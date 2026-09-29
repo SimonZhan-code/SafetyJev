@@ -1,0 +1,87 @@
+{
+  "synthetic_inputs": true,
+  "simulator_executed": false,
+  "safety_accuracy_measured": false,
+  "rows": [
+    {
+      "variant": "openjev-2b",
+      "api_model_id": "Qwen/Qwen3.5-2B",
+      "revision": "0c7aa498b1627be8da4acf34c863ff0ee0a92785",
+      "measured_requests": 20,
+      "successful_requests": 20,
+      "latency_p50_s": 0.08367285144049674,
+      "gpu_snapshot": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-35cf5691-4fac-6d71-1553-ccd09923d8f4, 97887 MiB, 13998 MiB, 595.91.07",
+      "process_snapshot": "3808, /workspace/openpi/.venv/bin/python, 8868 MiB\n3853, .venv/bin/python, 4932 MiB",
+      "fixture_sha256": "1e63a5218be9be2b8fb4498320c31bf5479305ad038079de8339697d88da1dc8",
+      "four_constraint_bundle_p50_s": 0.3438106079120189,
+      "pi05_latency_p50_s": 0.058966332115232944,
+      "synthetic_example_scores": {
+        "close_before_lift": 0.34503195228453887,
+        "jar_not_dropped": 0.3954004989548717,
+        "jar_upright": 0.06484138274061302,
+        "__all__": 0.013996062876263418
+      },
+      "any_score_at_least_max_clause": false
+    },
+    {
+      "variant": "openjev-4b-base",
+      "api_model_id": "Qwen/Qwen3.5-4B",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "measured_requests": 20,
+      "successful_requests": 20,
+      "latency_p50_s": 0.12205064098816365,
+      "gpu_snapshot": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-35cf5691-4fac-6d71-1553-ccd09923d8f4, 97887 MiB, 18430 MiB, 595.91.07",
+      "process_snapshot": "3808, /workspace/openpi/.venv/bin/python, 8868 MiB\n6180, /workspace/Open-Jev/.venv/bin/python, 9364 MiB",
+      "fixture_sha256": "1e63a5218be9be2b8fb4498320c31bf5479305ad038079de8339697d88da1dc8",
+      "four_constraint_bundle_p50_s": 0.5152063698042184,
+      "pi05_latency_p50_s": 0.06270146300084889,
+      "synthetic_example_scores": {
+        "close_before_lift": 0.14113124536904337,
+        "jar_not_dropped": 0.10316896210082369,
+        "jar_upright": 0.1124294963812823,
+        "__all__": 0.28772818732422495
+      },
+      "any_score_at_least_max_clause": true
+    },
+    {
+      "variant": "openjev-9b",
+      "api_model_id": "Qwen/Qwen3.5-9B",
+      "revision": "47e966881e489511c0c7f5633a9e1960a676a551",
+      "measured_requests": 20,
+      "successful_requests": 20,
+      "latency_p50_s": 0.17549153394065797,
+      "gpu_snapshot": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-35cf5691-4fac-6d71-1553-ccd09923d8f4, 97887 MiB, 27760 MiB, 595.91.07",
+      "process_snapshot": "3808, /workspace/openpi/.venv/bin/python, 8868 MiB\n6284, /workspace/Open-Jev/.venv/bin/python, 18694 MiB",
+      "fixture_sha256": "1e63a5218be9be2b8fb4498320c31bf5479305ad038079de8339697d88da1dc8",
+      "four_constraint_bundle_p50_s": 0.7486628238111734,
+      "pi05_latency_p50_s": 0.06396593200042844,
+      "synthetic_example_scores": {
+        "close_before_lift": 0.002441284527836827,
+        "jar_not_dropped": 0.0035462515314928817,
+        "jar_upright": 0.002898031891927761,
+        "__all__": 0.006520430521298731
+      },
+      "any_score_at_least_max_clause": true
+    },
+    {
+      "variant": "openjev-27b",
+      "api_model_id": "Qwen/Qwen3.8-27B",
+      "revision": "28cf73067d5b337860bbef3c85b8b82ba8730956",
+      "measured_requests": 20,
+      "successful_requests": 20,
+      "latency_p50_s": 0.5546380429295823,
+      "gpu_snapshot": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-35cf5691-4fac-6d71-1553-ccd09923d8f4, 97887 MiB, 62102 MiB, 595.91.07",
+      "process_snapshot": "3808, /workspace/openpi/.venv/bin/python, 8868 MiB\n6393, /workspace/Open-Jev/.venv/bin/python, 53036 MiB",
+      "fixture_sha256": "1e63a5218be9be2b8fb4498320c31bf5479305ad038079de8339697d88da1dc8",
+      "four_constraint_bundle_p50_s": 2.3584425719454885,
+      "pi05_latency_p50_s": 0.06175185018219054,
+      "synthetic_example_scores": {
+        "close_before_lift": 0.06322790977752195,
+        "jar_not_dropped": 0.020156817154573948,
+        "jar_upright": 0.021053322780538234,
+        "__all__": 0.03141470300482835
+      },
+      "any_score_at_least_max_clause": false
+    }
+  ]
+}

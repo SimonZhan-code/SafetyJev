@@ -1,0 +1,235 @@
+[
+  {
+    "variant": "4b-base",
+    "model_id": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "simulator_executed": false,
+    "status": "passed",
+    "health": {
+      "status": "ready",
+      "model": "Qwen/Qwen3.5-4B",
+      "method": "pretrained_yes_minus_no_no_training"
+    },
+    "memory_samples": [
+      {
+        "monotonic_s": 1733682.526939442,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733683.551146344,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733684.57547099,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733685.591028229,
+        "gpu_used_mib": 18282
+      },
+      {
+        "monotonic_s": 1733686.60338702,
+        "gpu_used_mib": 18410
+      },
+      {
+        "monotonic_s": 1733687.616540135,
+        "gpu_used_mib": 18410
+      },
+      {
+        "monotonic_s": 1733688.629502251,
+        "gpu_used_mib": 18420
+      },
+      {
+        "monotonic_s": 1733689.643865006,
+        "gpu_used_mib": 18430
+      },
+      {
+        "monotonic_s": 1733690.657137792,
+        "gpu_used_mib": 18430
+      },
+      {
+        "monotonic_s": 1733691.670068543,
+        "gpu_used_mib": 18430
+      }
+    ],
+    "sampled_peak_gpu_used_mib": 18430
+  },
+  {
+    "variant": "9b",
+    "model_id": "Qwen/Qwen3.5-9B",
+    "revision": "47e966881e489511c0c7f5633a9e1960a676a551",
+    "simulator_executed": false,
+    "status": "passed",
+    "health": {
+      "status": "ready",
+      "model": "Qwen/Qwen3.5-9B",
+      "method": "lora_decision_head"
+    },
+    "memory_samples": [
+      {
+        "monotonic_s": 1733692.095421815,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733693.108177436,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733694.121138627,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733695.135068532,
+        "gpu_used_mib": 27568
+      },
+      {
+        "monotonic_s": 1733696.149561995,
+        "gpu_used_mib": 27574
+      },
+      {
+        "monotonic_s": 1733697.161455942,
+        "gpu_used_mib": 27704
+      },
+      {
+        "monotonic_s": 1733698.175180053,
+        "gpu_used_mib": 27760
+      },
+      {
+        "monotonic_s": 1733699.189026446,
+        "gpu_used_mib": 27760
+      },
+      {
+        "monotonic_s": 1733700.201507148,
+        "gpu_used_mib": 27760
+      },
+      {
+        "monotonic_s": 1733701.213987591,
+        "gpu_used_mib": 27760
+      },
+      {
+        "monotonic_s": 1733702.226709011,
+        "gpu_used_mib": 27760
+      }
+    ],
+    "sampled_peak_gpu_used_mib": 27760
+  },
+  {
+    "variant": "27b",
+    "model_id": "Qwen/Qwen3.8-27B",
+    "revision": "28cf73067d5b337860bbef3c85b8b82ba8730956",
+    "simulator_executed": false,
+    "status": "passed",
+    "health": {
+      "status": "ready",
+      "model": "Qwen/Qwen3.8-27B",
+      "method": "lora_decision_head"
+    },
+    "memory_samples": [
+      {
+        "monotonic_s": 1733702.753518973,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733703.765850008,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733704.778679125,
+        "gpu_used_mib": 9061
+      },
+      {
+        "monotonic_s": 1733705.793199693,
+        "gpu_used_mib": 61800
+      },
+      {
+        "monotonic_s": 1733706.806915681,
+        "gpu_used_mib": 61808
+      },
+      {
+        "monotonic_s": 1733707.82072179,
+        "gpu_used_mib": 61814
+      },
+      {
+        "monotonic_s": 1733708.837676125,
+        "gpu_used_mib": 61822
+      },
+      {
+        "monotonic_s": 1733709.851507445,
+        "gpu_used_mib": 61828
+      },
+      {
+        "monotonic_s": 1733710.866298952,
+        "gpu_used_mib": 61836
+      },
+      {
+        "monotonic_s": 1733711.881863293,
+        "gpu_used_mib": 61846
+      },
+      {
+        "monotonic_s": 1733712.894534223,
+        "gpu_used_mib": 62000
+      },
+      {
+        "monotonic_s": 1733713.907672379,
+        "gpu_used_mib": 62090
+      },
+      {
+        "monotonic_s": 1733714.92120393,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733715.934393294,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733716.947456893,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733717.960519802,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733718.975112094,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733719.987962464,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733721.001526334,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733722.013911206,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733723.02652364,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733724.039410605,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733725.052182753,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733726.065998457,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733727.079681371,
+        "gpu_used_mib": 62102
+      },
+      {
+        "monotonic_s": 1733728.091877715,
+        "gpu_used_mib": 62102
+      }
+    ],
+    "sampled_peak_gpu_used_mib": 62102
+  }
+]

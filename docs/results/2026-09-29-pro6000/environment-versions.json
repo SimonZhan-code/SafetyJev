@@ -1,0 +1,22 @@
+{
+  "openpi": {
+    "torch": "2.7.1",
+    "transformers": "4.53.2",
+    "datasets": "3.6.0",
+    "jax": "0.5.3",
+    "jaxlib": "0.5.3",
+    "numpy": "1.26.4"
+  },
+  "openjev": {
+    "torch": "2.14.0",
+    "transformers": "5.10.2",
+    "peft": "0.19.1",
+    "accelerate": "1.13.0",
+    "datasets": "5.0.0",
+    "numpy": "2.4.6"
+  },
+  "behavior": {
+    "torch": "2.7.0+cu128",
+    "numpy": "1.26.4"
+  }
+}

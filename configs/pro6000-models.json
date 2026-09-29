@@ -1,0 +1,53 @@
+[
+  {
+    "repo": "ZefanCai/Open-Jev-2B",
+    "revision": "0c7aa498b1627be8da4acf34c863ff0ee0a92785",
+    "bytes": 12219048,
+    "files": [
+      "package/checkpoint/model.json"
+    ],
+    "model_config": {
+      "model_id": "Qwen/Qwen3.5-2B",
+      "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+      "max_length": 4096,
+      "lora_rank": 8,
+      "method": "independent_candidate_lora_nll_brier"
+    }
+  },
+  {
+    "repo": "ZefanCai/Open-Jev-9B",
+    "revision": "47e966881e489511c0c7f5633a9e1960a676a551",
+    "bytes": 25793449,
+    "files": [
+      "package/checkpoint/model.json"
+    ],
+    "model_config": {
+      "model_id": "Qwen/Qwen3.5-9B",
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "max_length": 4096,
+      "lora_rank": 8,
+      "method": "independent_candidate_lora_nll_brier"
+    }
+  },
+  {
+    "repo": "ZefanCai/Open-Jev-27B-v1.1",
+    "revision": "28cf73067d5b337860bbef3c85b8b82ba8730956",
+    "bytes": 62027159,
+    "files": [
+      "package/checkpoint/model.json"
+    ],
+    "model_config": {
+      "model_id": "Qwen/Qwen3.8-27B",
+      "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+      "max_length": 4096,
+      "lora_rank": 8,
+      "method": "independent_candidate_lora_nll_brier"
+    }
+  },
+  {
+    "repo": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "bytes": 9342907469,
+    "files": []
+  }
+]

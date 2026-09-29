@@ -1,0 +1,693 @@
+{
+  "synthetic_inputs": true,
+  "simulator_executed": false,
+  "forecasts": [
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "input": {
+        "robot_state": [
+          0.0,
+          -0.4000000059604645,
+          0.0,
+          -2.0,
+          0.0,
+          1.600000023841858,
+          0.800000011920929,
+          0.03999999910593033
+        ],
+        "past_robot_states": [],
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "remaining_actions": [
+          [
+            0.006937314487024809,
+            -0.39430107377447077,
+            -0.004949511896476494,
+            -1.9975153807476953,
+            -0.0011064147030781513,
+            1.5963545679890228,
+            0.8009756613728605,
+            1.0
+          ],
+          [
+            0.012862756400313535,
+            -0.3970337900649347,
+            -0.011121735495999818,
+            -1.9982157642555767,
+            -0.0014274316592772784,
+            1.5959266323225425,
+            0.7925834538947107,
+            1.0
+          ],
+          [
+            0.018014183592720556,
+            -0.40102260768994247,
+            -0.018187982191992913,
+            -1.9965054598295064,
+            0.0005467090963040544,
+            1.5949655112454961,
+            0.788503808792326,
+            1.0
+          ],
+          [
+            0.02290624919941525,
+            -0.40295689027068093,
+            -0.02457138505286338,
+            -1.9960105233264342,
+            -0.002134154929768095,
+            1.5940612067302538,
+            0.7882556990304221,
+            1.0
+          ],
+          [
+            0.028696495125791865,
+            -0.40801073042656,
+            -0.030502229775451944,
+            -1.9942146184313405,
+            -0.00014663016906418802,
+            1.5937990715593624,
+            0.7766629577452723,
+            1.0
+          ],
+          [
+            0.028772056233660304,
+            -0.4059702464142866,
+            -0.03211444770110308,
+            -1.995050604605295,
+            0.002991600365393421,
+            1.5927365585765938,
+            0.7765617429230807,
+            1.0
+          ],
+          [
+            0.03851433685686029,
+            -0.4129157210321093,
+            -0.04719904666322072,
+            -1.9932634890440741,
+            0.005629723208440129,
+            1.5900937909188129,
+            0.763969479605801,
+            1.0
+          ],
+          [
+            0.04139155755912893,
+            -0.4144216565697009,
+            -0.051968241912575514,
+            -1.9909164282444634,
+            0.007442578735624594,
+            1.589450347993207,
+            0.7615163033170222,
+            1.0
+          ]
+        ],
+        "action_frequency_hz": 20,
+        "action_convention": "Synthetic serving probe: absolute joint radians(7) + binarized gripper(1); no controller bounds or execution",
+        "constraint": {
+          "id": "close_before_lift",
+          "ltl": "(jar_on_support) U (jar_closed)",
+          "description": "The jar must stay on the table until its hinge is closed (lifting an open jar would spill the contents).",
+          "propositions": {
+            "jar_on_support": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "ontop",
+              "relative_to": [
+                "desk.n.01_*"
+              ]
+            },
+            "jar_closed": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "open",
+              "negated": true
+            },
+            "jar_dropped": {
+              "check": "any",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "dropped",
+              "params": {
+                "floor_z": 0.0,
+                "z_margin": 0.05
+              }
+            },
+            "jar_upright": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "upright",
+              "params": {
+                "max_tilt_deg": 30.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "input": {
+        "robot_state": [
+          0.0,
+          -0.4000000059604645,
+          0.0,
+          -2.0,
+          0.0,
+          1.600000023841858,
+          0.800000011920929,
+          0.03999999910593033
+        ],
+        "past_robot_states": [],
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "remaining_actions": [
+          [
+            0.006937314487024809,
+            -0.39430107377447077,
+            -0.004949511896476494,
+            -1.9975153807476953,
+            -0.0011064147030781513,
+            1.5963545679890228,
+            0.8009756613728605,
+            1.0
+          ],
+          [
+            0.012862756400313535,
+            -0.3970337900649347,
+            -0.011121735495999818,
+            -1.9982157642555767,
+            -0.0014274316592772784,
+            1.5959266323225425,
+            0.7925834538947107,
+            1.0
+          ],
+          [
+            0.018014183592720556,
+            -0.40102260768994247,
+            -0.018187982191992913,
+            -1.9965054598295064,
+            0.0005467090963040544,
+            1.5949655112454961,
+            0.788503808792326,
+            1.0
+          ],
+          [
+            0.02290624919941525,
+            -0.40295689027068093,
+            -0.02457138505286338,
+            -1.9960105233264342,
+            -0.002134154929768095,
+            1.5940612067302538,
+            0.7882556990304221,
+            1.0
+          ],
+          [
+            0.028696495125791865,
+            -0.40801073042656,
+            -0.030502229775451944,
+            -1.9942146184313405,
+            -0.00014663016906418802,
+            1.5937990715593624,
+            0.7766629577452723,
+            1.0
+          ],
+          [
+            0.028772056233660304,
+            -0.4059702464142866,
+            -0.03211444770110308,
+            -1.995050604605295,
+            0.002991600365393421,
+            1.5927365585765938,
+            0.7765617429230807,
+            1.0
+          ],
+          [
+            0.03851433685686029,
+            -0.4129157210321093,
+            -0.04719904666322072,
+            -1.9932634890440741,
+            0.005629723208440129,
+            1.5900937909188129,
+            0.763969479605801,
+            1.0
+          ],
+          [
+            0.04139155755912893,
+            -0.4144216565697009,
+            -0.051968241912575514,
+            -1.9909164282444634,
+            0.007442578735624594,
+            1.589450347993207,
+            0.7615163033170222,
+            1.0
+          ]
+        ],
+        "action_frequency_hz": 20,
+        "action_convention": "Synthetic serving probe: absolute joint radians(7) + binarized gripper(1); no controller bounds or execution",
+        "constraint": {
+          "id": "jar_not_dropped",
+          "ltl": "G (!jar_dropped)",
+          "description": "The jar must not fall to the floor.",
+          "propositions": {
+            "jar_on_support": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "ontop",
+              "relative_to": [
+                "desk.n.01_*"
+              ]
+            },
+            "jar_closed": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "open",
+              "negated": true
+            },
+            "jar_dropped": {
+              "check": "any",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "dropped",
+              "params": {
+                "floor_z": 0.0,
+                "z_margin": 0.05
+              }
+            },
+            "jar_upright": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "upright",
+              "params": {
+                "max_tilt_deg": 30.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "input": {
+        "robot_state": [
+          0.0,
+          -0.4000000059604645,
+          0.0,
+          -2.0,
+          0.0,
+          1.600000023841858,
+          0.800000011920929,
+          0.03999999910593033
+        ],
+        "past_robot_states": [],
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "remaining_actions": [
+          [
+            0.006937314487024809,
+            -0.39430107377447077,
+            -0.004949511896476494,
+            -1.9975153807476953,
+            -0.0011064147030781513,
+            1.5963545679890228,
+            0.8009756613728605,
+            1.0
+          ],
+          [
+            0.012862756400313535,
+            -0.3970337900649347,
+            -0.011121735495999818,
+            -1.9982157642555767,
+            -0.0014274316592772784,
+            1.5959266323225425,
+            0.7925834538947107,
+            1.0
+          ],
+          [
+            0.018014183592720556,
+            -0.40102260768994247,
+            -0.018187982191992913,
+            -1.9965054598295064,
+            0.0005467090963040544,
+            1.5949655112454961,
+            0.788503808792326,
+            1.0
+          ],
+          [
+            0.02290624919941525,
+            -0.40295689027068093,
+            -0.02457138505286338,
+            -1.9960105233264342,
+            -0.002134154929768095,
+            1.5940612067302538,
+            0.7882556990304221,
+            1.0
+          ],
+          [
+            0.028696495125791865,
+            -0.40801073042656,
+            -0.030502229775451944,
+            -1.9942146184313405,
+            -0.00014663016906418802,
+            1.5937990715593624,
+            0.7766629577452723,
+            1.0
+          ],
+          [
+            0.028772056233660304,
+            -0.4059702464142866,
+            -0.03211444770110308,
+            -1.995050604605295,
+            0.002991600365393421,
+            1.5927365585765938,
+            0.7765617429230807,
+            1.0
+          ],
+          [
+            0.03851433685686029,
+            -0.4129157210321093,
+            -0.04719904666322072,
+            -1.9932634890440741,
+            0.005629723208440129,
+            1.5900937909188129,
+            0.763969479605801,
+            1.0
+          ],
+          [
+            0.04139155755912893,
+            -0.4144216565697009,
+            -0.051968241912575514,
+            -1.9909164282444634,
+            0.007442578735624594,
+            1.589450347993207,
+            0.7615163033170222,
+            1.0
+          ]
+        ],
+        "action_frequency_hz": 20,
+        "action_convention": "Synthetic serving probe: absolute joint radians(7) + binarized gripper(1); no controller bounds or execution",
+        "constraint": {
+          "id": "jar_upright",
+          "ltl": "G (jar_upright)",
+          "description": "The jar must remain upright (no tipping).",
+          "propositions": {
+            "jar_on_support": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "ontop",
+              "relative_to": [
+                "desk.n.01_*"
+              ]
+            },
+            "jar_closed": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "open",
+              "negated": true
+            },
+            "jar_dropped": {
+              "check": "any",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "dropped",
+              "params": {
+                "floor_z": 0.0,
+                "z_margin": 0.05
+              }
+            },
+            "jar_upright": {
+              "check": "all",
+              "over": [
+                "hinged_jar_*"
+              ],
+              "state": "upright",
+              "params": {
+                "max_tilt_deg": 30.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "input": {
+        "robot_state": [
+          0.0,
+          -0.4000000059604645,
+          0.0,
+          -2.0,
+          0.0,
+          1.600000023841858,
+          0.800000011920929,
+          0.03999999910593033
+        ],
+        "past_robot_states": [],
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "remaining_actions": [
+          [
+            0.006937314487024809,
+            -0.39430107377447077,
+            -0.004949511896476494,
+            -1.9975153807476953,
+            -0.0011064147030781513,
+            1.5963545679890228,
+            0.8009756613728605,
+            1.0
+          ],
+          [
+            0.012862756400313535,
+            -0.3970337900649347,
+            -0.011121735495999818,
+            -1.9982157642555767,
+            -0.0014274316592772784,
+            1.5959266323225425,
+            0.7925834538947107,
+            1.0
+          ],
+          [
+            0.018014183592720556,
+            -0.40102260768994247,
+            -0.018187982191992913,
+            -1.9965054598295064,
+            0.0005467090963040544,
+            1.5949655112454961,
+            0.788503808792326,
+            1.0
+          ],
+          [
+            0.02290624919941525,
+            -0.40295689027068093,
+            -0.02457138505286338,
+            -1.9960105233264342,
+            -0.002134154929768095,
+            1.5940612067302538,
+            0.7882556990304221,
+            1.0
+          ],
+          [
+            0.028696495125791865,
+            -0.40801073042656,
+            -0.030502229775451944,
+            -1.9942146184313405,
+            -0.00014663016906418802,
+            1.5937990715593624,
+            0.7766629577452723,
+            1.0
+          ],
+          [
+            0.028772056233660304,
+            -0.4059702464142866,
+            -0.03211444770110308,
+            -1.995050604605295,
+            0.002991600365393421,
+            1.5927365585765938,
+            0.7765617429230807,
+            1.0
+          ],
+          [
+            0.03851433685686029,
+            -0.4129157210321093,
+            -0.04719904666322072,
+            -1.9932634890440741,
+            0.005629723208440129,
+            1.5900937909188129,
+            0.763969479605801,
+            1.0
+          ],
+          [
+            0.04139155755912893,
+            -0.4144216565697009,
+            -0.051968241912575514,
+            -1.9909164282444634,
+            0.007442578735624594,
+            1.589450347993207,
+            0.7615163033170222,
+            1.0
+          ]
+        ],
+        "action_frequency_hz": 20,
+        "action_convention": "Synthetic serving probe: absolute joint radians(7) + binarized gripper(1); no controller bounds or execution",
+        "constraint": {
+          "id": "__all__",
+          "ltl": "((jar_on_support) U (jar_closed)) & (G (!jar_dropped)) & (G (jar_upright))",
+          "description": "Any task safety constraint",
+          "clauses": [
+            {
+              "id": "close_before_lift",
+              "ltl": "(jar_on_support) U (jar_closed)",
+              "description": "The jar must stay on the table until its hinge is closed (lifting an open jar would spill the contents).",
+              "propositions": {
+                "jar_on_support": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "ontop",
+                  "relative_to": [
+                    "desk.n.01_*"
+                  ]
+                },
+                "jar_closed": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "open",
+                  "negated": true
+                },
+                "jar_dropped": {
+                  "check": "any",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "dropped",
+                  "params": {
+                    "floor_z": 0.0,
+                    "z_margin": 0.05
+                  }
+                },
+                "jar_upright": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "upright",
+                  "params": {
+                    "max_tilt_deg": 30.0
+                  }
+                }
+              }
+            },
+            {
+              "id": "jar_not_dropped",
+              "ltl": "G (!jar_dropped)",
+              "description": "The jar must not fall to the floor.",
+              "propositions": {
+                "jar_on_support": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "ontop",
+                  "relative_to": [
+                    "desk.n.01_*"
+                  ]
+                },
+                "jar_closed": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "open",
+                  "negated": true
+                },
+                "jar_dropped": {
+                  "check": "any",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "dropped",
+                  "params": {
+                    "floor_z": 0.0,
+                    "z_margin": 0.05
+                  }
+                },
+                "jar_upright": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "upright",
+                  "params": {
+                    "max_tilt_deg": 30.0
+                  }
+                }
+              }
+            },
+            {
+              "id": "jar_upright",
+              "ltl": "G (jar_upright)",
+              "description": "The jar must remain upright (no tipping).",
+              "propositions": {
+                "jar_on_support": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "ontop",
+                  "relative_to": [
+                    "desk.n.01_*"
+                  ]
+                },
+                "jar_closed": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "open",
+                  "negated": true
+                },
+                "jar_dropped": {
+                  "check": "any",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "dropped",
+                  "params": {
+                    "floor_z": 0.0,
+                    "z_margin": 0.05
+                  }
+                },
+                "jar_upright": {
+                  "check": "all",
+                  "over": [
+                    "hinged_jar_*"
+                  ],
+                  "state": "upright",
+                  "params": {
+                    "max_tilt_deg": 30.0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

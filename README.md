@@ -24,13 +24,14 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
 ```
 
 **Status:** All 24 CPU evaluation tests and pinned source-hook checks pass.
-The released π0.5 jar checkpoint also passed a GPU serving smoke test on a rented
-RTX 4090: three synthetic observations produced finite `(16, 8)` action chunks.
-Two warmed requests took 111 ms and 107 ms; these are not rollout benchmarks.
-See the [server smoke-test report](docs/server-smoke-test.md) for evidence and
-reproduction details. No Isaac Sim rollout, Open-Jev inference, safety fine-tuning,
-or safety-accuracy measurement has run yet. Simulator installation awaits the
-required license acceptance; host-driver compatibility is still unverified.
+On one RTX PRO 6000, the fine-tuned π0.5 jar policy successfully served alongside
+Open-Jev 2B, 9B, 27B, and a separately labeled 4B base-model decision head.
+Each variant completed 20 measured synthetic-input safety requests. These are
+serving tests, not safety-accuracy results. See the
+[single-GPU evaluation report](docs/pro6000-evaluation.md) for timings and memory.
+Isaac Sim repeatedly segfaulted during renderer startup on this node, so no
+three-component rollout or safety-accuracy evaluation completed. License
+acceptance is confirmed; host/runtime compatibility is the remaining blocker.
 
 The first policy is
 [ManiGuard's π0.5 jar checkpoint](https://huggingface.co/IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora),

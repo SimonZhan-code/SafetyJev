@@ -1,0 +1,53 @@
+{
+  "driver": "595.91.07",
+  "gpu": "RTX PRO 6000 Blackwell Workstation Edition",
+  "isaac_sim": "4.5.0.0",
+  "attempts": [
+    {
+      "log": "isaac-smoke.log",
+      "description": "initial; missing GLU/Xt and requests",
+      "sha256": "851773d5c83b6a4ac3fa0f98e92a06a0e090a10671967bb2b60cd6ecf520e099",
+      "segmentation_fault": true,
+      "diagnostic_lines": [
+        "2026-09-29 04:56:39 [754ms] [Error] [omni.ext.plugin] Could not load the dynamic library from /workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+d02c707b.lx64.r.cp310/bin/libMaterialXRenderHw.so. Error: libXt.so.6: cannot open shared object file: No such file or directory (note that this may be caused by a dependent library)",
+        "2026-09-29 04:56:39 [754ms] [Error] [omni.ext.plugin] Could not load the dynamic library from /workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+d02c707b.lx64.r.cp310/bin/libMaterialXRenderGlsl.so. Error: libXt.so.6: cannot open shared object file: No such file or directory (note that this may be caused by a dependent library)",
+        "2026-09-29 04:56:39 [759ms] [Error] [omni.ext.plugin] Could not load the dynamic library from /workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+d02c707b.lx64.r.cp310/bin/libusdBakeMtlx.so. Error: libXt.so.6: cannot open shared object file: No such file or directory (note that this may be caused by a dependent library)",
+        "2026-09-29 04:56:39 [772ms] [Error] [omni.ext.plugin] Could not load the dynamic library from /workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/extscache/omni.iray.libs-0.0.0+d02c707b.lx64.r/bin/iray/libneuray.so. Error: libGLU.so.1: cannot open shared object file: No such file or directory (note that this may be caused by a dependent library)",
+        "2026-09-29 04:56:41 [3,052ms] [Error] [omni.ext._impl.custom_importer] Failed to import python module isaacsim.asset.browser. Error: No module named 'requests'. Traceback:",
+        "ModuleNotFoundError: No module named 'requests'",
+        "2026-09-29 04:57:00 [21,709ms] [Error] [rtx.neuraylib.plugin] Failed to open /workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/extscache/omni.iray.libs-0.0.0+d02c707b.lx64.r/bin/iray/libneuray.so: libGLU.so.1: cannot open shared object file: No such file or directory",
+        "Fatal Python error: Segmentation fault"
+      ]
+    },
+    {
+      "log": "isaac-smoke-fixed.log",
+      "description": "after installing missing dependencies",
+      "sha256": "c7156def82638854c9241823c7ca972a7b8bd1fee6d4e79e6f3f44ee30b107fe",
+      "segmentation_fault": true,
+      "diagnostic_lines": [
+        "2026-09-29 04:57:51 [2,781ms] [Warning] [rtx.neuraylib.plugin] [IRAY:RENDER]   1.1   IRAY   rend warn : GPU 1 (NVIDIA RTX PRO 6000 Blackwell Workstation Edition) with CUDA compute capability 12.0 is unsupported by this version of iray photoreal. Please look for an update with your software provider.",
+        "2026-09-29 04:57:51 [2,783ms] [Warning] [rtx.scenedb.plugin] SceneDbContext : TLAS limit buffer size 7512601600",
+        "2026-09-29 04:57:51 [2,783ms] [Warning] [rtx.scenedb.plugin] SceneDbContext : TLAS limit : valid true, within: false",
+        "Fatal Python error: Segmentation fault",
+        "  File \"/workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/exts/isaacsim.simulation_app/isaacsim/simulation_app/simulation_app.py\", line 520 in _wait_for_viewport"
+      ]
+    },
+    {
+      "log": "isaac-single-gpu-smoke.log",
+      "description": "explicit single GPU, 256x256 renderer",
+      "sha256": "951761babe4d15c31ab7f88a815ec99870f54f133581dc7a3e10f7822f7ab00a",
+      "segmentation_fault": true,
+      "diagnostic_lines": [
+        "2026-09-29 04:59:32 [2,694ms] [Warning] [rtx.neuraylib.plugin] [IRAY:RENDER]   1.1   IRAY   rend warn : GPU 1 (NVIDIA RTX PRO 6000 Blackwell Workstation Edition) with CUDA compute capability 12.0 is unsupported by this version of iray photoreal. Please look for an update with your software provider.",
+        "2026-09-29 04:59:32 [2,696ms] [Warning] [rtx.scenedb.plugin] SceneDbContext : TLAS limit buffer size 7512601600",
+        "2026-09-29 04:59:32 [2,696ms] [Warning] [rtx.scenedb.plugin] SceneDbContext : TLAS limit : valid true, within: false",
+        "Fatal Python error: Segmentation fault",
+        "  File \"/workspace/conda/behavior/lib/python3.10/site-packages/isaacsim/exts/isaacsim.simulation_app/isaacsim/simulation_app/simulation_app.py\", line 520 in _wait_for_viewport"
+      ]
+    }
+  ],
+  "ground_truth_rollouts": 0,
+  "root_cause": "Unresolved renderer/runtime compatibility; driver causality not isolated",
+  "license_acceptance": "User confirmed Isaac Sim EULA and BEHAVIOR research data license in this session",
+  "large_behavior_assets_downloaded": false
+}

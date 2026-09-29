@@ -98,10 +98,14 @@ python -m jev.server --checkpoint /data/checkpoints/open-jev-2b/package/checkpoi
 python -m safetyjev.cli predict --episodes /data/safetyjev/jar-smoke \
   --name openjev2b-proprio \
   --endpoint http://127.0.0.1:8791/v1/systemone \
-  --model-id Open-Jev-2B \
+  --model-id Qwen/Qwen3.5-2B \
   --predictor-revision 0c7aa498b1627be8da4acf34c863ff0ee0a92785 \
   --input-mode proprio_only
 ```
+
+The API model ID must match the server’s `/health` identity (the upstream Qwen
+name), not the Open-Jev package name or experiment label. The pinned predictor
+revision above identifies the published Open-Jev adapter/head package.
 
 This explicitly omits camera pixels. It cannot establish the quality of a
 multimodal safety model. Scores from a future multimodal scorer should use the

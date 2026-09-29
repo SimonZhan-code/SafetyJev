@@ -1,0 +1,220 @@
+{
+  "test": "synthetic_joint_model_serving",
+  "variant": "openjev-4b-base",
+  "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "api_model_id": "Qwen/Qwen3.5-4B",
+  "synthetic_inputs": true,
+  "simulator_executed": false,
+  "safety_accuracy_measured": false,
+  "input_mode": "proprio_only",
+  "policy_metadata": {
+    "serve_config": "pi05-base_datagen_v1_jar_joint_2cam_lora",
+    "checkpoint": "/workspace/checkpoints/pi05-jar/7400"
+  },
+  "policy_latency_s": [
+    0.065995141165331,
+    0.06270146300084889,
+    0.06256493297405541
+  ],
+  "fixture_sha256": "1e63a5218be9be2b8fb4498320c31bf5479305ad038079de8339697d88da1dc8",
+  "measured_requests": 20,
+  "successful_requests": 20,
+  "latency_p50_s": 0.12205064098816365,
+  "gpu_snapshot": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-35cf5691-4fac-6d71-1553-ccd09923d8f4, 97887 MiB, 18430 MiB, 595.91.07",
+  "process_snapshot": "3808, /workspace/openpi/.venv/bin/python, 8868 MiB\n6180, /workspace/Open-Jev/.venv/bin/python, 9364 MiB",
+  "requests": [
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.6056042681448162,
+      "repeat": 0,
+      "warmup": true
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.11671838210895658,
+      "repeat": 0,
+      "warmup": true
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.11476880521513522,
+      "repeat": 0,
+      "warmup": true
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.1497907538432628,
+      "repeat": 0,
+      "warmup": true
+    },
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.12380168680101633,
+      "repeat": 1,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.12120502698235214,
+      "repeat": 1,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.12058936199173331,
+      "repeat": 1,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.15141382394358516,
+      "repeat": 1,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.12321274285204709,
+      "repeat": 2,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.12036262406036258,
+      "repeat": 2,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.11962894606404006,
+      "repeat": 2,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.15160132804885507,
+      "repeat": 2,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.12289625499397516,
+      "repeat": 3,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.12019212078303099,
+      "repeat": 3,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.11993833212181926,
+      "repeat": 3,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.15166856511496007,
+      "repeat": 3,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.12315771915018559,
+      "repeat": 4,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.12019304279237986,
+      "repeat": 4,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.11980959796346724,
+      "repeat": 4,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.15204600989818573,
+      "repeat": 4,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:close_before_lift",
+      "score": 0.14113124536904337,
+      "error": null,
+      "latency_s": 0.12412016908638179,
+      "repeat": 5,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_not_dropped",
+      "score": 0.10316896210082369,
+      "error": null,
+      "latency_s": 0.12077527400106192,
+      "repeat": 5,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:jar_upright",
+      "score": 0.1124294963812823,
+      "error": null,
+      "latency_s": 0.12032205797731876,
+      "repeat": 5,
+      "warmup": false
+    },
+    {
+      "forecast_id": "synthetic:__all__",
+      "score": 0.28772818732422495,
+      "error": null,
+      "latency_s": 0.15171708702109754,
+      "repeat": 5,
+      "warmup": false
+    }
+  ],
+  "limitations": "Sequential loopback requests while both models are resident on one GPU. No simulator or labels. No safety-quality inference. Small timing sample with fixed synthetic inputs. GPU memory is a snapshot, not peak."
+}
