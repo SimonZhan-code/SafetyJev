@@ -1,5 +1,8 @@
 # Run the first shadow evaluation
 
+For action gating and VLA regeneration, see the [guarded-loop guide](guarded-loop.md).
+Shadow mode remains the default for collecting unchanged-policy prediction data.
+
 All simulator commands below are for a Linux/NVIDIA machine with ManiGuard's
 BEHAVIOR/OmniGibson assets, valid Spot+Buddy, and the long-finger Franka asset.
 The Mac workspace can run the CPU evaluation tests. No remote node is assumed.

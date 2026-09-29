@@ -19,11 +19,16 @@ def verify_sources(repo):
             raise ValueError("Unsupported source " + name + "; use commit " + COMMIT)
 
 
-def instrument(source):
+def instrument(source, execution_mode="shadow"):
     if hashlib.sha256(source.encode()).hexdigest() != RUNNER_SHA256:
         raise ValueError("Unsupported ManiGuard runner. Use pinned commit " + COMMIT)
+    if execution_mode not in ("shadow", "guard_regenerate"):
+        raise ValueError("Unknown execution mode")
+    episode_import = ("from safetyjev.guard import GuardedEpisode as ShadowEpisode\n"
+                      if execution_mode == "guard_regenerate"
+                      else "from safetyjev.capture import ShadowEpisode\n")
     edits = [
-        ("import json\n", "import json\nfrom safetyjev.capture import ShadowEpisode\n"),
+        ("import json\n", "import json\n" + episode_import),
         ("        step_idx = 0\n", "        sj_shadow = ShadowEpisode(scene_info, cfg, monitor, obs, episode_seed)\n\n        step_idx = 0\n"),
         ("                for ci in range(chunk_len):\n",
          "                for ci in range(chunk_len):\n                    sj_shadow.before_action(step_idx, obs, chunk, ci, chunk_len, action_space)\n"),
@@ -32,6 +37,18 @@ def instrument(source):
         ("        all_results.append(result)\n        _ltl_str",
          "        sj_shadow.finish(result)\n        all_results.append(result)\n        _ltl_str"),
     ]
+    if execution_mode == "guard_regenerate":
+        anchor = "                chunk = query_policy(policy, obs, client_type, cfg)\n"
+        edits.insert(2, (anchor, anchor +
+            "                chunk = sj_shadow.select_chunk(\n"
+            "                    step_idx, obs, chunk,\n"
+            "                    lambda current_obs: query_policy(policy, current_obs, client_type, cfg),\n"
+            "                    action_space, min(cfg.execute_horizon, cfg.max_steps - step_idx))\n"
+            "                if chunk is None:\n"
+            "                    # A guard stop is an unsuccessful task outcome, not an infrastructure crash.\n"
+            "                    success = False\n"
+            "                    done = True\n"
+            "                    break\n"))
     for old, new in edits:
         if source.count(old) != 1:
             raise ValueError("Integration anchor changed: " + repr(old))
@@ -44,7 +61,7 @@ def launch(repo, benchmark_args, options):
     from . import capture
     verify_sources(repo)
     path = Path(repo).resolve() / "maniguard/eval/benchmark.py"
-    source = instrument(path.read_text())
+    source = instrument(path.read_text(), options.get("execution_mode", "shadow"))
     capture.OPTIONS = options
     sys.path.insert(0, str(Path(repo).resolve()))
     sys.argv = [str(path)] + benchmark_args

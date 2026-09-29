@@ -14,6 +14,9 @@ OPTIONS = {}
 
 
 class ShadowEpisode:
+    execution_mode = "shadow_no_intervention"
+    prediction_mode = "online_synchronous_shadow"
+
     def __init__(self, scene, cfg, monitor, observation, episode_seed):
         import imageio.v2 as imageio
         from maniguard.utils.ltl_utils import LTLMonitor
@@ -54,7 +57,7 @@ class ShadowEpisode:
             "pipeline": scene.get("pipeline"), "episode_seed": episode_seed,
             "scene_file_sha256": hashlib.sha256(Path(scene["scene_file"]).read_bytes()).hexdigest(),
             "config": vars(cfg), "specification": self.spec,
-            "mode": "shadow_no_intervention", "recheck_every": OPTIONS["recheck_every"],
+            "mode": self.execution_mode, "recheck_every": OPTIONS["recheck_every"],
             "clock": "synchronous simulation; wall time advances during model calls, simulation does not",
             "label_semantics": "raw bad-prefix rejection; not engagement-gated episode safety",
         })
@@ -64,7 +67,7 @@ class ShadowEpisode:
             self.predictor = OpenJevHTTP(OPTIONS["endpoint"], OPTIONS["model_id"],
                                        OPTIONS["input_mode"], OPTIONS["timeout"])
             write_json(self.directory / "prediction.meta.json", {
-                "mode": "online_synchronous_shadow", "input_mode": OPTIONS["input_mode"],
+                "mode": self.prediction_mode, "input_mode": OPTIONS["input_mode"],
                 "model_id": OPTIONS["model_id"], "model_revision": OPTIONS["predictor_revision"],
                 "endpoint": OPTIONS["endpoint"],
             })
@@ -73,15 +76,25 @@ class ShadowEpisode:
             raise ValueError("Initial monitor labels unavailable; see oracle.jsonl")
 
     def before_action(self, step, observation, chunk, ci, chunk_len, action_space):
-        import numpy as np
-
         cadence = OPTIONS["recheck_every"]
         if ci != 0 and (cadence == 0 or ci % cadence):
             return
+        for forecast in self.make_forecasts(step, observation, chunk, ci, chunk_len, action_space):
+            # Persist the exact pre-action input, even when inference fails.
+            append_jsonl(self.directory / "forecasts.jsonl", forecast)
+            if self.predictor:
+                append_jsonl(self.directory / "predictions.jsonl", self.predictor.score(forecast))
+
+    def make_forecasts(self, step, observation, chunk, ci, chunk_len, action_space,
+                       candidate_id=None, include_global=True):
+        import numpy as np
+
         # Exactly the commands the joint-only runner will execute, using a COPY.
         actions = np.array(chunk[ci:chunk_len], dtype=np.float32, copy=True)
         if actions.ndim != 2 or actions.shape[1] != 8 or not len(actions):
             raise ValueError("Expected nonempty (H, 8) chunk")
+        if not np.all(np.isfinite(actions)):
+            raise ValueError("Nonfinite proposed action")
         if self.cfg.gripper_binarize:
             g = actions[:, -1]
             actions[:, -1] = np.where(np.abs(g) > .01, np.sign(g), -1.0)
@@ -93,15 +106,17 @@ class ShadowEpisode:
             relative = f"frames/{step:07d}-{key}.png"
             self.imageio.imwrite(self.directory / relative, observation[key])
             images[key] = relative
-        constraints = self.constraints + [{
+        constraints = self.constraints + ([{
             "id": "__all__", "ltl": self.spec.get("combined_ltl", ""),
             "description": "Any of the task safety constraints",
             "clauses": self.constraints,
-        }]
+        }] if include_global else [])
+        forecasts = []
+        window_id = candidate_id or f"{self.episode_id}:{step}"
         for constraint in constraints:
             forecast = {
                 "schema_version": 1,
-                "forecast_id": f"{self.episode_id}:{step}:{constraint['id']}",
+                "forecast_id": f"{window_id}:{constraint['id']}",
                 "episode_id": self.episode_id, "constraint_id": constraint["id"],
                 "start_step": step, "end_step": step + len(actions),
                 "captured_monotonic_s": time.monotonic(),
@@ -115,10 +130,8 @@ class ShadowEpisode:
                     "constraint": constraint,
                 },
             }
-            # Persist the exact pre-action input, even when inference fails.
-            append_jsonl(self.directory / "forecasts.jsonl", forecast)
-            if self.predictor:
-                append_jsonl(self.directory / "predictions.jsonl", self.predictor.score(forecast))
+            forecasts.append(forecast)
+        return forecasts
 
     def after_step(self, step, monitor, observation):
         error = None

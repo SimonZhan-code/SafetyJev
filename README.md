@@ -3,7 +3,7 @@
 An agentic robotics system that enhances safety through an in-the-loop,
 safety-centric fine-tuned Jev model at runtime.
 
-## First milestone: prediction evaluation
+## Prediction evaluation and a first guarded loop
 
 We separate two experiments:
 
@@ -12,7 +12,10 @@ We separate two experiments:
    physics-grounded monitor. This repository implements the initial shadow
    capture, labeling, predictor connection, and reporting pipeline.
 2. **Intervention:** use those predictions to change execution and measure safe
-   success, engagement, and overhead. Deferred until prediction evaluation works.
+   success, engagement, and overhead. The optional `guard_regenerate` mode checks
+   every constraint before executing a chunk. A rejection triggers a new VLA
+   proposal from the same observation; bounded retry exhaustion ends the simulated
+   episode unsuccessfully. No second VLM or prompt rewriting is used.
 
 ```text
 ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
@@ -23,7 +26,13 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Status:** All 26 CPU tests and pinned source-hook checks pass. On an RTX PRO
+**Status:** CPU tests cover guard acceptance, rejection, regeneration, timeouts,
+retry exhaustion, and the actual pinned runner's execution loop with controlled
+policy/guard/simulator boundaries. The new intervention mode has **not yet had a
+live GPU simulator run**; the previous node refused SSH on 2026-09-29. See the
+[guarded-loop guide](docs/guarded-loop.md) for activation and validation details.
+
+Earlier shadow evaluation: on an RTX PRO
 6000 Blackwell with driver 580.126.09, the ManiGuard fine-tuned π0.5 jar policy,
 Open-Jev, and simulation ran together using a separate **Isaac Sim 5.1
 compatibility environment**. The 2B pilot completed 2,000 actions; the 4B base
@@ -53,8 +62,11 @@ python3 -m safetyjev.cli verify-integration --maniguard-root /path/to/ManiGuard
 ```
 
 The core labels, metrics, HTTP adapter, and CLI use only the Python standard
-library. NumPy is optional for one CPU action-contract test and required by the
+library. NumPy is required for CPU action/guard tests and by the
 simulator adapter. ManiGuard supplies its own simulator/image dependencies.
+
+To also execute the instrumented upstream loop in the CPU test harness, set
+`SAFETYJEV_MANIGUARD_ROOT=/path/to/ManiGuard` when running the test command.
 
 See [the runbook](docs/runbook.md) for capture and model comparison commands and
 [the evaluation protocol](docs/evaluation-protocol.md) for the target definition.
@@ -64,9 +76,9 @@ See [the runbook](docs/runbook.md) for capture and model comparison commands and
 - Pinned ManiGuard commit `be97624e0acbec6b6f9260a08891b04168eb8e6c`.
 - Absolute joint `(H, 8)` actions, matching the released jar configuration;
   camera and robot-state snapshots captured before execution.
-- Chunk-start predictions by default; optional rechecks of remaining actions.
+- Chunk-start predictions; optional remaining-action rechecks in shadow mode.
 - Per-constraint and combined-task (`__all__`) bad-prefix labels.
-- Offline replay or synchronous online shadow prediction; no intervention.
+- Offline replay, synchronous shadow prediction, or synchronous guard-and-regenerate execution.
 - Open-Jev HTTP Noul connector for the explicitly named **proprio-only ablation**.
 
 Zefan-Cai/Open-Jev's current loader discards the vision tower. The included
@@ -82,6 +94,7 @@ multimodal scorer, which can emit predictions in the same JSONL contract.
 |---|---|
 | `safetyjev/maniguard.py` | Hash-checked, in-memory upstream runner instrumentation |
 | `safetyjev/capture.py` | Pre-action snapshots and independent per-constraint oracle replay |
+| `safetyjev/guard.py` | All-constraint gating, bounded VLA regeneration, and candidate decision logs |
 | `safetyjev/labels.py` | Horizon alignment, censoring, and monitor-gap handling |
 | `safetyjev/predictors.py` | Explicit input allowlist and Open-Jev HTTP scoring |
 | `safetyjev/metrics.py` | Confusion matrix, ranking, calibration diagnostics, coverage, timing |
@@ -89,6 +102,7 @@ multimodal scorer, which can emit predictions in the same JSONL contract.
 
 The adapter does not modify upstream files. It refuses unknown source versions.
 Action arrays are copied for prediction; gripper binarization and clipping match
-the supported runner. The original goal checker, action cadence, and passive
-monitor remain in charge of the rollout. Instrumentation adds wall-clock overhead;
-behavioral parity still requires a real matched-seed runtime check.
+the supported runner. The original goal checker and passive monitor remain in use.
+Shadow mode preserves the policy actions; guard mode can replace a chunk or end an
+episode after retry exhaustion. Simulation pauses during model calls; this is not
+a real-time controller.

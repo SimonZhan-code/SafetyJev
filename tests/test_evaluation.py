@@ -186,6 +186,37 @@ class ReplayTests(unittest.TestCase):
 
 
 class ReportTests(unittest.TestCase):
+    def test_mixed_execution_modes_or_guard_settings_are_not_pooled(self):
+        for second in ({"mode": "shadow_no_intervention"},
+                       {"mode": "guard_regenerate", "guard": {"threshold": .7}}):
+            with self.subTest(second=second), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                for name, execution in (("a", {"mode": "guard_regenerate", "guard": {"threshold": .5}}),
+                                        ("b", second)):
+                    path = root / name
+                    path.mkdir()
+                    write_json(path / "episode.json", {"episode_id": name, **execution})
+                    write_json(path / "complete.json", {})
+                    append_jsonl(path / "oracle.jsonl", oracle([False])[0])
+                with self.assertRaisesRegex(ValueError, "execution modes or guard configurations"):
+                    main(["report", "--episodes", str(root), "--output", str(root / "report.json")])
+
+    def test_guard_stop_with_no_executed_candidates_is_in_report(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_json(root / "episode.json", {"episode_id": "e", "mode": "guard_regenerate"})
+            write_json(root / "complete.json", {})
+            outcome = {"steps": 0, "status": "completed", "success": False,
+                       "safetyjev_guard": {"termination_reason": "guard_retries_exhausted"}}
+            write_json(root / "maniguard_result.json", outcome)
+            append_jsonl(root / "oracle.jsonl", oracle([False])[0])
+            with patch("sys.stdout", new=io.StringIO()):
+                main(["report", "--episodes", str(root), "--output", str(root / "report.json")])
+            result = json.loads((root / "report.json").read_text())
+            self.assertEqual(len(result["episodes"]), 1)
+            self.assertEqual(result["episodes"][0]["outcome"], outcome)
+            self.assertEqual(result["eligible_labels"], 0)
+
     def test_report_from_recorded_fixture_and_missing_run(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -28,7 +28,7 @@ def model_args(parser):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="SafetyJev shadow prediction evaluation")
+    parser = argparse.ArgumentParser(description="SafetyJev prediction and guarded execution evaluation")
     subs = parser.add_subparsers(dest="command", required=True)
     verify = subs.add_parser("verify-integration")
     verify.add_argument("--maniguard-root", required=True)
@@ -38,6 +38,11 @@ def main(argv=None):
     capture.add_argument("--provenance", required=True, help="JSON with policy repo/revision and benchmark revision")
     capture.add_argument("--recheck-every", type=int, default=0, help="0: chunk starts only; N: every N executed actions")
     capture.add_argument("--online-predictor", help="JSON with endpoint/model_id/predictor_revision/input_mode/timeout")
+    capture.add_argument("--execution-mode", choices=["shadow", "guard_regenerate"], default="shadow")
+    capture.add_argument("--guard-threshold", type=float, default=.5,
+                         help="Reject if any constraint score >= threshold; development default, not calibrated")
+    capture.add_argument("--max-regenerations", type=int, default=3,
+                         help="Additional VLA proposals after the initial chunk is rejected")
     capture.add_argument("benchmark_args", nargs=argparse.REMAINDER)
     predict = subs.add_parser("predict", help="Score saved pre-action inputs only, without oracle data")
     predict.add_argument("--episodes", required=True)
@@ -55,13 +60,22 @@ def main(argv=None):
         from .maniguard import COMMIT, instrument, verify_sources
         verify_sources(args.maniguard_root)
         path = Path(args.maniguard_root) / "maniguard/eval/benchmark.py"
-        instrument(path.read_text())
+        for mode in ("shadow", "guard_regenerate"):
+            instrument(path.read_text(), mode)
         print(json.dumps({"status": "source_hooks_verified", "maniguard_commit": COMMIT,
+                          "execution_modes": ["shadow", "guard_regenerate"],
                           "gpu_simulator_tested": False}))
     elif args.command == "capture":
         from .maniguard import COMMIT, launch
         if args.recheck_every < 0:
             raise ValueError("recheck-every cannot be negative")
+        from .guard import validate_guard_options
+        validate_guard_options(args.guard_threshold, args.max_regenerations)
+        if args.execution_mode == "guard_regenerate":
+            if not args.online_predictor:
+                raise ValueError("guard_regenerate requires --online-predictor")
+            if args.recheck_every:
+                raise ValueError("guard_regenerate v1 checks chunk starts only; recheck-every must be 0")
         provenance = json.loads(Path(args.provenance).read_text())
         for field in ("policy_repo", "policy_revision", "benchmark_revision"):
             value = provenance.get(field)
@@ -74,7 +88,8 @@ def main(argv=None):
                          "maniguard/utils/safety_monitor.py")
         }
         options = {"output": str(Path(args.output).resolve()), "provenance": provenance,
-                   "recheck_every": args.recheck_every}
+                   "recheck_every": args.recheck_every, "execution_mode": args.execution_mode,
+                   "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}
         if args.online_predictor:
             config = json.loads(Path(args.online_predictor).read_text())
             for key in ("endpoint", "model_id", "predictor_revision", "input_mode"):
@@ -120,11 +135,14 @@ def main(argv=None):
             raise ValueError("Predictions must be a filename stem")
         all_labels, all_predictions, per_episode = [], [], []
         group_rows, metadata, incomplete = {}, [], []
+        execution_signatures = set()
         for path in episodes(args.episodes):
             meta = json.loads((path / "episode.json").read_text())
             if not (path / "complete.json").exists():
                 incomplete.append(meta["episode_id"])
                 continue
+            execution_signatures.add(json.dumps({"mode": meta.get("mode", "shadow_no_intervention"),
+                                                  "guard": meta.get("guard")}, sort_keys=True))
             forecast_path = path / "forecasts.jsonl"
             forecasts = read_jsonl(forecast_path) if forecast_path.exists() else []
             labels = label_forecasts(forecasts, read_jsonl(path / "oracle.jsonl"))
@@ -139,8 +157,10 @@ def main(argv=None):
             if prediction_meta.exists():
                 metadata.append(json.loads(prediction_meta.read_text()))
             result = evaluate(labels, predictions, args.threshold)
+            episode_result_path = path / "maniguard_result.json"
+            outcome = json.loads(episode_result_path.read_text()) if episode_result_path.exists() else {}
             per_episode.append({"episode_id": meta["episode_id"], "scene": meta.get("scene_name"),
-                                "metrics": result})
+                                "metrics": result, "outcome": outcome})
             all_labels.extend(labels)
             all_predictions.extend(predictions)
             group = (meta.get("pipeline", "unknown"), meta.get("scene_name", "").split("/")[-1])
@@ -151,8 +171,11 @@ def main(argv=None):
                       for m in metadata}
         if len(signatures) > 1:
             raise ValueError("Cannot pool different prediction models/revisions/input modes")
+        if len(execution_signatures) > 1:
+            raise ValueError("Cannot pool different execution modes or guard configurations")
         summary = evaluate(all_labels, all_predictions, args.threshold)
         summary.update({"episodes": per_episode, "incomplete_episode_ids": incomplete,
+                        "execution_metadata": [json.loads(s) for s in execution_signatures],
                         "prediction_metadata": metadata[:1],
                         "by_family_level": {"/".join(key): evaluate(*rows, threshold=args.threshold)
                                             for key, rows in group_rows.items()}})
