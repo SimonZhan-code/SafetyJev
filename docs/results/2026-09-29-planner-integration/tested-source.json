@@ -1,0 +1,19 @@
+{
+  "base_commit": "34ff936",
+  "scope": "Runtime Python modules and configs used by all three GPU cases; compared byte-for-byte before commit",
+  "sha256": {
+    "safetyjev/__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+    "safetyjev/capture.py": "649b949e52c131c15f51c59f0eb194c791395631187ff87288dac8bec896fcc9",
+    "safetyjev/cli.py": "0305c3a1a349a3e28b8476842088211bce896809dad9361aa04ed513d873c0ab",
+    "safetyjev/guard.py": "04207d94669caf5198b4cbc3d8de6c6d496b629727fa39c73aaf8a4e0cc33008",
+    "safetyjev/io.py": "e5d160fa67acdb204a82e9c51b3e9ea4ff597bc86bcfbbbdd15c028ce8444f88",
+    "safetyjev/labels.py": "a00df56512798cfb19d357ab60945584fe1d6250a043ff9833c14c196e697201",
+    "safetyjev/maniguard.py": "13f75178a9938e09d61ebf3536df833aad977759d695e74ef6fe61532f1a0f64",
+    "safetyjev/metrics.py": "5846bdd3662b64b450c84667cd0edea716758ee58a838b646eb3192399281fbf",
+    "safetyjev/planner.py": "fb442a60b37d26ecf7248a1c86360b9b570a6442e7fb15c0e0060fd70c52de19",
+    "safetyjev/predictors.py": "361e417a9a790ac6e561b44db597ea035b89a2004e54aecc1e456f70fd2b4779",
+    "configs/openrouter-deepseek-v4.1-flash.json": "154a21f97a42e0bb79ea0e78937f9c74acd07049734de2f65aed06fba0d1b48b",
+    "configs/openjev-state-only.json": "942c1719d5e50f1a0063f596dfe30f772b1d4181514b953f9813545ea1466131",
+    "configs/jar-isaac51-provenance.json": "a478b2114447c7d2ebc5d4d15cbc49c49e966db9a52b9879289e27aaa4353275"
+  }
+}

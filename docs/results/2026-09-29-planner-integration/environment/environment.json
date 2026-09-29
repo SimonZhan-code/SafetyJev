@@ -1,0 +1,21 @@
+{
+  "node": "ssh8.vast.ai:28085",
+  "gpu": "name, uuid, driver_version, memory.total [MiB]\nNVIDIA RTX PRO 6000 Blackwell Workstation Edition, GPU-f402bf02-024c-6420-66a5-4b1d51cd0785, 580.159.04, 97887 MiB",
+  "disk": "Filesystem      Size  Used Avail Use% Mounted on\noverlay         256G   82G  175G  32% /",
+  "host_memory": "total        used        free      shared  buff/cache   available\nMem:           123Gi        33Gi        13Gi       2.2Gi        79Gi        89Gi\nSwap:             0B          0B          0B",
+  "cgroup_memory_limit_bytes": "127234211840",
+  "python": "Python 3.11.16",
+  "source_commits": {
+    "ManiGuard": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+    "openpi": "215abfb217dbac7d5f1273282331b9b1866c0479",
+    "Open-Jev": "3308a15ccd7eea1df7a37d6ddc39b023b801ba16",
+    "BEHAVIOR-5.1": "d89aae4e0e9a1de3cf8285cb9669c11d8c8bb864"
+  },
+  "isaacsim": "5.1.0.0",
+  "policy_checkpoint": "IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora/7400",
+  "critic_health": {
+    "status": "ready",
+    "model": "Qwen/Qwen3.5-2B",
+    "method": "lora_decision_head"
+  }
+}

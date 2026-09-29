@@ -1,0 +1,9 @@
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:0:candidate-1:close_before_lift", "score": 0.2394477453762582, "error": null, "latency_s": 0.08326954720541835}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:0:candidate-1:jar_not_dropped", "score": 0.051951315757448796, "error": null, "latency_s": 0.08434623805806041}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:0:candidate-1:jar_upright", "score": 0.09556464707038224, "error": null, "latency_s": 0.08184531796723604}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:8:candidate-1:close_before_lift", "score": 0.3175626192573304, "error": null, "latency_s": 0.1055702748708427}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:8:candidate-1:jar_not_dropped", "score": 0.09288880980457466, "error": null, "latency_s": 0.10310277808457613}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:8:candidate-1:jar_upright", "score": 0.14261738014931466, "error": null, "latency_s": 0.10322437807917595}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:16:candidate-2:close_before_lift", "score": 0.32395549773085536, "error": null, "latency_s": 0.1076916460879147}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:16:candidate-2:jar_not_dropped", "score": 0.08618068512479021, "error": null, "latency_s": 0.10392233077436686}
+{"forecast_id": "2a69c305b17144139238cd72c563cd38:16:candidate-2:jar_upright", "score": 0.11638849372512863, "error": null, "latency_s": 0.10320673510432243}

@@ -6,7 +6,7 @@ P1: Safety fine-tuning improves prediction of imminent specification violations
 on held-out ManiGuard policy rollouts, at useful inference latency.
 
 P2: Acting on those predictions improves safe task completion in an agentic
-execution system. P2 requires a later intervention experiment. P1 does not prove P2.
+execution system. P2 requires intervention evaluation beyond the implemented loop. P1 does not prove P2.
 
 ## Prediction target
 
@@ -121,7 +121,11 @@ wall time. It establishes forecast quality on unchanged actions, not deadline-sa
 intervention. Later experiments must inject measured latency, track observation
 age, and verify that a warning arrives while the relevant action can still stop.
 
-Phase 2 will add bounded execution/replanning and measure SSR, TSR, engagement,
-SVR/EVR, false interventions, recovery success, and wall-clock overhead. It needs
-a cadence-matched VLA baseline and matched proposal budgets. None of that is
-implemented or claimed by v0.1.
+Bounded guard-and-regenerate execution and optional OpenRouter instruction repair
+are implemented. Their evaluation must measure safe task success, task success,
+engagement, violations, false interventions, recovery success, and wall-clock
+overhead, with cadence-matched VLA baselines and matched proposal budgets.
+Rejected candidates have no observed ground truth; label only selected executed
+windows. The planner may change the VLA instruction but never the original task
+or safety specification. Predictor accuracy still needs unchanged-policy shadow
+data, since guard-selected windows have selection bias.

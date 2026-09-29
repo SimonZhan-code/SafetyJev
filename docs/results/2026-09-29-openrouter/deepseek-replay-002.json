@@ -1,0 +1,55 @@
+{
+  "mode": "live_planner_on_recorded_shadow_inputs",
+  "live_simulation": false,
+  "source_episode": "227d236e22354ac78cf63be19772b696",
+  "step": 32,
+  "threshold": 0.35,
+  "threshold_note": "Deliberate rejection-path diagnostic; not a tuned safety threshold",
+  "planner": {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "include_images": true,
+    "timeout": 30,
+    "max_tokens": 256,
+    "max_calls_per_episode": 20,
+    "history_limit": 8,
+    "prompt_scope": "next replacement chunk only",
+    "reasoning_enabled": null,
+    "system_prompt_sha256": "6030cf70354044cffbac2544347b504a2184e85b1cc375353cad0c8abfb2aa2d"
+  },
+  "guard_feedback": [
+    {
+      "constraint_id": "close_before_lift",
+      "score": 0.3926793294983337,
+      "verdict": "violated"
+    },
+    {
+      "constraint_id": "jar_not_dropped",
+      "score": 0.076294289797659,
+      "verdict": "no_violation"
+    },
+    {
+      "constraint_id": "jar_upright",
+      "score": 0.12284350002574905,
+      "verdict": "no_violation"
+    }
+  ],
+  "source_sha256": {
+    "forecasts.jsonl": "79f07e60aebdc9dec3e5fb46887f56571a88f6221e6d0a6e4dfcb17324a9e4d4",
+    "predictions.jsonl": "ce98e475ebf008c6984e486e69d1d5064c8248152deff15fede9719ac66b7b09"
+  },
+  "status": "failed",
+  "error": "Planner response incomplete or refused",
+  "diagnostics": {
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 3457,
+      "completion_tokens": 256,
+      "total_tokens": 3713,
+      "cost": 0.0013443,
+      "reasoning_tokens": 0
+    }
+  },
+  "elapsed_s": 2.107963878661394
+}

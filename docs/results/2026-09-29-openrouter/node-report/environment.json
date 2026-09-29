@@ -1,0 +1,12 @@
+{
+  "node": "87.192.101.6:15176",
+  "python": "3.12.3",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 580.159.04, 97887 MiB, 1 MiB",
+  "disk": "Filesystem      Size  Used Avail Use% Mounted on\noverlay          32G   27M   32G   1% /\n",
+  "memory_limit_bytes": 126995136512,
+  "workspace_is_volume": false,
+  "simulator_installed": false,
+  "policy_installed": false,
+  "critic_installed": false
+}

@@ -1,0 +1,22 @@
+{
+  "scope": "live OpenRouter replay only; no live VLA, critic, or simulator on this node",
+  "requests": 6,
+  "initial_failures": 2,
+  "nonreasoning_passed": 4,
+  "nonreasoning_attempts": 4,
+  "nonreasoning_latency_s": {
+    "min": 0.7985513862222433,
+    "median": 1.019958756864071,
+    "max": 2.1280553359538317
+  },
+  "known_reported_cost_usd": 0.00306135,
+  "missing_usage_requests": [
+    "001"
+  ],
+  "temporary_runtime_credential_removed": true,
+  "local_cpu_tests_passed": 55,
+  "gpu_services_started": false,
+  "instance_stopped": false,
+  "full_rollout_blocker_at_probe_time": "32 GiB container disk; simulator assets alone are approximately 33 GB",
+  "subsequent_resolution": "Full three-mode integration completed on ssh8.vast.ai:28085; see ../2026-09-29-planner-integration"
+}

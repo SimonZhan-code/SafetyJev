@@ -1,0 +1,156 @@
+{
+  "scope": "64-action development integration; not safety improvement or accuracy evidence",
+  "cases": [
+    {
+      "case": "shadow",
+      "episode_id": "3e31842bd9de41528e6fa14b7bfdbf6a",
+      "steps": 64,
+      "success": false,
+      "raw_violation": true,
+      "raw_first_violation_step": 3,
+      "engaged": false,
+      "counted_violation": false,
+      "termination_reason": null,
+      "candidate_attempts": 0,
+      "accepted_chunks": 0,
+      "rejected_chunks": 0,
+      "executed_replacement_chunks": 0,
+      "selected_scores": 32,
+      "candidate_scores": 0,
+      "planner_calls": 0,
+      "planner_latency": {
+        "count": 0,
+        "median_s": null,
+        "max_s": null
+      },
+      "planner_reported_cost_usd": 0,
+      "critic_request_latency": {
+        "count": 32,
+        "median_s": 0.10424596001394093,
+        "max_s": 0.9412879920564592
+      },
+      "guard_candidate_latency": {
+        "count": 0,
+        "median_s": null,
+        "max_s": null
+      },
+      "process_wall_s": 162.0280692577362,
+      "guard_counters": null,
+      "oracle_samples": 65
+    },
+    {
+      "case": "guard",
+      "episode_id": "2a69c305b17144139238cd72c563cd38",
+      "steps": 24,
+      "success": false,
+      "raw_violation": true,
+      "raw_first_violation_step": 3,
+      "engaged": false,
+      "counted_violation": false,
+      "termination_reason": "guard_retries_exhausted",
+      "candidate_attempts": 11,
+      "accepted_chunks": 3,
+      "rejected_chunks": 8,
+      "executed_replacement_chunks": 3,
+      "selected_scores": 9,
+      "candidate_scores": 33,
+      "planner_calls": 0,
+      "planner_latency": {
+        "count": 0,
+        "median_s": null,
+        "max_s": null
+      },
+      "planner_reported_cost_usd": 0,
+      "critic_request_latency": {
+        "count": 33,
+        "median_s": 0.10322437807917595,
+        "max_s": 0.10808873875066638
+      },
+      "guard_candidate_latency": {
+        "count": 11,
+        "median_s": 0.33470817701891065,
+        "max_s": 0.3374013020657003
+      },
+      "process_wall_s": 21.69177746772766,
+      "guard_counters": {
+        "mode": "guard_regenerate",
+        "termination_reason": "guard_retries_exhausted",
+        "candidate_attempts": 11,
+        "accepted_chunks": 3,
+        "rejected_chunks": 8,
+        "regenerations": 7,
+        "unknown_candidates": 0,
+        "duplicate_candidates": 0,
+        "guard_latency_s": 3.5839601308107376,
+        "selection_latency_s": 3.991316845174879,
+        "planner_calls": 0,
+        "planner_failures": 0,
+        "planner_latency_s": 0.0
+      },
+      "oracle_samples": 25
+    },
+    {
+      "case": "planner",
+      "episode_id": "a0926df1e5bd46eeb71559c4ca64f910",
+      "steps": 64,
+      "success": false,
+      "raw_violation": true,
+      "raw_first_violation_step": 3,
+      "engaged": false,
+      "counted_violation": false,
+      "termination_reason": null,
+      "candidate_attempts": 13,
+      "accepted_chunks": 8,
+      "rejected_chunks": 5,
+      "executed_replacement_chunks": 3,
+      "selected_scores": 24,
+      "candidate_scores": 39,
+      "planner_calls": 5,
+      "planner_latency": {
+        "count": 5,
+        "median_s": 2.057940245140344,
+        "max_s": 4.594211875926703
+      },
+      "planner_reported_cost_usd": 0.0051981,
+      "critic_request_latency": {
+        "count": 39,
+        "median_s": 0.10528899217024446,
+        "max_s": 0.10956111922860146
+      },
+      "guard_candidate_latency": {
+        "count": 13,
+        "median_s": 0.3373455158434808,
+        "max_s": 0.38233318412676454
+      },
+      "process_wall_s": 34.75659155845642,
+      "guard_counters": {
+        "mode": "guard_regenerate",
+        "termination_reason": null,
+        "candidate_attempts": 13,
+        "accepted_chunks": 8,
+        "rejected_chunks": 5,
+        "regenerations": 5,
+        "unknown_candidates": 0,
+        "duplicate_candidates": 0,
+        "guard_latency_s": 4.393333015963435,
+        "selection_latency_s": 16.002449043095112,
+        "planner_calls": 5,
+        "planner_failures": 0,
+        "planner_latency_s": 11.30332146352157
+      },
+      "oracle_samples": 65
+    }
+  ],
+  "trace_consistency_checks_passed": true,
+  "sampled_peak_total_gpu_mib": 18627.0,
+  "initial_candidate_parity": {
+    "guard": {
+      "max_absolute_robot_state_delta_from_shadow": 0.0,
+      "max_absolute_action_delta_from_shadow": 0.003994405269622803
+    },
+    "planner": {
+      "max_absolute_robot_state_delta_from_shadow": 0.0,
+      "max_absolute_action_delta_from_shadow": 0.0028992798179388046
+    }
+  }
+}

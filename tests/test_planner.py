@@ -74,6 +74,24 @@ class PlannerAPITests(unittest.TestCase):
         self.assertEqual(plan["response_model"], "provider/test")
         self.assertNotIn("TEST_SECRET_KEY", json.dumps(plan))
 
+    def test_explicit_reasoning_setting_and_failure_usage(self):
+        planner = OpenRouterPlanner({"include_images": False, "reasoning_enabled": False})
+        body, _ = planner.request_body(context(), "/unused")
+        self.assertEqual(body["reasoning"], {"enabled": False, "exclude": True})
+        self.assertFalse(planner.metadata()["reasoning_enabled"])
+        with patch("safetyjev.planner.urlopen", return_value=response(finish="length")):
+            with self.assertRaises(PlannerError) as raised:
+                planner.plan(context(), "/unused")
+        self.assertEqual(raised.exception.diagnostics["finish_reason"], "length")
+        self.assertEqual(raised.exception.diagnostics["usage"]["cost"], .001)
+        self.assertNotIn("TEST_SECRET_KEY", json.dumps(raised.exception.diagnostics))
+
+    def test_reasoning_setting_does_not_change_generic_default(self):
+        body, _ = self.planner.request_body(context(), "/unused")
+        self.assertNotIn("reasoning", body)
+        with self.assertRaises(ValueError):
+            OpenRouterPlanner({"reasoning_enabled": "false"})
+
     def test_images_are_current_pngs_and_paths_cannot_escape_episode(self):
         self.planner.include_images = True
         with tempfile.TemporaryDirectory() as temp:

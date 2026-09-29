@@ -120,6 +120,7 @@ class GuardedEpisode(ShadowEpisode):
                         self.selection_latency_s += time.monotonic() - started
                         append_jsonl(self.directory / "planner.jsonl", {
                             "candidate_id": candidate_id, "latency_s": elapsed,
+                            "diagnostics": exc.diagnostics if isinstance(exc, PlannerError) else {},
                             "error": str(exc) if isinstance(exc, PlannerError) else type(exc).__name__})
                         return None
                     self.planner_latency_s += time.monotonic() - plan_started

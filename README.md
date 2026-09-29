@@ -20,7 +20,7 @@ We separate two experiments:
 Optional **System 1 planner**: add `--planner-config configs/openrouter-planner.json`
 to guarded execution to send rejection feedback, current cameras/state, and bounded
 history to OpenRouter. Its revised VLA instruction generates a replacement chunk
-that must pass the same guard. See [OpenRouter setup](docs/openrouter-planner.md).
+that must pass the same guard. See [OpenRouter setup](docs/runbook.md).
 
 ```text
 ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
@@ -31,11 +31,19 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Status:** All 53 CPU tests pass, covering guard acceptance, rejection, regeneration, timeouts,
-retry exhaustion, and the actual pinned runner's execution loop with controlled
-policy/guard/simulator boundaries. The new intervention mode has **not yet had a
-live GPU simulator run**; the previous node refused SSH on 2026-09-29. See the
-[guarded-loop guide](docs/guarded-loop.md) for activation and validation details.
+**Status:** The full π0.5 + Open-Jev 2B + Isaac Sim 5.1 + DeepSeek V4.1 Flash
+loop ran on one RTX PRO 6000 Blackwell (256 GiB disk). Five live planner calls
+returned valid instructions; three repaired replacement chunks passed the guard
+and executed. The planner case reached its 64-action cap, while guard-only
+regeneration stopped at 24 actions after retry exhaustion. Peak total GPU memory
+was 18.2 GiB; median planner latency was 2.06 s. All 55 CPU tests pass.
+
+This validates integration, **not improved safety**. All three short cases failed
+the task, never contacted the target objects, and had a raw violation at step 3.
+The 0.35 guard threshold deliberately exercises rejection; the critic is still
+an untuned, text-only baseline. Initial proposals also differ slightly across
+same-seed runs, so this is not a controlled performance comparison.
+See [evaluation results](docs/evaluation-results.md) and the [runbook](docs/runbook.md).
 
 Earlier shadow evaluation: on an RTX PRO
 6000 Blackwell with driver 580.126.09, the ManiGuard fine-tuned π0.5 jar policy,
@@ -48,9 +56,9 @@ noisy policy-camera images on Blackwell. Its rollout was aborted and excluded.
 The newer simulator renders clean images, but benchmark equivalence is unverified.
 The full pilot failed the task and has only two per-constraint positive events;
 it does not establish safety-model accuracy. See the
-[driver-580 compatibility report](docs/pro6000-580-evaluation.md) for results,
+[driver-580 compatibility report](docs/evaluation-results.md) for results,
 limitations, exact versions, and reproducible artifacts. Earlier model-only
-measurements remain in the [initial report](docs/pro6000-evaluation.md).
+measurements are retained in the same consolidated results record.
 
 The first policy is
 [ManiGuard's π0.5 jar checkpoint](https://huggingface.co/IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora),

@@ -27,11 +27,15 @@ VLA chunk will be independently rechecked by the guard."""
 class PlannerError(RuntimeError):
     """Safe-to-log error; never contains response bodies or credentials."""
 
+    def __init__(self, message, diagnostics=None):
+        super().__init__(message)
+        self.diagnostics = diagnostics or {}
+
 
 class OpenRouterPlanner:
     def __init__(self, config):
         allowed = {"model", "model_env", "api_key_env", "include_images", "timeout",
-                   "max_tokens", "max_calls_per_episode", "history_limit"}
+                   "max_tokens", "max_calls_per_episode", "history_limit", "reasoning_enabled"}
         if not isinstance(config, dict) or set(config) - allowed:
             raise ValueError("Unknown planner config fields; store credentials only in an environment variable")
         self.model = config.get("model") or os.environ.get(config.get("model_env", "OPENROUTER_MODEL"))
@@ -46,6 +50,9 @@ class OpenRouterPlanner:
         self.max_tokens = config.get("max_tokens", 256)
         self.max_calls = config.get("max_calls_per_episode", 20)
         self.history_limit = config.get("history_limit", 8)
+        self.reasoning_enabled = config.get("reasoning_enabled")
+        if self.reasoning_enabled is not None and type(self.reasoning_enabled) is not bool:
+            raise ValueError("reasoning_enabled must be boolean when supplied")
         if type(self.include_images) is not bool:
             raise ValueError("include_images must be boolean")
         if (isinstance(self.timeout, bool) or not isinstance(self.timeout, (int, float))
@@ -60,6 +67,7 @@ class OpenRouterPlanner:
                 "include_images": self.include_images, "timeout": self.timeout,
                 "max_tokens": self.max_tokens, "max_calls_per_episode": self.max_calls,
                 "history_limit": self.history_limit, "prompt_scope": "next replacement chunk only",
+                "reasoning_enabled": self.reasoning_enabled,
                 "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()}
 
     def request_body(self, context, directory):
@@ -106,6 +114,8 @@ class OpenRouterPlanner:
                     "type": "object", "properties": {"vla_instruction": {"type": "string"}},
                     "required": ["vla_instruction"], "additionalProperties": False}}},
         }
+        if self.reasoning_enabled is not None:
+            body["reasoning"] = {"enabled": self.reasoning_enabled, "exclude": True}
         return body, {"context": data, "images": image_manifest}
 
     def plan(self, context, directory):
@@ -121,8 +131,16 @@ class OpenRouterPlanner:
                 raise PlannerError("Planner response exceeds size bound")
             result = json.loads(raw)
             choice = result["choices"][0]
+            usage = {k: v for k, v in (result.get("usage") or {}).items()
+                     if k in ("prompt_tokens", "completion_tokens", "total_tokens", "cost")
+                     and type(v) in (int, float) and math.isfinite(v) and v >= 0}
+            reasoning_tokens = ((result.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens")
+            if type(reasoning_tokens) is int and reasoning_tokens >= 0:
+                usage["reasoning_tokens"] = reasoning_tokens
             if choice.get("finish_reason") != "stop" or choice["message"].get("refusal"):
-                raise PlannerError("Planner response incomplete or refused")
+                reason = choice.get("finish_reason")
+                reason = reason if reason in ("length", "stop", "content_filter", "tool_calls", "error") else "unknown"
+                raise PlannerError("Planner response incomplete or refused", {"finish_reason": reason, "usage": usage})
             content = json.loads(choice["message"]["content"])
             if not isinstance(content, dict) or set(content) != {"vla_instruction"}:
                 raise PlannerError("Planner response does not match instruction schema")
@@ -132,9 +150,6 @@ class OpenRouterPlanner:
             if any(ord(c) < 32 for c in instruction) or self._api_key in instruction:
                 raise PlannerError("Planner instruction contains invalid content")
             # Do not log arbitrary server payloads, headers, errors, or reasoning.
-            usage = {k: v for k, v in (result.get("usage") or {}).items()
-                     if k in ("prompt_tokens", "completion_tokens", "total_tokens", "cost")
-                     and type(v) in (int, float) and math.isfinite(v) and v >= 0}
             response_model = result.get("model")
             if (not isinstance(response_model, str) or len(response_model) > 200
                     or self._api_key in response_model):
