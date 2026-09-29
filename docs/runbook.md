@@ -107,6 +107,13 @@ The API model ID must match the server’s `/health` identity (the upstream Qwen
 name), not the Open-Jev package name or experiment label. The pinned predictor
 revision above identifies the published Open-Jev adapter/head package.
 
+For completed captures, add `--eligible-only` to offline `predict` to skip
+windows excluded by the labeling rules (for example, already violated constraints).
+The evaluator determines eligibility from the oracle, but sends only the original
+pre-action forecast to the scorer. Selection is recorded in prediction metadata.
+Use the same selection for every model; offline timing then covers the eligible
+subset, whereas online capture still records all attempted requests.
+
 This explicitly omits camera pixels. It cannot establish the quality of a
 multimodal safety model. Scores from a future multimodal scorer should use the
 same `forecast_id`, with JSONL rows:

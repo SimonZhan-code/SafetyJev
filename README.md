@@ -23,15 +23,20 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Status:** All 24 CPU evaluation tests and pinned source-hook checks pass.
-On one RTX PRO 6000, the fine-tuned π0.5 jar policy successfully served alongside
-Open-Jev 2B, 9B, 27B, and a separately labeled 4B base-model decision head.
-Each variant completed 20 measured synthetic-input safety requests. These are
-serving tests, not safety-accuracy results. See the
-[single-GPU evaluation report](docs/pro6000-evaluation.md) for timings and memory.
-Isaac Sim repeatedly segfaulted during renderer startup on this node, so no
-three-component rollout or safety-accuracy evaluation completed. License
-acceptance is confirmed; host/runtime compatibility is the remaining blocker.
+**Status:** All 26 CPU tests and pinned source-hook checks pass. On an RTX PRO
+6000 Blackwell with driver 580.126.09, the ManiGuard fine-tuned π0.5 jar policy,
+Open-Jev, and simulation ran together using a separate **Isaac Sim 5.1
+compatibility environment**. The 2B pilot completed 2,000 actions; the 4B base
+head, 9B, and 27B variants each completed a 64-action coexistence check.
+
+The original pinned Isaac Sim 4.5 stack starts on this host but produces heavily
+noisy policy-camera images on Blackwell. Its rollout was aborted and excluded.
+The newer simulator renders clean images, but benchmark equivalence is unverified.
+The full pilot failed the task and has only two per-constraint positive events;
+it does not establish safety-model accuracy. See the
+[driver-580 compatibility report](docs/pro6000-580-evaluation.md) for results,
+limitations, exact versions, and reproducible artifacts. Earlier model-only
+measurements remain in the [initial report](docs/pro6000-evaluation.md).
 
 The first policy is
 [ManiGuard's π0.5 jar checkpoint](https://huggingface.co/IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora),

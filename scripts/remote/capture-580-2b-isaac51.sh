@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+export OMNI_KIT_ACCEPT_EULA=YES
+export OMNIGIBSON_HEADLESS=1
+export OMNIGIBSON_DATA_PATH=/workspace/ManiGuard/behavior-1k/datasets
+export CUDA_VISIBLE_DEVICES=0
+export VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json
+export PYTHONNOUSERSITE=1
+export PYTHONPATH=/workspace/SafetyJev:/workspace/ManiGuard
+cd /workspace/ManiGuard
+exec /workspace/conda/behavior51/bin/python -u -m safetyjev.cli capture \
+ --maniguard-root /workspace/ManiGuard \
+ --output /workspace/SafetyJev/artifacts/jar-580-2b-isaac51 \
+ --provenance /workspace/SafetyJev/configs/jar-isaac51-provenance.json \
+ --online-predictor /workspace/SafetyJev/configs/openjev-state-only.json \
+ -- --config configs/eval/jar_transport_joint.yaml \
+ --benchmark-root /workspace/data/maniguard-bench/jar_transport \
+ --scenes task_0000/base --seed 0 --tag safetyjev-580-2b-isaac51

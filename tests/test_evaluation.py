@@ -142,6 +142,49 @@ class PredictorTests(unittest.TestCase):
             OpenJevHTTP("http://localhost", "test", "multimodal")
 
 
+class ReplayTests(unittest.TestCase):
+    def args(self, episode):
+        return ["predict", "--episodes", str(episode), "--name", "filtered",
+                "--endpoint", "http://localhost/v1/systemone", "--model-id", "fixture",
+                "--predictor-revision", "pinned", "--input-mode", "proprio_only", "--eligible-only"]
+
+    def test_eligible_replay_preserves_metrics_and_blinds_scorer(self):
+        with tempfile.TemporaryDirectory() as temp:
+            episode = Path(temp)
+            write_json(episode / "episode.json", {"episode_id": "e"})
+            write_json(episode / "complete.json", {})
+            rows = [forecast(0, 1, fid="negative"), forecast(1, 1, fid="positive"),
+                    forecast(2, 1, fid="excluded")]
+            truth = oracle([False, False, True, True])
+            for row in rows:
+                append_jsonl(episode / "forecasts.jsonl", row)
+            for row in truth:
+                append_jsonl(episode / "oracle.jsonl", row)
+            def score(row):
+                self.assertEqual(row, next(r for r in rows if r["forecast_id"] == row["forecast_id"]))
+                self.assertNotIn("label", row)
+                return {"forecast_id": row["forecast_id"], "score": .8}
+            with patch("safetyjev.cli.OpenJevHTTP.score", side_effect=score) as mocked:
+                main(self.args(episode))
+            self.assertEqual([call.args[0]["forecast_id"] for call in mocked.call_args_list],
+                             ["negative", "positive"])
+            filtered = [json.loads(x) for x in (episode / "filtered.jsonl").read_text().splitlines()]
+            labels = label_forecasts(rows, truth)
+            result = evaluate(labels, filtered)
+            self.assertEqual(result["missing_predictions"], 0)
+            self.assertEqual(result["prediction_coverage"], 1)
+            self.assertEqual(result["micro"], evaluate(labels, filtered + [{"forecast_id": "excluded", "score": .8}])["micro"])
+            self.assertEqual(json.loads((episode / "filtered.meta.json").read_text())["selection"], "eligible_windows")
+
+    def test_incomplete_replay_rejected_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            episode = Path(temp)
+            write_json(episode / "episode.json", {"episode_id": "e"})
+            with self.assertRaisesRegex(ValueError, "complete episodes"):
+                main(self.args(episode))
+            self.assertFalse((episode / "filtered.meta.json").exists())
+
+
 class ReportTests(unittest.TestCase):
     def test_report_from_recorded_fixture_and_missing_run(self):
         with tempfile.TemporaryDirectory() as temp:

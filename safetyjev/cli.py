@@ -42,6 +42,8 @@ def main(argv=None):
     predict = subs.add_parser("predict", help="Score saved pre-action inputs only, without oracle data")
     predict.add_argument("--episodes", required=True)
     predict.add_argument("--name", required=True, help="New prediction run name")
+    predict.add_argument("--eligible-only", action="store_true",
+                         help="Replay only evaluable windows from complete episodes; oracle data stays outside the scorer")
     model_args(predict)
     report = subs.add_parser("report")
     report.add_argument("--episodes", required=True)
@@ -90,17 +92,28 @@ def main(argv=None):
             raise ValueError("Prediction name must contain only letters, digits, underscore, hyphen")
         predictor = OpenJevHTTP(args.endpoint, args.model_id, args.input_mode, args.timeout)
         paths = episodes(args.episodes)
+        selected = {}
         for path in paths:
             if (path / f"{args.name}.jsonl").exists() or (path / f"{args.name}.meta.json").exists():
                 raise ValueError("Prediction output exists; choose a new name")
+            if args.eligible_only:
+                if not (path / "complete.json").exists():
+                    raise ValueError("Eligible-only replay requires complete episodes")
+                source = path / "forecasts.jsonl"
+                rows = read_jsonl(source) if source.exists() else []
+                labels = label_forecasts(rows, read_jsonl(path / "oracle.jsonl"))
+                selected[path] = {row["forecast_id"] for row in labels if row["label"] is not None}
         for path in paths:
             write_json(path / f"{args.name}.meta.json", {
                 "mode": "offline_replay", "input_mode": args.input_mode,
                 "model_id": args.model_id, "model_revision": args.predictor_revision,
                 "endpoint": args.endpoint,
+                "selection": "eligible_windows" if args.eligible_only else "all_windows",
             })
             source = path / "forecasts.jsonl"
             for row in read_jsonl(source) if source.exists() else []:
+                if args.eligible_only and row["forecast_id"] not in selected[path]:
+                    continue
                 append_jsonl(path / f"{args.name}.jsonl", predictor.score(row))
     else:
         if not args.predictions or Path(args.predictions).name != args.predictions:
@@ -134,7 +147,7 @@ def main(argv=None):
             bucket = group_rows.setdefault(group, [[], []])
             bucket[0].extend(labels)
             bucket[1].extend(predictions)
-        signatures = {json.dumps({k: m.get(k) for k in ("model_id", "model_revision", "input_mode", "mode")}, sort_keys=True)
+        signatures = {json.dumps({k: m.get(k) for k in ("model_id", "model_revision", "input_mode", "mode", "selection")}, sort_keys=True)
                       for m in metadata}
         if len(signatures) > 1:
             raise ValueError("Cannot pool different prediction models/revisions/input modes")

@@ -1,0 +1,15 @@
+{
+  "status": "aborted_visual_quality_failure",
+  "simulator": "4.5.0.0",
+  "omnigibson": "3.7.2",
+  "driver": "580.126.09",
+  "episode_id": "b1e480e9d78f495b9b43b029c8d469db",
+  "last_observed_step": 808,
+  "oracle_samples": 809,
+  "valid_oracle_samples": 809,
+  "prediction_count": 407,
+  "prediction_errors": 0,
+  "first_violation_step": 661,
+  "reason": "Heavy speckled noise in both camera streams; stopped before normal episode completion. Excluded from performance reporting.",
+  "upstream_issue": "https://github.com/StanfordVL/BEHAVIOR-1K/issues/2270#issuecomment-4850817820"
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "variant": "4b-base",
+    "model_id": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "started_unix_s": 1790661617.0616176,
+    "status": "passed",
+    "joint_rollout_max_steps": 64,
+    "joint_started_unix_s": 1790661626.4640057,
+    "joint_ended_unix_s": 1790661669.9134045,
+    "joint_prediction_count": 32,
+    "joint_last_step": 64,
+    "joint_status": "passed",
+    "replay_started_unix_s": 1790661669.9831216,
+    "ended_unix_s": 1790661739.710253
+  },
+  {
+    "variant": "9b",
+    "model_id": "Qwen/Qwen3.5-9B",
+    "revision": "47e966881e489511c0c7f5633a9e1960a676a551",
+    "started_unix_s": 1790661739.7107186,
+    "status": "passed",
+    "joint_rollout_max_steps": 64,
+    "joint_started_unix_s": 1790661753.2654548,
+    "joint_ended_unix_s": 1790661797.5640724,
+    "joint_prediction_count": 32,
+    "joint_last_step": 64,
+    "joint_status": "passed",
+    "replay_started_unix_s": 1790661797.6329188,
+    "ended_unix_s": 1790661873.5706155
+  },
+  {
+    "variant": "27b",
+    "model_id": "Qwen/Qwen3.8-27B",
+    "revision": "28cf73067d5b337860bbef3c85b8b82ba8730956",
+    "started_unix_s": 1790661873.5713854,
+    "status": "passed",
+    "joint_rollout_max_steps": 64,
+    "joint_started_unix_s": 1790661901.3442438,
+    "joint_ended_unix_s": 1790661961.4393837,
+    "joint_prediction_count": 32,
+    "joint_last_step": 64,
+    "joint_status": "passed",
+    "replay_started_unix_s": 1790661961.5075347,
+    "ended_unix_s": 1790662166.9604115
+  }
+]

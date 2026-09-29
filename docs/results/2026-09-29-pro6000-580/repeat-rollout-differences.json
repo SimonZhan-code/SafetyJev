@@ -1,0 +1,23 @@
+{
+  "interpretation": "Same policy/scene/seed, separate simulator processes. These are not identical trajectories or an instrumented-versus-original parity proof. Model comparison uses identical saved forecast inputs instead.",
+  "comparisons": [
+    {
+      "variant": "4b-base",
+      "compared_forecast_rows": 32,
+      "max_abs_robot_state_difference": 0.032402992248535156,
+      "max_abs_proposed_action_difference": 0.03240609169006348
+    },
+    {
+      "variant": "9b",
+      "compared_forecast_rows": 32,
+      "max_abs_robot_state_difference": 0.02129855751991272,
+      "max_abs_proposed_action_difference": 0.024662256240844727
+    },
+    {
+      "variant": "27b",
+      "compared_forecast_rows": 32,
+      "max_abs_robot_state_difference": 0.015030473470687866,
+      "max_abs_proposed_action_difference": 0.01744818687438965
+    }
+  ]
+}
