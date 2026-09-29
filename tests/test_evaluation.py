@@ -188,7 +188,9 @@ class ReplayTests(unittest.TestCase):
 class ReportTests(unittest.TestCase):
     def test_mixed_execution_modes_or_guard_settings_are_not_pooled(self):
         for second in ({"mode": "shadow_no_intervention"},
-                       {"mode": "guard_regenerate", "guard": {"threshold": .7}}):
+                       {"mode": "guard_regenerate", "guard": {"threshold": .7}},
+                       {"mode": "guard_regenerate", "guard": {"threshold": .5},
+                        "planner": {"model": "different/planner"}}):
             with self.subTest(second=second), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
                 for name, execution in (("a", {"mode": "guard_regenerate", "guard": {"threshold": .5}}),

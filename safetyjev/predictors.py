@@ -24,6 +24,8 @@ class OpenJevHTTP:
             "robot_state", "past_robot_states", "task_instruction",
             "remaining_actions", "action_frequency_hz", "action_convention",
         )}
+        if "policy_instruction" in data:
+            state["policy_instruction"] = data["policy_instruction"]
         constraint = data["constraint"]
         return {
             "model": self.model_id,

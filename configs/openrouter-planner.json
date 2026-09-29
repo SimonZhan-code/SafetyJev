@@ -1,0 +1,9 @@
+{
+  "model_env": "OPENROUTER_MODEL",
+  "api_key_env": "OPENROUTER_API_KEY",
+  "include_images": true,
+  "timeout": 30,
+  "max_tokens": 256,
+  "max_calls_per_episode": 20,
+  "history_limit": 8
+}

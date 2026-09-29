@@ -123,13 +123,15 @@ class ShadowEpisode:
                 "input": {
                     "robot_state": observation["states"].tolist(),
                     "past_robot_states": copy.deepcopy(self.history[-4:]),
-                    "task_instruction": observation["task_descriptions"],
+                    "task_instruction": observation.get("original_task_instruction", observation["task_descriptions"]),
                     "images": images, "remaining_actions": actions.tolist(),
                     "action_frequency_hz": self.cfg.action_frequency,
                     "action_convention": "absolute joint radians(7) + binarized gripper(1), clipped to controller bounds",
                     "constraint": constraint,
                 },
             }
+            if "original_task_instruction" in observation:
+                forecast["input"]["policy_instruction"] = observation["task_descriptions"]
             forecasts.append(forecast)
         return forecasts
 

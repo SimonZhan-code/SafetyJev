@@ -1,7 +1,9 @@
 # Guard-and-regenerate loop
 
-This first intervention uses one VLA and one safety guard. No second VLM, prompt
-rewriting, recovery planner, online training, or oracle-guided action selection.
+The default intervention uses one VLA and one safety guard. To add an OpenRouter
+planner that rewrites instructions after rejection, see [System 1 setup](openrouter-planner.md).
+Without `--planner-config`, there is no second VLM or prompt rewriting. Neither
+mode uses online training or oracle-guided action selection.
 
 ```text
 current observation -> VLA proposal -> evaluate every constraint

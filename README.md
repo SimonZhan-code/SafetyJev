@@ -17,6 +17,11 @@ We separate two experiments:
    proposal from the same observation; bounded retry exhaustion ends the simulated
    episode unsuccessfully. No second VLM or prompt rewriting is used.
 
+Optional **System 1 planner**: add `--planner-config configs/openrouter-planner.json`
+to guarded execution to send rejection feedback, current cameras/state, and bounded
+history to OpenRouter. Its revised VLA instruction generates a replacement chunk
+that must pass the same guard. See [OpenRouter setup](docs/openrouter-planner.md).
+
 ```text
 ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
           |                    |                                  |
@@ -26,7 +31,7 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Status:** CPU tests cover guard acceptance, rejection, regeneration, timeouts,
+**Status:** All 53 CPU tests pass, covering guard acceptance, rejection, regeneration, timeouts,
 retry exhaustion, and the actual pinned runner's execution loop with controlled
 policy/guard/simulator boundaries. The new intervention mode has **not yet had a
 live GPU simulator run**; the previous node refused SSH on 2026-09-29. See the
@@ -95,6 +100,7 @@ multimodal scorer, which can emit predictions in the same JSONL contract.
 | `safetyjev/maniguard.py` | Hash-checked, in-memory upstream runner instrumentation |
 | `safetyjev/capture.py` | Pre-action snapshots and independent per-constraint oracle replay |
 | `safetyjev/guard.py` | All-constraint gating, bounded VLA regeneration, and candidate decision logs |
+| `safetyjev/planner.py` | Optional OpenRouter instruction repair with current cameras and bounded history |
 | `safetyjev/labels.py` | Horizon alignment, censoring, and monitor-gap handling |
 | `safetyjev/predictors.py` | Explicit input allowlist and Open-Jev HTTP scoring |
 | `safetyjev/metrics.py` | Confusion matrix, ranking, calibration diagnostics, coverage, timing |

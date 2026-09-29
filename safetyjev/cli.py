@@ -39,6 +39,7 @@ def main(argv=None):
     capture.add_argument("--recheck-every", type=int, default=0, help="0: chunk starts only; N: every N executed actions")
     capture.add_argument("--online-predictor", help="JSON with endpoint/model_id/predictor_revision/input_mode/timeout")
     capture.add_argument("--execution-mode", choices=["shadow", "guard_regenerate"], default="shadow")
+    capture.add_argument("--planner-config", help="Optional OpenRouter instruction-repair JSON; guard_regenerate only")
     capture.add_argument("--guard-threshold", type=float, default=.5,
                          help="Reject if any constraint score >= threshold; development default, not calibrated")
     capture.add_argument("--max-regenerations", type=int, default=3,
@@ -71,6 +72,15 @@ def main(argv=None):
             raise ValueError("recheck-every cannot be negative")
         from .guard import validate_guard_options
         validate_guard_options(args.guard_threshold, args.max_regenerations)
+        planner_config = None
+        if args.planner_config:
+            if args.execution_mode != "guard_regenerate":
+                raise ValueError("planner-config requires guard_regenerate execution mode")
+            from .planner import OpenRouterPlanner
+            planner_config = json.loads(Path(args.planner_config).read_text())
+            # Fail before simulator startup. Resolve the model once for provenance.
+            planner = OpenRouterPlanner(planner_config)
+            planner_config["model"] = planner.model
         if args.execution_mode == "guard_regenerate":
             if not args.online_predictor:
                 raise ValueError("guard_regenerate requires --online-predictor")
@@ -90,6 +100,8 @@ def main(argv=None):
         options = {"output": str(Path(args.output).resolve()), "provenance": provenance,
                    "recheck_every": args.recheck_every, "execution_mode": args.execution_mode,
                    "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}
+        if planner_config:
+            options["planner_config"] = planner_config
         if args.online_predictor:
             config = json.loads(Path(args.online_predictor).read_text())
             for key in ("endpoint", "model_id", "predictor_revision", "input_mode"):
@@ -142,7 +154,7 @@ def main(argv=None):
                 incomplete.append(meta["episode_id"])
                 continue
             execution_signatures.add(json.dumps({"mode": meta.get("mode", "shadow_no_intervention"),
-                                                  "guard": meta.get("guard")}, sort_keys=True))
+                                                  "guard": meta.get("guard"), "planner": meta.get("planner")}, sort_keys=True))
             forecast_path = path / "forecasts.jsonl"
             forecasts = read_jsonl(forecast_path) if forecast_path.exists() else []
             labels = label_forecasts(forecasts, read_jsonl(path / "oracle.jsonl"))
