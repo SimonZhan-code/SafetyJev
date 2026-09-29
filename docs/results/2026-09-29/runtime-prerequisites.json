@@ -1,0 +1,8 @@
+{
+  "spot_module": "/workspace/conda/behavior/lib/python3.10/site-packages/spot/__init__.py",
+  "monitor_states": 2,
+  "buddy_available": true,
+  "cuda_available": true,
+  "torch_version": "2.6.0+cu124",
+  "finite_gpu_matmul": true
+}

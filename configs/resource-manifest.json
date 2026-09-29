@@ -1,0 +1,48 @@
+{
+  "policy": {
+    "repo": "IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora",
+    "revision": "1d84eda070313a202a595e449fcf41a1a1e8a546",
+    "file_count": 126,
+    "top_level_entries": [
+      ".gitattributes",
+      "1850",
+      "3700",
+      "5550",
+      "7400",
+      "README.md"
+    ]
+  },
+  "benchmark": {
+    "repo": "IDEAS-Lab-Northwestern/ManiGuard-Bench",
+    "revision": "2ea32a1451669fb736ae78ffce9cc82aad4cceac",
+    "file_count": 6064,
+    "top_level_entries": [
+      ".gitattributes",
+      "LICENSE",
+      "README.md",
+      "cabinet_pickup",
+      "clutter_pickup",
+      "dusty_transfer",
+      "jar_transport",
+      "lid_transport",
+      "overview.png",
+      "stack_retrieve"
+    ]
+  },
+  "predictor": {
+    "repo": "ZefanCai/Open-Jev-2B",
+    "revision": "0c7aa498b1627be8da4acf34c863ff0ee0a92785",
+    "file_count": 19,
+    "top_level_entries": [
+      ".gitattributes",
+      "LICENSE",
+      "LICENSE-CODE",
+      "README.md",
+      "UPSTREAM.md",
+      "evaluation",
+      "package",
+      "release-manifest.json"
+    ]
+  },
+  "retrieved_on": "2026-09-28"
+}

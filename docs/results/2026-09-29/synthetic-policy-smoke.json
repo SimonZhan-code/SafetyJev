@@ -1,0 +1,39 @@
+{
+  "test": "synthetic_policy_inference",
+  "synthetic_inputs": true,
+  "simulator_executed": false,
+  "safety_accuracy_measured": false,
+  "server_metadata": {
+    "serve_config": "pi05-base_datagen_v1_jar_joint_2cam_lora",
+    "checkpoint": "/workspace/checkpoints/pi05-jar/7400"
+  },
+  "requests": [
+    {
+      "request": 0,
+      "latency_s": 16.410027544014156,
+      "action_shape": [
+        16,
+        8
+      ],
+      "all_finite": true
+    },
+    {
+      "request": 1,
+      "latency_s": 0.1114508009632118,
+      "action_shape": [
+        16,
+        8
+      ],
+      "all_finite": true
+    },
+    {
+      "request": 2,
+      "latency_s": 0.10674208198906854,
+      "action_shape": [
+        16,
+        8
+      ],
+      "all_finite": true
+    }
+  ]
+}

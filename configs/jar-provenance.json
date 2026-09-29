@@ -1,0 +1,11 @@
+{
+  "experiment": "jar_transport_shadow_development",
+  "split": "development_smoke",
+  "policy_repo": "IDEAS-Lab-Northwestern/pi05-base-datagen-v1-jar-joint-2cam-lora",
+  "policy_revision": "1d84eda070313a202a595e449fcf41a1a1e8a546",
+  "policy_checkpoint_subdirectory": "7400",
+  "policy_checkpoint_selection": "largest released training step for initial development; not a claim about the paper's selected checkpoint",
+  "benchmark_repo": "IDEAS-Lab-Northwestern/ManiGuard-Bench",
+  "benchmark_revision": "2ea32a1451669fb736ae78ffce9cc82aad4cceac",
+  "resource_metadata_checked_on": "2026-09-28"
+}

@@ -1,0 +1,7 @@
+{
+  "endpoint": "http://127.0.0.1:8791/v1/systemone",
+  "model_id": "Open-Jev-2B",
+  "predictor_revision": "0c7aa498b1627be8da4acf34c863ff0ee0a92785",
+  "input_mode": "proprio_only",
+  "timeout": 30
+}
