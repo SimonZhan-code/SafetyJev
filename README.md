@@ -22,11 +22,16 @@ For an existing checkout, switch to `feat/data-preparation` and run
 
 ### 2. Put the data in place
 
-Download **`safetyjev-five-family.zip`** from the shared Drive folder. From
-inside the **SafetyJev repository root**, run:
+The dataset is hosted in the private organization repository
+[IDEAS-Lab-Northwestern/SafetyJev-Data](https://huggingface.co/datasets/IDEAS-Lab-Northwestern/SafetyJev-Data).
+Use your own Hugging Face account with access to the organization repository.
+From inside the **SafetyJev repository root**, run:
 
 ```bash
-unzip /path/to/safetyjev-five-family.zip
+hf auth login
+hf download IDEAS-Lab-Northwestern/SafetyJev-Data safetyjev-five-family.zip \
+  --repo-type dataset --local-dir downloads
+unzip downloads/safetyjev-five-family.zip
 ```
 
 The ZIP already contains `datasets/`. After extraction, the layout is:

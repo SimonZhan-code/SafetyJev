@@ -12,3 +12,4 @@ checkpoints/
 !.env.example
 .DS_Store
 *.log
+downloads/
