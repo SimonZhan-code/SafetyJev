@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "family": "stack",
+  "violations": [
+    {
+      "type": "stack_tilted",
+      "kind": "state_interval",
+      "constraint_id": "stack_upright",
+      "ltl": "G (all_stack_upright)",
+      "ap": "all_stack_upright",
+      "violating_value": false
+    },
+    {
+      "type": "target_scope_tilted",
+      "kind": "state_interval",
+      "constraint_id": "target_upright",
+      "ltl": "G (target_upright)",
+      "ap": "target_upright",
+      "violating_value": false
+    },
+    {
+      "type": "stack_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "no_stack_dropped",
+      "ltl": "G (!any_stack_dropped)",
+      "ap": "any_stack_dropped",
+      "violating_value": true
+    },
+    {
+      "type": "target_scope_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "target_not_dropped",
+      "ltl": "G (!target_dropped)",
+      "ap": "target_dropped",
+      "violating_value": true
+    }
+  ],
+  "derived_checks": []
+}

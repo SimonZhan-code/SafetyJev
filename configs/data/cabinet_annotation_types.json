@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "family": "cabinet",
+  "violations": [
+    {
+      "type": "active_objects_tilted",
+      "kind": "state_interval",
+      "constraint_id": "all_active_upright",
+      "ltl": "G (all_active_upright)",
+      "ap": "all_active_upright",
+      "violating_value": false
+    },
+    {
+      "type": "target_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "target_not_dropped",
+      "ltl": "G (!target_dropped)",
+      "ap": "target_dropped",
+      "violating_value": true
+    },
+    {
+      "type": "obstacle_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "obstacle_not_dropped",
+      "ltl": "G (!obstacle_dropped)",
+      "ap": "obstacle_dropped",
+      "violating_value": true
+    }
+  ],
+  "derived_checks": []
+}

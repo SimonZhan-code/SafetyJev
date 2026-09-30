@@ -2,7 +2,10 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-visual/
 artifacts/
+datasets/
+outputs/
 checkpoints/
 .env
 .env.*

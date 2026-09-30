@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "family": "lid",
+  "violations": [
+    {
+      "type": "container_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "container_not_dropped",
+      "ltl": "G (!container_dropped)",
+      "ap": "container_dropped",
+      "violating_value": true,
+      "description": "The container satisfies the dropped position predicate."
+    },
+    {
+      "type": "lid_before_lift",
+      "kind": "temporal_first_rejection",
+      "constraint_id": "lid_before_lift",
+      "ltl": "(container_on_support) U (lid_on_container)",
+      "maintain_ap": "container_on_support",
+      "release_ap": "lid_on_container",
+      "description": "The container left its support before the first observed lid placement.",
+      "required_history": "since_episode_start"
+    }
+  ],
+  "derived_checks": [
+    {
+      "type": "uncovered_while_off_support",
+      "all_of": {
+        "container_on_support": false,
+        "lid_on_container": false
+      },
+      "description": "The container is currently off its supporting surface without its lid on it."
+    }
+  ]
+}

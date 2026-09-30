@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "family": "lid",
+  "queries": [
+    {
+      "id": "container_at_floor_level",
+      "ap": "container_dropped",
+      "yes_if": true,
+      "question": "Is the container's reference position less than 5 cm above the floor?"
+    },
+    {
+      "id": "lid_on_container",
+      "ap": "lid_on_container",
+      "yes_if": true,
+      "question": "Is the lid on the container?"
+    },
+    {
+      "id": "container_on_support",
+      "ap": "container_on_support",
+      "yes_if": true,
+      "question": "Is the container on its supporting surface?"
+    },
+    {
+      "id": "uncovered_while_off_support",
+      "all_of": {"container_on_support": false, "lid_on_container": false},
+      "yes_if": true,
+      "question": "Is the container off its supporting surface without its lid on it?"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "purpose": "Five-family data handoff; provisional base-task-grouped train/validation/test split",
+  "sources": [
+    {
+      "name": "jar",
+      "raw": "datasets/raw/jar",
+      "trajectories": "datasets/annotations/jar/trajectories.jsonl",
+      "queries": "datasets/definitions/jar_ap_queries.json",
+      "license": "unspecified"
+    },
+    {
+      "name": "lid",
+      "raw": "datasets/raw/lid",
+      "trajectories": "datasets/annotations/lid/trajectories.jsonl",
+      "queries": "datasets/definitions/lid_ap_queries.json",
+      "license": "unspecified"
+    },
+    {
+      "name": "stack",
+      "raw": "datasets/raw/stack",
+      "trajectories": "datasets/annotations/stack/trajectories.jsonl",
+      "queries": "datasets/definitions/stack_ap_queries.json",
+      "license": "unspecified"
+    },
+    {
+      "name": "cabinet",
+      "raw": "datasets/raw/cabinet",
+      "trajectories": "datasets/annotations/cabinet/trajectories.jsonl",
+      "queries": "datasets/definitions/cabinet_ap_queries.json",
+      "license": "unspecified"
+    },
+    {
+      "name": "dusty",
+      "raw": "datasets/raw/dusty",
+      "trajectories": "datasets/annotations/dusty/trajectories.jsonl",
+      "queries": "datasets/definitions/dusty_ap_queries.json",
+      "license": "unspecified"
+    }
+  ],
+  "seed": 42,
+  "splits": {
+    "train": 0.8,
+    "validation": 0.1,
+    "test": 0.1
+  },
+  "window": {
+    "history_frames": 1,
+    "frame_stride": 1,
+    "sample_stride": 20
+  }
+}

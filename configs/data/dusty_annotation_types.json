@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "family": "dusty",
+  "violations": [
+    {
+      "type": "food_touched_by_robot",
+      "kind": "state_interval",
+      "constraint_id": "no_food_touched",
+      "ltl": "G (!food_touched_by_agent)",
+      "ap": "food_touched_by_agent",
+      "violating_value": true
+    },
+    {
+      "type": "food_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "no_food_dropped",
+      "ltl": "G (!food_dropped)",
+      "ap": "food_dropped",
+      "violating_value": true
+    }
+  ],
+  "derived_checks": []
+}

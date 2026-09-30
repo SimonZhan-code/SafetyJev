@@ -30,6 +30,26 @@ def model_args(parser):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="SafetyJev prediction and guarded execution evaluation")
     subs = parser.add_subparsers(dest="command", required=True)
+    raw_check = subs.add_parser("validate-ap-raw", help="Validate copied observation/AP archives")
+    raw_check.add_argument("--raw", required=True)
+    raw_check.add_argument("--verify-hashes", action="store_true")
+    raw_check.add_argument("--output", help="Optional JSON validation report")
+    annotate = subs.add_parser("annotate-trajectories", help="Build trajectory GT from reviewed AP archives")
+    annotate.add_argument("--raw", required=True)
+    annotate.add_argument("--rules", required=True)
+    annotate.add_argument("--output", required=True, help="New annotation directory")
+    prepare = subs.add_parser("prepare-ap-data", help="Index current-AP visual classification windows")
+    prepare.add_argument("--raw", required=True)
+    prepare.add_argument("--queries", required=True, help="Natural-language questions and AP polarity JSON")
+    prepare.add_argument("--trajectories", help="Trajectory GT JSONL; video/AP paths remain relative to --raw")
+    prepare.add_argument("--output", required=True, help="New output directory; never overwritten")
+    prepare.add_argument("--history-frames", required=True, type=int)
+    prepare.add_argument("--frame-stride", required=True, type=int)
+    prepare.add_argument("--sample-stride", required=True, type=int)
+    prepare.add_argument("--limit-episodes", type=int, help="Bounded smoke export; omit for the full manifest")
+    mixture = subs.add_parser("build-ap-mixture", help="Build grouped Noul splits from one or more reviewed families")
+    mixture.add_argument("--recipe", required=True)
+    mixture.add_argument("--output", required=True, help="New package directory")
     verify = subs.add_parser("verify-integration")
     verify.add_argument("--maniguard-root", required=True)
     capture = subs.add_parser("capture", help="Run original policy with shadow sidecars; use -- before ManiGuard args")
@@ -57,7 +77,28 @@ def main(argv=None):
     report.add_argument("--threshold", type=float, default=.5)
     report.add_argument("--output", required=True)
     args = parser.parse_args(argv)
-    if args.command == "verify-integration":
+    if args.command == "validate-ap-raw":
+        from .data_preparation import validate_raw
+        result = validate_raw(args.raw, verify_hashes=args.verify_hashes)
+        if args.output:
+            write_json(args.output, result)
+        print(json.dumps(result, indent=2))
+    elif args.command == "annotate-trajectories":
+        from .trajectory_annotations import build_trajectory_gt
+        result = build_trajectory_gt(args.raw, json.loads(Path(args.rules).read_text()), args.output)
+        print(json.dumps(result, indent=2))
+    elif args.command == "prepare-ap-data":
+        from .data_preparation import export_ap_dataset
+        result = export_ap_dataset(args.raw, json.loads(Path(args.queries).read_text()), args.output,
+                                   history_frames=args.history_frames, frame_stride=args.frame_stride,
+                                   sample_stride=args.sample_stride, limit_episodes=args.limit_episodes,
+                                   trajectory_index=args.trajectories)
+        print(json.dumps(result, indent=2))
+    elif args.command == "build-ap-mixture":
+        from .data_mixture import build_mixture
+        result = build_mixture(json.loads(Path(args.recipe).read_text()), args.output)
+        print(json.dumps({k: result[k] for k in ("samples", "splits", "groups_per_split", "by_source")}, indent=2))
+    elif args.command == "verify-integration":
         from .maniguard import COMMIT, instrument, verify_sources
         verify_sources(args.maniguard_root)
         path = Path(args.maniguard_root) / "maniguard/eval/benchmark.py"

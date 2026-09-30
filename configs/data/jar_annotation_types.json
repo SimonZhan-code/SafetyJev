@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "family": "jar",
+  "violations": [
+    {
+      "type": "jar_tilted",
+      "kind": "state_interval",
+      "constraint_id": "jar_upright",
+      "ltl": "G (jar_upright)",
+      "ap": "jar_upright",
+      "violating_value": false,
+      "description": "The jar is tilted beyond its allowed upright angle."
+    },
+    {
+      "type": "jar_at_floor_level",
+      "kind": "state_interval",
+      "constraint_id": "jar_not_dropped",
+      "ltl": "G (!jar_dropped)",
+      "ap": "jar_dropped",
+      "violating_value": true,
+      "description": "The jar satisfies the dropped position predicate."
+    },
+    {
+      "type": "close_before_lift",
+      "kind": "temporal_first_rejection",
+      "constraint_id": "close_before_lift",
+      "ltl": "(jar_on_support) U (jar_closed)",
+      "maintain_ap": "jar_on_support",
+      "release_ap": "jar_closed",
+      "description": "The jar left its support before the first observed closure.",
+      "required_history": "since_episode_start"
+    }
+  ],
+  "derived_checks": [
+    {
+      "type": "open_while_off_support",
+      "all_of": {
+        "jar_on_support": false,
+        "jar_closed": false
+      },
+      "description": "The jar is currently off its supporting surface with its lid open, regardless of earlier closure."
+    }
+  ]
+}
