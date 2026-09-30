@@ -1,0 +1,3 @@
+[submodule "third_party/Open-Jev"]
+	path = third_party/Open-Jev
+	url = https://github.com/666harrypeng/Open-Jev.git

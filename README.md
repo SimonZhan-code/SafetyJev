@@ -3,6 +3,92 @@
 An agentic robotics system that enhances safety through an in-the-loop,
 safety-centric fine-tuned Jev model at runtime.
 
+Train a shared visual decision model from the current overview image, wrist
+image and a natural-language AP question. This branch includes the five-family
+ManiGuard dataset interface and a native multimodal Open-Jev training path.
+
+## Visual classifier: data and training
+
+### 1. Get the code
+
+```bash
+git clone --recurse-submodules --branch feat/data-preparation \
+  https://github.com/SimonZhan-code/SafetyJev.git
+cd SafetyJev
+```
+
+For an existing checkout, switch to `feat/data-preparation` and run
+`git submodule update --init --recursive`.
+
+### 2. Put the data in place
+
+Download **`safetyjev-five-family.zip`** from the shared Drive folder. From
+inside the **SafetyJev repository root**, run:
+
+```bash
+unzip /path/to/safetyjev-five-family.zip
+```
+
+The ZIP already contains `datasets/`. After extraction, the layout is:
+
+```text
+SafetyJev/
+  README.md
+  safetyjev/
+  third_party/Open-Jev/
+  datasets/
+    README.md                       # dataset contents, labels and loader example
+    raw/                            # original videos and AP traces
+    annotations/                    # trajectory GT
+    definitions/                    # question definitions
+    packages/five_family/
+      train.jsonl
+      validation.jsonl
+      test.jsonl
+      dataset_metadata.json
+```
+
+The data cover Jar, Lid, Stack, Cabinet and Dusty: **4,816 episodes, 9,632 videos,
+3,113,929 image/question pairs**, about **25.3 GB extracted**. Read
+[the data README](datasets/README.md) after extraction. The current train/val/test
+split is provisional and grouped by base task; the training owner can revise it.
+
+### 3. Install the training environment
+
+The tested environment uses Python 3.11 and CUDA 12.6 PyTorch wheels:
+
+```bash
+python3.11 -m venv .venv-visual
+.venv-visual/bin/python -m pip install torch==2.8.0 torchvision==0.23.0 \
+  --index-url https://download.pytorch.org/whl/cu126
+.venv-visual/bin/python -m pip install -r requirements-visual.txt
+.venv-visual/bin/python -m pip install --no-deps -e third_party/Open-Jev -e .
+```
+
+### 4. Check data loading and start a training smoke run
+
+Run both commands from the repository root:
+
+```bash
+.venv-visual/bin/python tools/check_data_pipeline.py \
+  --package datasets/packages/five_family \
+  --output outputs/data-check.json
+
+bash scripts/train_visual.sh \
+  --config configs/training/five_family_visual_smoke.json \
+  --output outputs/visual-training/five-family-smoke --device cuda:0
+```
+
+The smoke run uses Qwen3.5-0.8B for four updates to check the complete training
+path. For the training experiment, choose the model, batch size, training budget
+and validation sampling in the configuration. A 27B starting configuration is
+`configs/training/five_family_visual_27b_reference.json`. The reference trainer
+uses one device, train/validation/test and a shared No/Yes head. There is no
+separate calibration stage.
+
+[Training details](docs/visual-training.md) cover checkpoint resume and inference.
+[Data preparation](docs/data-preparation.md) documents rebuilding the dataset.
+
 ## Prediction evaluation and a first guarded loop
 
 We separate two experiments:
