@@ -1,0 +1,38 @@
+{
+  "purpose": "Bounded predictor judge engineering smoke; no claim of learned safety performance",
+  "seed": 42,
+  "deterministic": true,
+  "model": {
+    "model_id": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "dtype": "bfloat16",
+    "lora_rank": 8,
+    "max_length": 4096,
+    "min_pixels": 65536,
+    "max_pixels": 65536,
+    "gradient_checkpointing": true
+  },
+  "data": {
+    "package": "datasets/packages/predictor_judge",
+    "batch_size": 1,
+    "num_workers": 0,
+    "sampling": {
+      "positive_fraction": 0.5
+    }
+  },
+  "training": {
+    "max_steps": 2,
+    "accumulation": 1,
+    "lr": 2e-05,
+    "head_lr": 0.0001,
+    "weight_decay": 0.01,
+    "warmup_steps": 0,
+    "clip_grad_norm": 1.0,
+    "brier_weight": 0.1,
+    "eval_every": 1,
+    "save_every": 1
+  },
+  "evaluation": {
+    "max_batches": 1
+  }
+}

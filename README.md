@@ -7,6 +7,8 @@ Train a shared visual decision model from the current overview image, wrist
 image and a natural-language AP question. This branch includes the five-family
 ManiGuard dataset interface and a native multimodal Open-Jev training path.
 
+The action-conditioned safety **Predictor Judge** has a separate [capture, training and offline evaluation guide](docs/predictor-judge-training.md). It uses newly recorded robot state and action data; the existing classifier dataset remains usable as before.
+
 ## Visual classifier: data and training
 
 ### 1. Get the code
@@ -94,15 +96,15 @@ separate calibration stage.
 [Training details](docs/visual-training.md) cover checkpoint resume and inference.
 [Data preparation](docs/data-preparation.md) documents rebuilding the dataset.
 
-## Prediction evaluation and a first guarded loop
+## Safety judgment and the existing guarded loop
 
 We separate two experiments:
 
-1. **Prediction:** run the existing ManiGuard π0.5 policy unchanged, forecast
+1. **Safety judgment:** run the existing ManiGuard π0.5 policy unchanged, judge
    constraint violations before actions execute, and compare with ManiGuard's
    physics-grounded monitor. This repository implements the initial shadow
-   capture, labeling, predictor connection, and reporting pipeline.
-2. **Intervention:** use those predictions to change execution and measure safe
+   capture, labeling, judge connection, and reporting pipeline.
+2. **Intervention:** use those judgments to change execution and measure safe
    success, engagement, and overhead. The optional `guard_regenerate` mode checks
    every constraint before executing a chunk. A rejection triggers a new VLA
    proposal from the same observation; bounded retry exhaustion ends the simulated
@@ -117,7 +119,7 @@ that must pass the same guard. See [OpenRouter setup](docs/runbook.md).
 ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
           |                    |                                  |
           +---- SafetyJev -----+                                  |
-               forecast                              ManiGuard LTL monitor
+               risk score                            ManiGuard LTL monitor
                   |                                               |
                   +---------- horizon-aligned comparison ----------+
 ```
@@ -175,14 +177,14 @@ To also execute the instrumented upstream loop in the CPU test harness, set
 See [the runbook](docs/runbook.md) for capture and model comparison commands and
 [the evaluation protocol](docs/evaluation-protocol.md) for the target definition.
 
-## Supported scope
+## Existing guarded-loop scope
 
 - Pinned ManiGuard commit `be97624e0acbec6b6f9260a08891b04168eb8e6c`.
 - Absolute joint `(H, 8)` actions, matching the released jar configuration;
   camera and robot-state snapshots captured before execution.
-- Chunk-start predictions; optional remaining-action rechecks in shadow mode.
+- Chunk-start safety judgments; optional remaining-action rechecks in shadow mode.
 - Per-constraint and combined-task (`__all__`) bad-prefix labels.
-- Offline replay, synchronous shadow prediction, or synchronous guard-and-regenerate execution.
+- Offline replay, synchronous shadow judgment, or synchronous guard-and-regenerate execution.
 - Open-Jev HTTP Noul connector for the explicitly named **proprio-only ablation**.
 
 Zefan-Cai/Open-Jev's current loader discards the vision tower. The included
@@ -190,7 +192,7 @@ connector therefore sends robot states, recent robot-state history, action
 commands, task instruction, and static constraint definitions, **not images or
 simulator object-state ground truth**. This is an intentionally information-limited
 baseline, not the intended full SafetyJev model. PNGs are retained for a future
-multimodal scorer, which can emit predictions in the same JSONL contract.
+multimodal scorer, which can emit safety scores in the same JSONL contract.
 
 ## Implementation
 
@@ -206,7 +208,7 @@ multimodal scorer, which can emit predictions in the same JSONL contract.
 | `safetyjev/cli.py` | Capture, predict, report, and integration verification |
 
 The adapter does not modify upstream files. It refuses unknown source versions.
-Action arrays are copied for prediction; gripper binarization and clipping match
+Action arrays are copied for safety judgment; gripper binarization and clipping match
 the supported runner. The original goal checker and passive monitor remain in use.
 Shadow mode preserves the policy actions; guard mode can replace a chunk or end an
 episode after retry exhaustion. Simulation pauses during model calls; this is not
