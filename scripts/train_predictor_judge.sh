@@ -8,6 +8,6 @@ export TOKENIZERS_PARALLELISM=false
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
 if [[ "${NPROC_PER_NODE:-1}" -gt 1 ]]; then
   exec "$SAFETYJEV_PYTHON" -m torch.distributed.run --standalone --nnodes=1 \
-    --nproc-per-node "$NPROC_PER_NODE" -m safetyjev.visual_train "$@"
+    --nproc-per-node "$NPROC_PER_NODE" -m safetyjev.predictor_judge_train "$@"
 fi
-exec "$SAFETYJEV_PYTHON" -m safetyjev.visual_train "$@"
+exec "$SAFETYJEV_PYTHON" -m safetyjev.predictor_judge_train "$@"

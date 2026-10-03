@@ -154,31 +154,128 @@ a constraint already rejected at t is not a new-violation target. Temporal const
 remain present with their original GT semantics. Short observations may omit relevant
 past events; no privileged monitor memory is silently added to compensate.
 
-## Train and evaluate
+## Cache, train and evaluate
 
-Use the training environment described in [visual training](visual-training.md).
-Set the package path and training budget in a copy of
-`configs/training/predictor_judge_smoke.json`. That configuration is a two-update engineering
-smoke, not a scientific training recipe.
+Use the environment in [visual training](visual-training.md), from the repository root.
+The classifier and Predictor Judge share the optimizer/DDP/checkpoint engine. The
+Predictor Judge adds trainable state/action projections to the language LoRA and
+scalar head; the base weights and vision encoder stay frozen.
+
+Prepare the package above, then build its disposable training cache **on the server**:
 
 ```bash
-python -m safetyjev.predictor_judge_train \
-  --config configs/training/predictor_judge_smoke.json \
-  --output outputs/predictor-judge-training --device cuda:0
-
-python -m safetyjev.predictor_judge_eval \
-  --checkpoint outputs/predictor-judge-training/final/model \
-  --package datasets/predictor_judge/package --split test \
-  --output outputs/predictor-judge-test.json --device cuda:0
+.venv-visual/bin/python tools/prepare_predictor_judge_cache.py \
+  --package datasets/predictor_judge/package --output datasets/cache/predictor_judge
+.venv-visual/bin/python tools/prepare_predictor_judge_cache.py \
+  --package datasets/predictor_judge/package --output datasets/cache/predictor_judge --verify-only
 ```
 
-Resume in the original output directory with `--resume` pointing to its latest
-`checkpoints/step-XXXXXXXX`. Source, data and training identity must match. Model
-selection uses validation NLL; the selected checkpoint is evaluated on test after
-training. The reference trainer is single-device and preserves the existing scalar
-head/language-LoRA/frozen-vision convention, adding trainable state/action projections.
+The SQLite cache deduplicates original PNG images and numeric/history windows
+shared by constraint questions, and indexes JSONL offsets. It does not change labels,
+resize the source images or duplicate the raw archive. Preparation checks raw record
+and media identities and image hashes; reads check cached payload hashes. Incomplete
+caches are refused. Re-running preparation resumes it; `--max-gib` applies periodic
+budget checks with transaction headroom. Keep the package and referenced raw records
+available. Build indices recursively from a campaign root with `build --episodes`;
+duplicate episode IDs are rejected rather than silently counted twice.
 
-Reports include confusion counts, precision/recall, AUROC/average precision where
-defined, Brier/NLL, per-constraint and per-valid-length breakdowns, and excluded-label
-counts. Adjacent windows are correlated; window counts are not independent trials.
-Timing covers processor/model batches, not a real-time simulator/control loop.
+`configs/training/predictor_judge_27b_reference.json` specifies the pinned backbone,
+three adjacent frames per camera, worker preprocessing, event-balanced training,
+global batch 128 and 1,000 optimizer updates. This is a starting experimental budget,
+not evidence of convergence. The configured 128,000 draws per sampler epoch use
+replacement; inspect distinct event counts as well as draw counts.
+
+Download the model once, before launching ranks/workers:
+
+```bash
+export HF_HOME="$PWD/checkpoints/hf_cache"
+.venv-visual/bin/python - <<'PYMODEL'
+import json
+from huggingface_hub import snapshot_download
+c = json.load(open('configs/training/predictor_judge_27b_reference.json'))
+snapshot_download(c['model']['model_id'], revision=c['model']['revision'])
+PYMODEL
+
+.venv-visual/bin/python tools/visual_training_preflight.py \
+  --config configs/training/predictor_judge_27b_reference.json --gpus 4
+OMP_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false .venv-visual/bin/python tools/profile_visual_loader.py \
+  --config configs/training/predictor_judge_27b_reference.json \
+  --workers 2 --batches 200 --output outputs/judge-loader-profile.json
+
+NPROC_PER_NODE=4 bash scripts/train_predictor_judge.sh \
+  --config configs/training/predictor_judge_27b_reference.json \
+  --output outputs/predictor-judge-training/27b \
+  --batch-size 1 --global-batch-size 128 --workers 2
+```
+
+Use `NPROC_PER_NODE=8` for eight GPUs or `1` for one sufficiently large GPU. As with
+the classifier, accumulation is derived from global batch / (GPUs × microbatch).
+DDP replicates the full backbone per GPU. This model processes up to six images,
+versus the classifier's two, so memory and throughput must be measured separately.
+GPU count does not change the data or model interface. See the shared guide for
+hardware compatibility, resume rules and checkpoint layout.
+
+The CPU workers prepare image/text tokens; numeric projections remain in the model
+and receive gradients. A global deterministic sampling stream is partitioned across
+ranks. Training pads draws to a global microbatch; evaluation partitions without
+padding and merges predictions by sample ID. Duplicate IDs fail evaluation.
+
+For an engineering smoke, use `predictor_judge_smoke.json` with the package path
+set appropriately. It runs two updates with capped evaluation, not a quality test.
+`--stop-after-step` supports controlled interruption. Resume in the same output:
+
+```bash
+NPROC_PER_NODE=4 bash scripts/train_predictor_judge.sh \
+  --config configs/training/predictor_judge_27b_reference.json \
+  --output outputs/predictor-judge-training/27b \
+  --resume outputs/predictor-judge-training/27b/checkpoints/step-00000100
+```
+
+Resume requires matching model, data, source, training configuration and world size;
+it restores optimizer, per-rank RNG and sampler cursor. Changing GPU count is a new
+run, not an exact resume. Shared checkpoints are published by rank zero atomically.
+
+During training a fixed, uniformly sampled 4,096-row validation subset selects the
+checkpoint by NLL. Its indices are saved; rare events may be absent from this subset.
+Finalization evaluates the selected model on **full validation and test**, without
+label balancing. For independent full evaluation, including multi-GPU evaluation:
+
+```bash
+NPROC_PER_NODE=4 bash scripts/evaluate_model.sh --task predictor_judge \
+  --checkpoint outputs/predictor-judge-training/27b/final/model \
+  --package datasets/predictor_judge/package --frame-cache datasets/cache/predictor_judge \
+  --split test --workers 2 --output outputs/predictor-judge-test.json
+```
+
+The evaluator checks complete split coverage and writes both a report and per-window
+JSONL scores. Threshold defaults to 0.5; any alternative must be chosen on validation
+and frozen before test evaluation. There is no separate calibration split.
+
+## Interpret the evaluation
+
+- **Window metrics:** confusion counts, violation recall/miss rate, false-positive
+  rate, precision/F1, balanced accuracy, AUROC and average precision where defined,
+  NLL and binary Brier. Reports partition these by constraint, family/constraint,
+  and actual remaining length (1–8), and include an always-No accuracy baseline.
+- **Event metrics:** each `(episode, constraint, first rejection)` is counted once.
+  Recall asks whether at least one eligible positive window alerted before it;
+  lead steps use the earliest such alert. Only events with eligible positive windows
+  are in this denominator. Multiply steps by the recorded control interval for time.
+- **Safe-episode false alarms:** fraction of wholly safe source episodes with at least
+  one alert. Interpret only on a full uncapped split, not the development subset.
+- **Coverage/composition:** raw selection, excluded-label reasons, available events,
+  actual sampled draws and repeated samples remain visible in package/run reports.
+
+Predictor Judge `micro.brier` is mean `(p_yes - y)^2`; the classifier's upstream
+`brier` sums both No/Yes squared errors and is twice that quantity for binary labels.
+The optimization loss is shared. `answers` additionally reports No/Yes support and
+macro F1 consistently with the classifier. A missing class has undefined recall;
+large counts of adjacent windows are not independent events. Judge Yes means a new
+violation; classifier Yes answers its particular AP question and can mean safety.
+
+Training-balanced scores are not established deployment probabilities. No runtime
+intervention or speed benefit is claimed by these offline metrics. Forward timing
+includes tensor transfer but excludes worker preprocessing and data waiting; inspect
+training input-wait and global-samples/s logs for throughput. The initial experiment
+should examine event recall and safe-operation false alarms alongside per-constraint
+metrics, rather than judging quality from training loss or pooled accuracy alone.

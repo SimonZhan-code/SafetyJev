@@ -15,16 +15,21 @@ class VisualTrainTests(unittest.TestCase):
         from safetyjev.visual_train import run
 
         requested = []
+        eval_sizes = []
+        from torch.utils.data import DataLoader
+        def loader(dataset, *args, **kwargs):
+            eval_sizes.append(len(dataset))
+            return DataLoader(dataset, *args, **kwargs)
         class Dataset:
             def __init__(self, package, split):
                 requested.append(split)
                 if split not in ("train", "validation", "test"):
                     raise AssertionError("Unexpected split: " + split)
-            def __len__(self): return 2
+            def __len__(self): return 4
             def __getitem__(self, i):
                 image = np.zeros((1, 8, 8, 3), dtype=np.uint8)
                 return {"inputs": {"question": "Is it tilted?", "observations": {"overview": image, "wrist": image}},
-                        "target": np.array([1-i, i], dtype=np.float32), "sample_id": str(i), "query_id": "tilted"}
+                        "target": np.array([1-i%2, i%2], dtype=np.float32), "sample_id": str(i), "query_id": "tilted"}
         class Model(torch.nn.Module):
             def __init__(self):
                 super().__init__(); self.head=torch.nn.Linear(1,1)
@@ -41,14 +46,16 @@ class VisualTrainTests(unittest.TestCase):
             root=Path(folder);package=root/'package';package.mkdir()
             (package/'dataset_metadata.json').write_text('{}')
             config={'model':{'dtype':'float32'},'data':{'package':str(package),'num_workers':0,'batch_size':2,'balance':'uniform'},
-                    'seed':42,'training':{},'evaluation':{'max_batches':None}}
+                    'seed':42,'training':{},'evaluation':{'max_batches':1}}
             with patch('safetyjev.visual_train.verify_package',return_value={'window':{'history_frames':1},'file_sha256':{}}), \
                  patch('safetyjev.visual_train.APWindowDataset',Dataset), \
+                 patch('safetyjev.visual_train.DataLoader',side_effect=loader), \
                  patch('jev.visual_model.VisualDecisionModel.from_pretrained',side_effect=lambda **kwargs:Model()), \
                  patch('jev.visual_model.VisualDecisionModel.load',side_effect=lambda *args,**kwargs:Model()), \
                  patch('jev.visual_training.fit_updates',side_effect=train):
                 report=run(config,root/'run',device='cpu')
             self.assertEqual(requested,['train','validation','test'])
+            self.assertEqual(eval_sizes,[2,2,2])
             self.assertEqual(report['temperature'],1.)
             self.assertNotIn('calibration',report)
             self.assertFalse((root/'run/final/calibration.jsonl').exists())
@@ -104,6 +111,15 @@ class VisualTrainTests(unittest.TestCase):
             self.assertEqual(publish_final(root,succeed),'done')
             self.assertTrue((root/'final/report.json').exists())
 
+
+class AnswerMetricsTests(unittest.TestCase):
+    def test_answers_are_not_named_violations_and_missing_support_is_null(self):
+        from safetyjev.visual_train import answer_metrics
+        report=answer_metrics([[1,0],[0,1]], [.2,.8])
+        self.assertEqual(report['yes']['support'],1)
+        self.assertEqual(report['no']['recall'],1.)
+        self.assertEqual(report['macro_f1'],1.)
+        self.assertIsNone(answer_metrics([[1,0]],[.1])['yes']['recall'])
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,3 +11,12 @@ class PredictorJudgeCommandTests(unittest.TestCase):
             args=['--seed','0'];cmd,env=capture_command(root,'raw','p.json',args)
             self.assertEqual(args,['--seed','0']);self.assertIn('safetyjev.predictor_judge_capture:create_observer',cmd)
             self.assertTrue(env['PYTHONPATH'].startswith(str(root)))
+    def test_build_discovers_nested_campaign_episodes_once(self):
+        from unittest.mock import patch
+        from safetyjev.predictor_judge_commands import main
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);episode=root/'run/raw/id';episode.mkdir(parents=True)
+            for name in ['record.json','episode.json','episode_status.json']:(episode/name).write_text('{}')
+            with patch('safetyjev.predictor_judge_commands.build_package') as build:
+                main(['build','--episodes',str(root),'--output',str(root/'package')])
+            self.assertEqual(build.call_args.args[0],[episode])

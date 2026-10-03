@@ -31,7 +31,7 @@ def main(argv=None):
     if a.command=='capture':
         cmd,env=capture_command(a.maniguard_root,a.output,a.provenance,a.benchmark_args)
         return subprocess.call(cmd,cwd=a.maniguard_root,env=env)
-    directories=sorted({f.parent for name in ('record.json','episode.json','episode_status.json') for f in Path(a.episodes).glob('*/'+name)})
+    directories=sorted({f.parent for name in ('record.json','episode.json','episode_status.json') for f in Path(a.episodes).rglob(name)})
     if not directories:raise ValueError('No captured episode records')
     assignment=json.loads(Path(a.split_manifest).read_text()) if a.split_manifest else None
     build_package(directories,a.output,history_frames=a.history_frames,seed=a.seed,group_splits=assignment,

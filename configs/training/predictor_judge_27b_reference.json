@@ -1,5 +1,5 @@
 {
-  "purpose": "Current-camera classifier training reference; profile memory/throughput and choose the training budget on target hardware",
+  "purpose": "Action-conditioned Predictor Judge reference; choose training budget after target-host acceptance",
   "seed": 42,
   "deterministic": true,
   "model": {
@@ -7,19 +7,22 @@
     "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
     "dtype": "bfloat16",
     "lora_rank": 8,
-    "max_length": 2048,
+    "max_length": 4096,
     "min_pixels": 65536,
     "max_pixels": 65536,
     "gradient_checkpointing": true
   },
   "data": {
-    "package": "datasets/packages/five_family",
+    "package": "datasets/predictor_judge/package",
     "batch_size": 1,
     "num_workers": 2,
-    "balance": "query_answer",
-    "frame_cache": "datasets/cache/five_family",
+    "frame_cache": "datasets/cache/predictor_judge",
     "prepare_in_workers": true,
-    "prefetch_factor": 2
+    "prefetch_factor": 2,
+    "sampling": {
+      "positive_fraction": 0.5,
+      "samples_per_epoch": 128000
+    }
   },
   "training": {
     "max_steps": 1000,
@@ -36,5 +39,6 @@
   "evaluation": {
     "max_batches": null,
     "validation_samples": 4096
-  }
+  },
+  "task": "predictor_judge"
 }

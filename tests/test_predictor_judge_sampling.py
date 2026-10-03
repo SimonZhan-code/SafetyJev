@@ -54,3 +54,16 @@ class JudgeSamplingTests(unittest.TestCase):
             self.assertEqual(list(rows),data)
             sampler=JudgeBatchSampler(rows,2,seed=42,epoch=0)
             self.assertEqual(sampler.report()['labels'],{'positive':1,'negative':1})
+
+    def test_rank_shards_and_consumed_counts_follow_global_draws(self):
+        rows=[row(0,1),row(1,0),row(2,1,episode='u2')]
+        ranks=[JudgeBatchSampler(rows,2,seed=4,epoch=0,samples_per_epoch=7,rank=r,world_size=2) for r in range(2)]
+        self.assertEqual(ranks[0].order,ranks[1].order)
+        batches=[list(s) for s in ranks]
+        combined=[]
+        for i in range(len(batches[0])):
+            combined.extend(batches[0][i]);combined.extend(batches[1][i])
+        self.assertEqual(combined,ranks[0].order)
+        self.assertEqual(len(combined),8)
+        report=consumed_draw_report(rows,batch_size=2,world_size=2,seed=4,epoch=0,batch_offset=1,samples_per_epoch=7)
+        self.assertEqual(report['draws'],4)

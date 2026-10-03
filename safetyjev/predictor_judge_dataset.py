@@ -111,13 +111,24 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
 
 
 class PredictorJudgeWindowDataset:
-    def __init__(self,package,split,cache_episodes=2):
+    def __init__(self,package,split,cache_episodes=2,frame_cache=None):
         self.package=Path(package).resolve()
         if split not in ('train','validation','test'):raise ValueError('Use train/validation/test')
         if (self.package/'BUILDING').exists():raise ValueError('Unfinished package')
         self.summary=json.loads((self.package/'dataset_metadata.json').read_text());self.path=self.package/(split+'.jsonl')
         if file_hash(self.path)!=self.summary['file_sha256'][split]:raise ValueError('Split bytes changed')
         self.offsets=array('Q');self.cache=OrderedDict();self.cache_episodes=cache_episodes
+        self._reader=None;self._reader_pid=None;self.frame_cache=None
+        if frame_cache:
+            from .predictor_judge_cache import JudgeCache
+            from .visual_cache import sample_index_digest
+            self.frame_cache=JudgeCache(frame_cache,self.package)
+            for offset, in self.frame_cache.connection().execute('SELECT offset FROM samples WHERE split=? ORDER BY idx',(split,)):self.offsets.append(offset)
+            self.frame_cache.close()
+            digest=sample_index_digest((i,o,0) for i,o in enumerate(self.offsets))
+            if len(self.offsets)!=self.frame_cache.meta['splits'][split] or digest!=self.frame_cache.meta['index_sha256'][split]:raise ValueError('Cached sample index checksum differs')
+            if not self.offsets:raise ValueError('Selected split has no eligible samples')
+            return
         with self.path.open('rb') as f:
             while True:
                 offset=f.tell();line=f.readline()
@@ -127,9 +138,22 @@ class PredictorJudgeWindowDataset:
                     raise ValueError('Invalid label/split assignment')
                 self.offsets.append(offset)
         if not self.offsets:raise ValueError('Selected split has no eligible samples')
+    def close(self):
+        self._reader_pid=None
+        reader=getattr(self,'_reader',None)
+        if reader is not None:reader.close();self._reader=None
+        cache=getattr(self,'frame_cache',None)
+        if cache is not None:cache.close()
+    def __del__(self):
+        self.close()
     def __len__(self):return len(self.offsets)
     def record(self,index):
-        with self.path.open('rb') as f:f.seek(self.offsets[index]);return json.loads(f.readline())
+        if self._reader_pid!=os.getpid():
+            if self._reader is not None:self._reader.close()
+            self._reader=self.path.open('rb');self._reader_pid=os.getpid()
+        self._reader.seek(self.offsets[index]);return json.loads(self._reader.readline())
+    def __getstate__(self):
+        state=self.__dict__.copy();state.update(_reader=None,_reader_pid=None,cache=OrderedDict());return state
     def _episode(self,eid):
         if eid not in self.cache:
             res=self.summary['resources'][eid];root=(self.package/res['raw_root']).resolve()
@@ -141,7 +165,11 @@ class PredictorJudgeWindowDataset:
         self.cache.move_to_end(eid);return self.cache[eid]
     def __getitem__(self,index):
         from PIL import Image
-        row=self.record(index);root,e,media=self._episode(row['episode_id']);t=row['start_step']
+        row=self.record(index)
+        if self.frame_cache:
+            inputs=self.frame_cache.inputs(row)
+            return {'inputs':inputs,'target':row['target'],'sample_id':row['id'],'query_id':row['constraint_id'],'valid_steps':int(inputs['action_mask'].sum()),'metadata':_evaluation_metadata(row)}
+        root,e,media=self._episode(row['episode_id']);t=row['start_step']
         proposal=next(p for p in e['proposals'] if p['proposal_id']==row['proposal_id'])
         w=make_action_window(proposal['planned_commands'],row['action_offset'],dt_s=e['action_dt_s'])
         views={}
@@ -159,7 +187,11 @@ class PredictorJudgeWindowDataset:
         return {'inputs':{'questions':row['question'],'observations':views,'robot_state':np.asarray(e['observations'][t]['robot_state'],dtype=np.float32),
             'remaining_actions':w['actions'],'action_mask':w['action_mask'],'action_dt_s':w['action_dt_s'],
             'history_mask':np.asarray([s is not None for s in row['history_steps']]),'constraint_context':row['constraint_context']},
-            'target':row['target'],'sample_id':row['id'],'query_id':row['constraint_id'],'valid_steps':w['valid_steps']}
+            'target':row['target'],'sample_id':row['id'],'query_id':row['constraint_id'],'valid_steps':w['valid_steps'],'metadata':_evaluation_metadata(row)}
+
+
+def _evaluation_metadata(row):
+    return {k:row.get(k) for k in ['episode_id','family','group_id','episode_safety','start_step','end_step','first_violation_step']}
 
 
 def collate_predictor_judge(items):
@@ -172,4 +204,23 @@ def collate_predictor_judge(items):
         inputs[key]=torch.from_numpy(np.asarray([r['inputs'][key] for r in items]))
     return {'inputs':inputs,'targets':torch.tensor([r['target'] for r in items],dtype=torch.float32),
             'sample_ids':[r['sample_id'] for r in items],'query_ids':[r['query_id'] for r in items],
-            'valid_steps':[r['valid_steps'] for r in items]}
+            'valid_steps':[r['valid_steps'] for r in items],'metadata':[r.get('metadata',{}) for r in items]}
+
+
+class PreparedPredictorJudgeCollator:
+    """Worker-local CPU image/text processing; numeric tensors stay differentiable in the model."""
+    def __init__(self,model_config):self.config=dict(model_config);self.processor=None
+    def __call__(self,items):
+        from transformers import AutoProcessor
+        from jev.predictor_judge_model import encode_predictor_judge_visual_inputs
+        if self.processor is None:
+            os.environ.setdefault('TOKENIZERS_PARALLELISM','false')
+            self.processor=AutoProcessor.from_pretrained(self.config['model_id'],revision=self.config['revision'],
+                min_pixels=self.config['min_pixels'],max_pixels=self.config['max_pixels'],local_files_only=True)
+            self.processor.tokenizer.padding_side='right'
+            if self.processor.tokenizer.pad_token_id is None:self.processor.tokenizer.pad_token=self.processor.tokenizer.eos_token
+        batch=collate_predictor_judge(items);inputs=batch['inputs']
+        visual={k:inputs[k] for k in ['questions','observations','action_mask','action_dt_s','history_mask','constraint_context']}
+        encoded=encode_predictor_judge_visual_inputs(self.processor,self.config,**visual)
+        batch['inputs']={k:inputs[k] for k in ['robot_state','remaining_actions','action_mask','action_dt_s','history_mask']}
+        batch['inputs']['encoded']=encoded;return batch

@@ -3,6 +3,7 @@ from array import array
 from collections import Counter, OrderedDict
 import json
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -63,7 +64,7 @@ class VideoWindowDecoder:
 
 class APWindowDataset:
     """Torch-compatible map-style dataset with a compact JSONL byte-offset index."""
-    def __init__(self, package, split, cache_windows=16):
+    def __init__(self, package, split, cache_windows=16, frame_cache=None):
         self.package = Path(package).resolve()
         if (self.package / "BUILDING").exists():
             raise ValueError("Dataset package build has not finished")
@@ -73,6 +74,21 @@ class APWindowDataset:
         self.split = split
         self.path = self.package / (split + ".jsonl")
         self.offsets, self.strata = array("Q"), array("I")
+        self.frame_cache = None
+        if frame_cache is not None:
+            from .visual_cache import FrameCache
+            self.frame_cache = FrameCache(frame_cache, self.package)
+            for offset, code in self.frame_cache.connection().execute(
+                    'SELECT offset,stratum FROM samples WHERE split=? ORDER BY idx', (split,)):
+                self.offsets.append(offset); self.strata.append(code)
+            self.frame_cache.close()
+            from .visual_cache import sample_index_digest
+            digest=sample_index_digest((idx,offset,code) for idx,(offset,code) in enumerate(zip(self.offsets,self.strata)))
+            if digest!=self.frame_cache.metadata['sample_index_sha256'].get(split):raise ValueError('Cached sample index checksum differs')
+            if len(self.offsets)!=self.frame_cache.metadata['splits'].get(split):raise ValueError('Cached sample count differs')
+            if not self.offsets: raise ValueError("Selected split has no cached samples")
+            self.decoder = VideoWindowDecoder(cache_windows=cache_windows)
+            return
         strata_ids = {}
         with self.path.open("rb") as stream:
             while True:
@@ -96,13 +112,27 @@ class APWindowDataset:
             raise ValueError("Selected split has no samples")
         self.decoder = VideoWindowDecoder(cache_windows=cache_windows)
 
+    def close(self):
+        self._reader_pid=None
+        reader=getattr(self,'_reader',None)
+        if reader is not None:reader.close();self._reader=None
+        cache=getattr(self,'frame_cache',None)
+        if cache is not None:cache.close()
+    def __del__(self):
+        self.close()
     def __len__(self):
         return len(self.offsets)
 
     def record(self, index):
-        with self.path.open("rb") as stream:
-            stream.seek(self.offsets[index])
-            return json.loads(stream.readline())
+        if getattr(self,"_reader_pid",None)!=os.getpid():
+            if getattr(self,"_reader",None) is not None:self._reader.close()
+            self._reader=self.path.open("rb");self._reader_pid=os.getpid()
+        self._reader.seek(self.offsets[index])
+        return json.loads(self._reader.readline())
+
+    def __getstate__(self):
+        state=self.__dict__.copy();state['_reader']=None;state['_reader_pid']=None
+        return state
 
     def media_path(self, record, camera):
         media = record["state"]["observation_window"]
@@ -116,8 +146,13 @@ class APWindowDataset:
     def __getitem__(self, index):
         row = self.record(index)
         media = row["state"]["observation_window"]
-        images = {camera: self.decoder.decode(self.media_path(row, camera), media["frame_indices"], media["video_fps"])
-                  for camera in media["videos"]}
+        if self.frame_cache is None:
+            images = {camera: self.decoder.decode(self.media_path(row, camera), media["frame_indices"], media["video_fps"])
+                      for camera in media["videos"]}
+        else:
+            from .visual_cache import frame_key
+            images = {camera: np.stack([self.frame_cache.read(frame_key(media["resource_id"], video, frame, media["video_fps"]))
+                                      for frame in media["frame_indices"]]) for camera, video in media["videos"].items()}
         inputs = visual_model_payload(row, images)
         return {"inputs": inputs, "target": np.asarray(row["target"], dtype=np.float32), "sample_id": row["id"],
                 "query_id": row["metadata"]["query_id"]}
@@ -176,3 +211,26 @@ def make_dataloader(dataset, *, batch_size, num_workers=0, balance="uniform", se
     return DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collate_torch,
                       shuffle=dataset.split == "train" and sampler is None, sampler=sampler,
                       generator=generator, persistent_workers=num_workers > 0)
+
+
+class PreparedVisualCollator:
+    """Spawn-safe worker-local processor; metadata never enters the model input."""
+    def __init__(self, model_config):
+        self.config=dict(model_config)
+        self.processor=None
+
+    def __call__(self, items):
+        from transformers import AutoProcessor
+        from jev.visual_model import encode_visual_inputs
+        if self.processor is None:
+            import os
+            os.environ.setdefault('TOKENIZERS_PARALLELISM','false')
+            self.processor=AutoProcessor.from_pretrained(self.config['model_id'],revision=self.config['revision'],
+                min_pixels=self.config['min_pixels'],max_pixels=self.config['max_pixels'],local_files_only=True)
+            self.processor.tokenizer.padding_side='right'
+            if self.processor.tokenizer.pad_token_id is None:self.processor.tokenizer.pad_token=self.processor.tokenizer.eos_token
+        batch=collate_torch(items)
+        encoded=encode_visual_inputs(self.processor,batch['inputs']['questions'],batch['inputs']['observations'],
+                                     ('overview','wrist'),self.config['max_length'])
+        batch['inputs']={'encoded':encoded}
+        return batch

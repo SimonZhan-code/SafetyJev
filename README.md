@@ -7,7 +7,7 @@ Train a shared visual decision model from the current overview image, wrist
 image and a natural-language AP question. This branch includes the five-family
 ManiGuard dataset interface and a native multimodal Open-Jev training path.
 
-The action-conditioned safety **Predictor Judge** has a separate [capture, training and offline evaluation guide](docs/predictor-judge-training.md). It uses newly recorded robot state and action data; the existing classifier dataset remains usable as before.
+The action-conditioned safety **Predictor Judge** has a separate [capture, training and offline evaluation guide](docs/predictor-judge-training.md). It uses newly recorded robot state and action data; the existing classifier dataset remains usable as before. Both pipelines support one-device or one-node DDP training, worker-side image preprocessing, resumable checkpoints and complete offline validation/test evaluation. Their 27B reference configurations use the same global-batch controls; model inputs and label meanings remain distinct.
 
 ## Visual classifier: data and training
 
@@ -90,10 +90,12 @@ The smoke run uses Qwen3.5-0.8B for four updates to check the complete training
 path. For the training experiment, choose the model, batch size, training budget
 and validation sampling in the configuration. A 27B starting configuration is
 `configs/training/five_family_visual_27b_reference.json`. The reference trainer
-uses one device, train/validation/test and a shared No/Yes head. There is no
+supports one device or one-node DDP, train/validation/test and a shared No/Yes head. There is no
 separate calibration stage.
 
-[Training details](docs/visual-training.md) cover checkpoint resume and inference.
+[Training details](docs/visual-training.md) cover the indexed frame cache, CPU-worker
+preprocessing, GPU-count/batch controls, checkpoint resume, metrics and inference.
+Prepare the cache before using the 27B reference configuration.
 [Data preparation](docs/data-preparation.md) documents rebuilding the dataset.
 
 ## Safety judgment and the existing guarded loop

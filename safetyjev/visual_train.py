@@ -1,4 +1,7 @@
 """Jar/multi-family launch layer for the fork's current-camera Noul trainer."""
+import copy
+from datetime import timedelta
+import torch.distributed as dist
 import argparse
 from collections import defaultdict
 import hashlib
@@ -16,7 +19,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .visual_dataset import APWindowDataset, collate_torch
+from .visual_dataset import APWindowDataset, collate_torch, PreparedVisualCollator
+from .visual_distributed import GlobalBatchSampler, resolve_accumulation
 from .data_preparation import _local_path
 
 
@@ -49,6 +53,21 @@ def confusion(targets, yes_probabilities, threshold=.5):
     return result
 
 
+
+def answer_metrics(targets, probabilities, threshold=.5):
+    counts=confusion(targets,probabilities,threshold)
+    result={}
+    for name,tp,fp,fn in [('yes',counts['tp'],counts['fp'],counts['fn']),('no',counts['tn'],counts['fn'],counts['fp'])]:
+        support=tp+fn
+        result[name]={'support':support,'precision':tp/(tp+fp) if tp+fp else None,
+                      'recall':tp/support if support else None,
+                      'f1':2*tp/(2*tp+fp+fn) if support else None}
+    f1=[r['f1'] for r in result.values() if r['f1'] is not None]
+    recall=[r['recall'] for r in result.values() if r['recall'] is not None]
+    result['macro_f1']=sum(f1)/len(f1) if f1 else None
+    result['balanced_accuracy']=sum(recall)/2 if len(recall)==2 else None
+    return result
+
 def _hash(path):
     h=hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -56,7 +75,7 @@ def _hash(path):
     return h.hexdigest()
 
 
-def verify_package(package):
+def verify_package(package, *, verify_raw=True):
     package=Path(package).resolve()
     summary=json.loads((package/"dataset_metadata.json").read_text())
     for split,digest in summary["file_sha256"].items():
@@ -64,6 +83,7 @@ def verify_package(package):
     for resource in summary["resources"].values():
         raw=(package/resource["raw_root"]).resolve();manifest=raw/"manifest.jsonl"
         if _hash(manifest)!=resource["raw_manifest_sha256"]:raise ValueError("Raw manifest changed")
+        if not verify_raw:continue
         with manifest.open() as stream:
             for line in stream:
                 for item in json.loads(line)["files"]:
@@ -87,7 +107,7 @@ def publish_final(output, build):
 
 
 @torch.inference_mode()
-def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=None):
+def _evaluate_visual_local(model, loader, *, temperature=1., max_batches=None, output=None):
     from jev.metrics import evaluate_probabilities, softmax
     model.eval();logits_all=[];targets_all=[];ids=[];queries=[];elapsed=0.
     for index,batch in enumerate(loader):
@@ -103,13 +123,15 @@ def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=N
     probabilities=[softmax(values,temperature) for values in logits_all]
     metrics=evaluate_probabilities(targets_all,probabilities)
     metrics["confusion"]=confusion(targets_all,[p[1] for p in probabilities])
+    metrics['answers']=answer_metrics(targets_all,[p[1] for p in probabilities])
     groups=defaultdict(list)
     for i,query in enumerate(queries):groups[query].append(i)
     metrics["by_query"]={q:{**evaluate_probabilities([targets_all[i] for i in ix],[probabilities[i] for i in ix]),
-                             "confusion":confusion([targets_all[i] for i in ix],[probabilities[i][1] for i in ix])}
+                             "confusion":confusion([targets_all[i] for i in ix],[probabilities[i][1] for i in ix]),
+                             'answers':answer_metrics([targets_all[i] for i in ix],[probabilities[i][1] for i in ix])}
                           for q,ix in groups.items()}
     metrics.update(evaluated=len(ids),available=len(loader.dataset),temperature=temperature,
-                   model_time_seconds=elapsed,time_scope="processor+model batches; excludes video decode and transport")
+                   model_time_seconds=elapsed,time_scope="forward including host-to-device transfer; excludes loader and worker preprocessing")
     if output is not None:
         output=Path(output);output.parent.mkdir(parents=True,exist_ok=True)
         with output.open("w") as stream:
@@ -119,11 +141,68 @@ def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=N
     return metrics,logits_all,targets_all
 
 
+
+def _rank_zero_call(fn):
+    distributed=dist.is_initialized();rank=dist.get_rank() if distributed else 0
+    result=[None,None]
+    if rank==0:
+        try:result[0]=fn()
+        except Exception as exc:result[1]=f"{type(exc).__name__}: {exc}"
+    if distributed:dist.broadcast_object_list(result,src=0)
+    if result[1]:raise RuntimeError(result[1])
+    return result[0]
+
+
+@torch.inference_mode()
+def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=None):
+    if not dist.is_initialized():
+        return _evaluate_visual_local(model,loader,temperature=temperature,max_batches=max_batches,output=output)
+    if output is None:raise ValueError("Distributed evaluation requires a shared prediction output path")
+    rank=dist.get_rank();world=dist.get_world_size();output=Path(output)
+    part=output.with_name(output.name+f".rank{rank}")
+    if len(loader.dataset):
+        metrics,_,_=_evaluate_visual_local(model,loader,temperature=temperature,max_batches=max_batches,output=part)
+        elapsed=metrics['model_time_seconds']
+    else:
+        part.parent.mkdir(parents=True,exist_ok=True);part.write_text('');elapsed=0.
+    timings=[None]*world;dist.all_gather_object(timings,elapsed)
+    def merge():
+        from jev.metrics import evaluate_probabilities
+        targets=[];probs=[];groups=defaultdict(list);seen=set()
+        temporary=output.with_suffix(output.suffix+'.tmp')
+        with temporary.open('w') as writer:
+            for r in range(world):
+                with output.with_name(output.name+f".rank{r}").open() as stream:
+                    for line in stream:
+                        row=json.loads(line)
+                        if row['id'] in seen:raise ValueError("Duplicate distributed evaluation sample")
+                        seen.add(row['id']);groups[row['query_id']].append(len(targets))
+                        targets.append(row['target']);probs.append(row['probabilities']);writer.write(line)
+        if not targets:raise ValueError("Evaluation has no samples")
+        result=evaluate_probabilities(targets,probs)
+        result['confusion']=confusion(targets,[p[1] for p in probs])
+        result['answers']=answer_metrics(targets,[p[1] for p in probs])
+        result['by_query']={q:{**evaluate_probabilities([targets[i] for i in ix],[probs[i] for i in ix]),
+                            'confusion':confusion([targets[i] for i in ix],[probs[i][1] for i in ix]),
+                            'answers':answer_metrics([targets[i] for i in ix],[probs[i][1] for i in ix])} for q,ix in groups.items()}
+        result.update(evaluated=len(targets),temperature=temperature,model_time_seconds=max(timings),
+                      time_scope='max rank forward including host-to-device transfer; excludes loader and worker preprocessing')
+        os.replace(temporary,output)
+        for r in range(world):output.with_name(output.name+f".rank{r}").unlink()
+        return result
+    return _rank_zero_call(merge),[],[]
+
 def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
     from jev.visual_model import VisualDecisionModel
     from jev.visual_training import fit_updates
-    if int(os.environ.get("WORLD_SIZE","1"))!=1:
-        raise ValueError("This reference trainer uses one device; do not launch duplicate torchrun processes")
+    config=copy.deepcopy(config)
+    world=int(os.environ.get("WORLD_SIZE","1"));rank=int(os.environ.get("RANK","0"))
+    if world>1 and not dist.is_initialized():
+        local=int(os.environ['LOCAL_RANK'])
+        if device.startswith('cuda'):torch.cuda.set_device(local);device=f'cuda:{local}'
+        dist.init_process_group('nccl' if device.startswith('cuda') else 'gloo',timeout=timedelta(minutes=10))
+    if config['training'].get('global_batch_size') is not None:
+        config['training']['accumulation']=resolve_accumulation(config['training']['global_batch_size'],config['data']['batch_size'],world)
     if config["model"]["dtype"] not in ("float32","bfloat16"):
         raise ValueError("The training reference uses float32 or bfloat16, without FP16 loss scaling")
     deterministic=config.get("deterministic",True)
@@ -134,32 +213,64 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
             raise ValueError("Set a deterministic CUBLAS_WORKSPACE_CONFIG before training")
     torch.use_deterministic_algorithms(deterministic)
     package=Path(config["data"]["package"]).resolve()
-    summary=verify_package(package)
+    frame_cache=config['data'].get('frame_cache')
+    def preflight():
+        if frame_cache:
+            from .visual_cache import FrameCache
+            FrameCache(frame_cache,package).close()
+            return verify_package(package,verify_raw=False)
+        return verify_package(package)
+    summary=_rank_zero_call(preflight)
     if summary["window"]["history_frames"]!=1:
         raise ValueError("First-round visual training requires current-frame H1 data")
     output=Path(output).resolve()
-    if output.exists() and not resume:raise FileExistsError(output)
-    output.mkdir(parents=True,exist_ok=True)
-    if (output/"final/report.json").exists():raise ValueError("This run has already finished")
+    def create_output():
+        if output.exists() and not resume:raise FileExistsError(output)
+        output.mkdir(parents=True,exist_ok=True)
+        if (output/"final/report.json").exists():raise ValueError("This run has already finished")
+    _rank_zero_call(create_output)
     seed=config["seed"];random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
     if device.startswith("cuda"):torch.cuda.manual_seed_all(seed)
-    datasets={split:APWindowDataset(package,split) for split in ("train","validation","test")}
+    datasets={split:APWindowDataset(package,split,**({'frame_cache':frame_cache} if frame_cache else {})) for split in ("train","validation","test")}
     workers=config["data"]["num_workers"];batch_size=config["data"]["batch_size"]
     balance=config["data"].get("balance","uniform")
     weights=None if balance=="uniform" else datasets["train"].training_weights(balance)
+    collator=PreparedVisualCollator(config['model']) if config['data'].get('prepare_in_workers',False) else collate_torch
+    loader_options={'num_workers':workers,'collate_fn':collator,'pin_memory':device.startswith('cuda')}
+    if workers:
+        loader_options.update(persistent_workers=True,prefetch_factor=config['data'].get('prefetch_factor',2),multiprocessing_context='spawn')
     def train_loader(epoch,start_batch):
-        sampler=EpochBatchSampler(len(datasets["train"]),batch_size,seed=seed,epoch=epoch,start_batch=start_batch,weights=weights)
-        return DataLoader(datasets["train"],batch_sampler=sampler,num_workers=workers,collate_fn=collate_torch,
-                          generator=torch.Generator().manual_seed(seed+epoch+100000))
-    eval_loaders={s:DataLoader(datasets[s],batch_size=batch_size,num_workers=workers,collate_fn=collate_torch,
-                              shuffle=False,generator=torch.Generator().manual_seed(seed+200000))
-                  for s in ("validation","test")}
+        sampler=GlobalBatchSampler(len(datasets['train']),batch_size,seed=seed,epoch=epoch,rank=rank,world_size=world,
+                                   start_batch=start_batch,weights=weights)
+        return DataLoader(datasets['train'],batch_sampler=sampler,**loader_options,
+                          generator=torch.Generator().manual_seed(seed+epoch+100000+rank))
+    def eval_loader(split,limit=None):
+        dataset=datasets[split]
+        indices=list(range(len(dataset)))
+        if limit is not None and limit<len(indices):
+            g=torch.Generator().manual_seed(seed+200001)
+            indices=torch.randperm(len(dataset),generator=g)[:limit].sort().values.tolist()
+        if split=='validation' and limit is not None and rank==0:
+            (output/'validation-subset.json').write_text(json.dumps({'row_indices':indices,'split_sha256':summary['file_sha256'].get('validation'),
+                'selection':'uniform without replacement, fixed seed; diagnostic subset'})+'\n')
+        indices=indices[rank::world]
+        # Cap before worker prefetch starts, so smoke evaluation exhausts its
+        # loader instead of discarding an active pinned-memory worker pipeline.
+        batch_limit=config['evaluation'].get('max_batches')
+        if batch_limit is not None:
+            if type(batch_limit) is not int or batch_limit<1:raise ValueError('max_batches must be positive')
+            indices=indices[:batch_limit*batch_size]
+        from torch.utils.data import Subset
+        return DataLoader(Subset(dataset,indices),batch_size=batch_size,**loader_options,shuffle=False,
+                          generator=torch.Generator().manual_seed(seed+200000+rank))
+    eval_loaders={s:eval_loader(s,config['evaluation'].get('validation_samples') if s=='validation' else None)
+                  for s in ('validation','test')}
     import jev.visual_model as vm
     import jev.visual_training as vt
-    from . import visual_dataset
-    source_hashes={str(Path(p).name):_hash(p) for p in (__file__,vm.__file__,vt.__file__,visual_dataset.__file__)}
+    from . import visual_dataset,visual_distributed,visual_cache
+    source_hashes={str(Path(p).name):_hash(p) for p in (__file__,vm.__file__,vt.__file__,visual_dataset.__file__,visual_distributed.__file__,visual_cache.__file__)}
     identity={"package_sha256":_hash(package/"dataset_metadata.json"),"split_hashes":summary["file_sha256"],
-              "sources":source_hashes,"seed":seed,"batch_size":batch_size,"balance":balance,
+              "sources":source_hashes,"seed":seed,"world_size":world,"frame_cache":bool(frame_cache),"batch_size":batch_size,"balance":balance,
               "num_workers":workers,"evaluation":config["evaluation"],"deterministic":deterministic,
               "cublas_workspace_config":os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
               "runtime":{name:importlib.metadata.version(name) for name in
@@ -168,33 +279,37 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
     params={"total":sum(p.numel() for p in model.parameters()),"trainable":sum(p.numel() for p in model.parameters() if p.requires_grad),
             "vision_trainable":sum(p.numel() for p in model.backbone.visual.parameters() if p.requires_grad)}
     if params["vision_trainable"]:raise ValueError("The initial visual experiment must keep the vision encoder frozen")
-    (output/"run.json").write_text(json.dumps({"config":config,"identity":identity,"device":device,"parameters":params},indent=2)+"\n")
+    if rank==0:(output/"run.json").write_text(json.dumps({"config":config,"identity":identity,"device":device,"parameters":params},indent=2)+"\n")
     if device.startswith("cuda"):torch.cuda.reset_peak_memory_stats(device)
     max_batches=config["evaluation"].get("max_batches")
     def validation(current,step):
         metrics,_,_=evaluate_visual(current,eval_loaders["validation"],max_batches=max_batches,
                                     output=output/"evaluations"/f"validation-{step:08d}.jsonl")
-        (output/"evaluations"/f"validation-{step:08d}.json").write_text(json.dumps(metrics,indent=2)+"\n")
+        if rank==0:(output/"evaluations"/f"validation-{step:08d}.json").write_text(json.dumps(metrics,indent=2)+"\n")
         return metrics["nll"]
+    if world>1:
+        model=torch.nn.parallel.DistributedDataParallel(model,device_ids=[int(os.environ['LOCAL_RANK'])] if device.startswith('cuda') else None,
+                                                        broadcast_buffers=False)
     trained=fit_updates(model,train_loader,config["training"],output,identity=identity,
                         validation_fn=validation,resume=resume,stop_after=stop_after)
     if trained["status"]!="completed":return trained
     del model
     if device.startswith("cuda"):torch.cuda.empty_cache()
     model=VisualDecisionModel.load(Path(trained["best_checkpoint"])/"model",device=device)
+    temperature=1.
+    model.set_temperature(temperature)
+    full_validation,_,_=evaluate_visual(model,eval_loader('validation'),output=output/'evaluations/final-validation.jsonl',max_batches=max_batches)
+    test,_,_=evaluate_visual(model,eval_loaders["test"],temperature=temperature,max_batches=max_batches,output=output/'evaluations/final-test.jsonl')
     def finalize(stage):
-        temperature=1.
-        model.set_temperature(temperature)
-        test,_,_=evaluate_visual(model,eval_loaders["test"],temperature=temperature,max_batches=max_batches,
-                                 output=stage/"test.jsonl")
+        shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl')
         model.save(stage/"model")
         report={"training":trained,"parameters":params,"identity":identity,
-                "temperature":temperature,"test":test,
+                "temperature":temperature,"validation":full_validation,"test":test,
                 "checkpoint":str(output/"final/model"),"target":"current-question yes/no, not action-conditioned forecasting",
                 "peak_cuda_allocated_bytes":torch.cuda.max_memory_allocated(device) if device.startswith("cuda") else None}
         (stage/"report.json").write_text(json.dumps(report,indent=2,allow_nan=False)+"\n")
         return report
-    return publish_final(output,finalize)
+    return _rank_zero_call(lambda:publish_final(output,finalize))
 
 
 def main(argv=None):
@@ -202,9 +317,20 @@ def main(argv=None):
     parser.add_argument("--config",required=True);parser.add_argument("--output",required=True)
     parser.add_argument("--device",default="cuda:0");parser.add_argument("--resume")
     parser.add_argument("--stop-after-step",type=int)
+    parser.add_argument('--batch-size',type=int,help='Per-device microbatch')
+    parser.add_argument('--global-batch-size',type=int,help='Samples per optimizer update; accumulation is derived')
+    parser.add_argument('--workers',type=int);parser.add_argument('--frame-cache')
     args=parser.parse_args(argv)
-    result=run(json.loads(Path(args.config).read_text()),args.output,device=args.device,resume=args.resume,stop_after=args.stop_after_step)
-    print(json.dumps(result,indent=2))
+    config=json.loads(Path(args.config).read_text())
+    if args.batch_size is not None:config['data']['batch_size']=args.batch_size
+    if args.global_batch_size is not None:config['training']['global_batch_size']=args.global_batch_size
+    if args.workers is not None:config['data']['num_workers']=args.workers
+    if args.frame_cache is not None:config['data']['frame_cache']=args.frame_cache
+    try:
+        result=run(config,args.output,device=args.device,resume=args.resume,stop_after=args.stop_after_step)
+        if int(os.environ.get('RANK','0'))==0:print(json.dumps(result,indent=2))
+    finally:
+        if dist.is_initialized():dist.destroy_process_group()
 
 
 if __name__=="__main__":main()

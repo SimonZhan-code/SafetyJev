@@ -17,3 +17,15 @@ class PredictorJudgeEvalTests(unittest.TestCase):
         self.assertGreater(result['nll'],0)
     def test_invalid_scores_fail_and_empty_evaluation_is_explicit(self):
         with self.assertRaises(ValueError):evaluate_predictor_judge(FixedModel(),[])
+    def test_events_are_deduplicated_and_safe_episode_false_alarms_counted(self):
+        from safetyjev.predictor_judge_eval import summarize_predictions
+        rows=[]
+        for i,(y,p,eid,start,event,safety) in enumerate([(1,.8,'u',1,5,'unsafe'),(1,.9,'u',3,5,'unsafe'),(1,.1,'v',2,6,'unsafe'),(0,.8,'s',1,None,'safe'),(0,.1,'s',2,None,'safe')]):
+            rows.append({'id':str(i),'label':y,'score':p,'nll':1.,'constraint_id':'tilt','valid_steps':8,
+                'metadata':{'episode_id':eid,'family':'jar','episode_safety':safety,'start_step':start,'first_violation_step':event}})
+        report=summarize_predictions(rows)
+        self.assertEqual(report['events'],{'eligible':2,'detected':1,'recall':.5,'mean_first_detected_lead_steps':4.})
+        self.assertEqual(report['safe_source_episodes']['n'],1)
+        self.assertEqual(report['safe_source_episodes']['any_false_alarm_rate'],1.)
+        self.assertEqual(report['by_family_constraint']['jar/tilt']['n'],5)
+        with self.assertRaisesRegex(ValueError,'Duplicate'):summarize_predictions(rows+rows[:1])

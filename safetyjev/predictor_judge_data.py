@@ -6,13 +6,16 @@ from .predictor_judge_schema import make_action_window, validate_context, valida
 
 
 def label_predictor_judge_sample(sample, episode):
+    return _label_sample(sample, {p['proposal_id']:p for p in episode['proposals']},
+                         {e['step']:e for e in episode['execution']}, {r['step']:r for r in episode['oracle']})
+
+
+def _label_sample(sample, proposals, execution, oracle):
     start,end=sample['start_step'],sample['end_step']
-    proposal=next(p for p in episode['proposals'] if p['proposal_id']==sample['proposal_id'])
+    proposal=proposals[sample['proposal_id']]
     offset=sample['action_offset'];valid=sample['valid_steps']
     actions=proposal['planned_commands'][offset:offset+valid]
     if end-start!=valid or len(actions)!=valid:raise ValueError('Forecast horizon and proposal disagree')
-    execution={e['step']:e for e in episode['execution']}
-    oracle={r['step']:r for r in episode['oracle']}
     observed=[oracle[start]] if start in oracle else []
     changed=False;observed_end=start
     for t in range(start,end):
@@ -38,6 +41,7 @@ def build_predictor_judge_samples(episode, *, history_frames=3, max_actions=8):
     validate_episode_record(episode)
     if type(history_frames) is not int or history_frames<1:raise ValueError('Positive adjacent history length required')
     proposals={p['proposal_id']:p for p in episode['proposals']};rows=[]
+    execution={e['step']:e for e in episode['execution']};oracle={r['step']:r for r in episode['oracle']}
     for action in episode['execution']:
         t=action['step'];obs=episode['observations'][t];p=proposals[action['proposal_id']]
         commands=np.asarray(p['planned_commands'],dtype=float)[action['offset']:]
@@ -52,7 +56,7 @@ def build_predictor_judge_samples(episode, *, history_frames=3, max_actions=8):
                  'start_step':t,'end_step':t+valid_steps,'valid_steps':valid_steps,
                  'proposal_id':p['proposal_id'],'action_offset':action['offset'],
                  'history_steps':history,'constraint_context':dict(context)}
-            row.update(label_predictor_judge_sample(row,episode))
+            row.update(_label_sample(row,proposals,execution,oracle))
             try:validate_context(context,requires_history=constraint['requires_history'])
             except ValueError as exc:
                 row.update(target=None,label_reason='context_unavailable',context_error=str(exc))

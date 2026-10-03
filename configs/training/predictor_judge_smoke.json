@@ -13,7 +13,7 @@
     "gradient_checkpointing": true
   },
   "data": {
-    "package": "datasets/packages/predictor_judge",
+    "package": "datasets/predictor_judge/package",
     "batch_size": 1,
     "num_workers": 0,
     "sampling": {
@@ -34,5 +34,6 @@
   },
   "evaluation": {
     "max_batches": 1
-  }
+  },
+  "task": "predictor_judge"
 }

@@ -30,9 +30,11 @@ Choose CUDA wheels compatible with the deployment host. Model weights and run ar
 
 Prepare the H1 package following [data preparation](data-preparation.md). The
 loader provides current RGB images, questions and Noul targets; source model,
-ID/OOD, AP truth and episode metadata never become prompt features. The trainer
-verifies split files, registered raw manifests and source-file hashes before
-both a new run and a resume.
+ID/OOD, AP truth and episode metadata never become prompt features. The direct-video path verifies the raw source files before each run. The cached
+path verifies all raw hashes during preparation, then checks package, split and
+raw-manifest identities on startup and each cached image's checksum on access.
+An explicit full-cache check is available below. Keep the extracted source data
+alongside the cache; this changes storage access, not the dataset or its labels.
 
 ```bash
 bash scripts/train_visual.sh \
@@ -44,19 +46,117 @@ The smoke configuration uses pinned Qwen3.5-0.8B weights, four optimizer
 updates and capped evaluation to verify the training pipeline. The cap reads
 the first batches only; choose representative validation sampling or full
 evaluation when designing the training experiment.
-`five_family_visual_27b_reference.json` uses pinned Qwen3.8-27B weights and full held-out
-evaluation; choose hardware with sufficient memory for that model.
+`five_family_visual_27b_reference.json` uses pinned Qwen3.8-27B weights. Its
+1,000-update budget is a starting diagnostic budget, not a claim of convergence.
+At global batch 128 this draws 128,000 pairs; the delivered train split contains
+2,440,945 pairs. Balanced replacement sampling does not guarantee epoch coverage.
 
-Training uses one device, gradient accumulation, bfloat16 or float32,
+Training uses one device or one-node DDP, gradient accumulation, bfloat16 or float32,
 language-only LoRA, gradient checkpointing, AdamW, warmup/cosine learning rates,
 gradient clipping, and the upstream cross-entropy plus Brier objective. The
 sampler reconstructs each epoch and batch cursor deterministically.
 
-The reference uses train, validation and test. Validation NLL selects the
-checkpoint; test data are used only for the final report. Temperature stays at 1. Reports contain
-per-question confusion counts, precision/recall for Yes, NLL and Brier. Yes is
-question-dependent, not universally synonymous with unsafe. A question with no
-positive targets has undefined Yes recall, recorded as null.
+The reference uses train, validation and test. During training, validation NLL
+on a fixed 4,096-row subset selects the checkpoint. The subset is drawn uniformly
+without replacement, independently of model results, and recorded in
+`validation-subset.json`; small-query coverage is not guaranteed. Finalization
+runs full validation and test once using the selected model. The smoke config
+instead caps evaluation batches and must not be used for quality claims.
+
+Temperature stays at 1. Reports include per-question and pooled confusion counts,
+No/Yes support, precision, recall, F1, two-class macro F1 and balanced accuracy,
+as well as NLL and Brier. Metrics are calculated from individual predictions,
+not unweighted averages of rank metrics. A missing class has null recall/F1;
+balanced accuracy is null unless both classes exist. Yes is question-dependent,
+not universally synonymous with unsafe. The current data come from reviewed
+unsafe episodes: their safe frames do not measure false alarms across a natural
+population of wholly safe episodes. Use per-query results when assessing rare
+violations, rather than pooled accuracy alone.
+
+## Prepare efficient input storage
+
+After downloading and extracting the HF ZIP as described in the repository
+README, run from the repository root:
+
+```bash
+.venv-visual/bin/python tools/prepare_visual_cache.py \
+  --package datasets/packages/five_family --output datasets/cache/five_family
+.venv-visual/bin/python tools/prepare_visual_cache.py \
+  --package datasets/packages/five_family --output datasets/cache/five_family --verify-only
+```
+
+Preparation indexes every split and sequentially decodes each needed source
+video. Identical video/frame references shared by AP questions are stored once
+as lossless PNG records in `frames.sqlite`. No millions-of-files extraction and
+no repeated MP4 seeking during training. `cache.json` marks completion; incomplete
+caches are refused by the loader. Rerun the same preparation command to resume.
+`--max-gib` stops a growing build at periodic disk-budget checks and leaves it
+incomplete; allow transaction headroom. Full preparation is intended for the
+training server's NVMe, not a duplicate local dataset release.
+
+The reference config uses this cache and CPU-worker multimodal preprocessing.
+Only images and question text enter the model; labels and source metadata remain
+outside the input tensors. Download the pinned model once before starting workers
+or distributed ranks:
+
+```bash
+export HF_HOME="$PWD/checkpoints/hf_cache"
+.venv-visual/bin/python - <<'PYMODEL'
+import json
+from huggingface_hub import snapshot_download
+c = json.load(open('configs/training/five_family_visual_27b_reference.json'))
+snapshot_download(c['model']['model_id'], revision=c['model']['revision'])
+PYMODEL
+
+OMP_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false .venv-visual/bin/python tools/profile_visual_loader.py \
+  --config configs/training/five_family_visual_27b_reference.json \
+  --workers 2 --batches 200 --output outputs/loader-profile.json
+```
+
+Compare 0/2/4 workers on the actual host. The profile includes worker startup and
+reports subsequent batch-wait percentiles; loader-only speed is not GPU training
+throughput. Each training update separately records input wait, update time and
+global samples/s. Warm up before interpreting them. With worker preprocessing,
+evaluation forward timing includes tensor transfer and model computation but
+excludes worker preprocessing; it is not end-to-end deployment latency.
+
+## Choose GPU count and batch size
+
+Run host checks, then launch the same training entrypoint:
+
+```bash
+.venv-visual/bin/python tools/visual_training_preflight.py \
+  --config configs/training/five_family_visual_27b_reference.json --gpus 4
+
+NPROC_PER_NODE=4 bash scripts/train_visual.sh \
+  --config configs/training/five_family_visual_27b_reference.json \
+  --output outputs/visual-training/five-family-27b \
+  --batch-size 1 --global-batch-size 128 --workers 2
+```
+
+Only four scaling controls are needed: `NPROC_PER_NODE`, `--batch-size`
+(per-device microbatch), `--global-batch-size`, and `--workers` (per rank).
+Accumulation is derived exactly, refusing non-divisible combinations:
+
+| GPUs | Microbatch per GPU | Accumulation | Global batch |
+|---|---:|---:|---:|
+| 4 | 1 | 32 | 128 |
+| 8 | 1 | 16 | 128 |
+| 1 | 1 | 128 | 128 |
+
+Increase microbatch only after measuring memory. A single high-memory GPU uses
+`NPROC_PER_NODE=1`; no source changes are required. DDP replicates the whole
+frozen backbone on each GPU, so more cards do not solve per-card model fit.
+A B300 requires a compatible Torch/CUDA build; the environment above is not a
+B300 validation. Preflight executes BF16 CUDA math and reports memory, architecture
+and batch accounting; it does not prove full-model fit or NCCL health.
+
+Training ranks partition one deterministic weighted draw stream. The final epoch
+batch is filled to a complete global microbatch (replacement draws, or repeated
+prefix indices for uniform sampling). Validation/test have disjoint partitions
+with no padding, so every selected row is counted once. Workers use spawn,
+worker-local handles, persistent processes and bounded prefetch. A failed rank
+fails the run; it must not be interpreted as a partial successful evaluation.
 
 ## Checkpoints and resume
 
@@ -79,7 +179,8 @@ run/
 
 Snapshots are written at optimizer-step boundaries. Resume restores the optimizer,
 Python/NumPy/Torch/CUDA RNG and epoch/batch position. Model, data, source-code and
-training-configuration identities must agree. The base weights are reconstructed
+training-configuration identities and GPU world size must agree. Distributed
+checkpoints preserve each rank's RNG; rank zero owns shared checkpoint files. The base weights are reconstructed
 from their pinned revision; the snapshot does not duplicate frozen base weights.
 Deterministic Torch algorithms and a deterministic cuBLAS workspace are enabled
 in the reference configurations. These settings and core dependency versions are
@@ -129,3 +230,32 @@ predictor.
 ```
 
 Use the four-update smoke configuration above to check the model training path.
+The local engineering checks cover a small real five-family cache, small-VLM GPU
+updates and CPU/Gloo distributed accounting/resume. Full cache coverage, actual
+27B memory fit, NCCL and sustained four-H100 throughput must pass target-server
+acceptance before declaring the collaborator setup validated. Eight-rank and
+B300 execution require their own host checks.
+
+The Predictor Judge can reuse cache/worker, launch, distributed optimization and
+reporting infrastructure. Its temporal image inputs, numeric state/actions,
+valid-action masks, horizons and censored supervision still require their own
+integration tests; this classifier implementation does not validate those paths.
+
+
+## Evaluate a saved classifier independently
+
+```bash
+NPROC_PER_NODE=4 bash scripts/evaluate_model.sh --task classifier \
+  --checkpoint outputs/visual-training/five-family-27b/final/model \
+  --package datasets/packages/five_family --frame-cache datasets/cache/five_family \
+  --split test --workers 2 --output outputs/classifier-test.json
+```
+
+This evaluates the complete selected split exactly once across ranks and writes
+per-pair predictions alongside the report. Use one GPU by setting `NPROC_PER_NODE=1`.
+The same launcher accepts `--task predictor_judge`; that model has different inputs
+and supervision described in [its training guide](predictor-judge-training.md).
+The two trainers share batch scaling, prepared CPU inputs, frozen vision/language
+LoRA, optimizer, exact-cursor resume and rank-safe finalization. Each has its own
+cache/loader to preserve its dataset contract. Model-quality and target-hardware
+acceptance remain separate from a successful small-model functional smoke.
