@@ -7,7 +7,7 @@ Train a shared visual decision model from the current overview image, wrist
 image and a natural-language AP question. This branch includes the five-family
 ManiGuard dataset interface and a native multimodal Open-Jev training path.
 
-The action-conditioned safety **Predictor Judge** has a separate [capture, training and offline evaluation guide](docs/predictor-judge-training.md). It uses newly recorded robot state and action data; the existing classifier dataset remains usable as before. Both pipelines support one-device or one-node DDP training, worker-side image preprocessing, resumable checkpoints and complete offline validation/test evaluation. Their 27B reference configurations use the same global-batch controls; model inputs and label meanings remain distinct.
+The action-conditioned safety **Predictor Judge** has a separate [capture, training and offline evaluation guide](docs/predictor-judge-training.md). It uses newly recorded robot state and action data; the existing classifier dataset remains usable as before. Both pipelines support one-device or one-node DDP training, worker-side image preprocessing, resumable checkpoints and complete offline validation/test evaluation. Their 27B reference configurations use the same global-batch controls; model inputs and label meanings remain distinct. Both default to per-device batch 8 and global batch 128; the training guides show an eight-process launch with automatically derived gradient accumulation.
 
 ## Visual classifier: data and training
 
@@ -22,7 +22,19 @@ cd SafetyJev
 For an existing checkout, switch to `feat/data-preparation` and run
 `git submodule update --init --recursive`.
 
-### 2. Put the data in place
+### 2. Install the training environment
+
+The tested environment uses Python 3.11 and CUDA 12.6 PyTorch wheels:
+
+```bash
+python3.11 -m venv .venv-visual
+.venv-visual/bin/python -m pip install torch==2.8.0 torchvision==0.23.0 \
+  --index-url https://download.pytorch.org/whl/cu126
+.venv-visual/bin/python -m pip install -r requirements-visual.txt
+.venv-visual/bin/python -m pip install --no-deps -e third_party/Open-Jev -e .
+```
+
+### 3. Put the data in place
 
 The dataset is hosted in the private organization repository
 [IDEAS-Lab-Northwestern/SafetyJev-Data](https://huggingface.co/datasets/IDEAS-Lab-Northwestern/SafetyJev-Data).
@@ -30,9 +42,10 @@ Use your own Hugging Face account with access to the organization repository.
 From inside the **SafetyJev repository root**, run:
 
 ```bash
-hf auth login
-hf download IDEAS-Lab-Northwestern/SafetyJev-Data safetyjev-five-family.zip \
-  --repo-type dataset --local-dir downloads
+.venv-visual/bin/hf auth login
+.venv-visual/bin/hf download IDEAS-Lab-Northwestern/SafetyJev-Data safetyjev-five-family.zip \
+  --repo-type dataset --revision c184b83f2765082a37174040be88d6c89b7a515a \
+  --local-dir downloads
 unzip downloads/safetyjev-five-family.zip
 ```
 
@@ -59,18 +72,6 @@ The data cover Jar, Lid, Stack, Cabinet and Dusty: **4,816 episodes, 9,632 video
 3,113,929 image/question pairs**, about **25.3 GB extracted**. Read
 [the data README](datasets/README.md) after extraction. The current train/val/test
 split is provisional and grouped by base task; the training owner can revise it.
-
-### 3. Install the training environment
-
-The tested environment uses Python 3.11 and CUDA 12.6 PyTorch wheels:
-
-```bash
-python3.11 -m venv .venv-visual
-.venv-visual/bin/python -m pip install torch==2.8.0 torchvision==0.23.0 \
-  --index-url https://download.pytorch.org/whl/cu126
-.venv-visual/bin/python -m pip install -r requirements-visual.txt
-.venv-visual/bin/python -m pip install --no-deps -e third_party/Open-Jev -e .
-```
 
 ### 4. Check data loading and start a training smoke run
 

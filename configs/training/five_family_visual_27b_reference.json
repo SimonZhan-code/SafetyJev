@@ -14,7 +14,7 @@
   },
   "data": {
     "package": "datasets/packages/five_family",
-    "batch_size": 1,
+    "batch_size": 8,
     "num_workers": 2,
     "balance": "query_answer",
     "frame_cache": "datasets/cache/five_family",

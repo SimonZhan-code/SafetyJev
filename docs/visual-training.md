@@ -134,12 +134,11 @@ Run host checks, then launch the same training entrypoint:
 
 ```bash
 .venv-visual/bin/python tools/visual_training_preflight.py \
-  --config configs/training/five_family_visual_27b_reference.json --gpus 4
+  --config configs/training/five_family_visual_27b_reference.json --gpus 8
 
-NPROC_PER_NODE=4 bash scripts/train_visual.sh \
+NPROC_PER_NODE=8 bash scripts/train_visual.sh \
   --config configs/training/five_family_visual_27b_reference.json \
-  --output outputs/visual-training/five-family-27b \
-  --batch-size 1 --global-batch-size 128 --workers 2
+  --output outputs/visual-training/five-family-27b
 ```
 
 Only four scaling controls are needed: `NPROC_PER_NODE`, `--batch-size`
@@ -148,9 +147,16 @@ Accumulation is derived exactly, refusing non-divisible combinations:
 
 | GPUs | Microbatch per GPU | Accumulation | Global batch |
 |---|---:|---:|---:|
-| 4 | 1 | 32 | 128 |
-| 8 | 1 | 16 | 128 |
-| 1 | 1 | 128 | 128 |
+| 8 | 8 | 2 | 128 |
+| 4 | 8 | 4 | 128 |
+| 1 | 8 | 16 | 128 |
+
+Both 27B reference configurations use per-device batch 8, global batch 128,
+and two loader workers per rank. The eight-rank launch therefore uses two
+accumulation steps; the worker processes total 16. Accumulation is computed at
+launch rather than fixed in the configuration. Per-device batch 8 was selected
+from four-rank throughput/memory tests; eight-rank execution still needs a host
+check. Override the four controls above to fit another machine.
 
 Increase microbatch only after measuring memory. A single high-memory GPU uses
 `NPROC_PER_NODE=1`; no source changes are required. DDP replicates the whole
@@ -238,22 +244,18 @@ predictor.
 ```
 
 Use the four-update smoke configuration above to check the model training path.
-The local engineering checks cover a small real five-family cache, small-VLM GPU
-updates and CPU/Gloo distributed accounting/resume. Full cache coverage, actual
-27B memory fit, NCCL and sustained four-H100 throughput must pass target-server
-acceptance before declaring the collaborator setup validated. Eight-rank and
-B300 execution require their own host checks.
-
-The Predictor Judge can reuse cache/worker, launch, distributed optimization and
-reporting infrastructure. Its temporal image inputs, numeric state/actions,
-valid-action masks, horizons and censored supervision still require their own
-integration tests; this classifier implementation does not validate those paths.
+Engineering checks cover local small-model tests, CPU/Gloo accounting/resume,
+and actual 27B four-rank training, save/reload, and throughput tests for both
+models. The classifier used the full five-family cache; Predictor Judge tests
+used pilot captures. Eight-rank execution and the full Predictor Judge dataset
+still require their own acceptance checks. These checks establish functionality,
+not trained-model quality.
 
 
 ## Evaluate a saved classifier independently
 
 ```bash
-NPROC_PER_NODE=4 bash scripts/evaluate_model.sh --task classifier \
+NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task classifier \
   --checkpoint outputs/visual-training/five-family-27b/final/model \
   --package datasets/packages/five_family --frame-cache datasets/cache/five_family \
   --split test --workers 2 --output outputs/classifier-test.json

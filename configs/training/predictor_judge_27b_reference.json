@@ -14,7 +14,7 @@
   },
   "data": {
     "package": "datasets/predictor_judge/package",
-    "batch_size": 1,
+    "batch_size": 8,
     "num_workers": 2,
     "frame_cache": "datasets/cache/predictor_judge",
     "prepare_in_workers": true,

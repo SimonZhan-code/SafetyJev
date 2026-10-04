@@ -197,19 +197,24 @@ snapshot_download(c['model']['model_id'], revision=c['model']['revision'])
 PYMODEL
 
 .venv-visual/bin/python tools/visual_training_preflight.py \
-  --config configs/training/predictor_judge_27b_reference.json --gpus 4
+  --config configs/training/predictor_judge_27b_reference.json --gpus 8
 OMP_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false .venv-visual/bin/python tools/profile_visual_loader.py \
   --config configs/training/predictor_judge_27b_reference.json \
   --workers 2 --batches 200 --output outputs/judge-loader-profile.json
 
-NPROC_PER_NODE=4 bash scripts/train_predictor_judge.sh \
+NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
   --config configs/training/predictor_judge_27b_reference.json \
-  --output outputs/predictor-judge-training/27b \
-  --batch-size 1 --global-batch-size 128 --workers 2
+  --output outputs/predictor-judge-training/27b
 ```
 
-Use `NPROC_PER_NODE=8` for eight GPUs or `1` for one sufficiently large GPU. As with
-the classifier, accumulation is derived from global batch / (GPUs × microbatch).
+The reference uses per-device batch 8, global batch 128 and two loader workers
+per rank. The eight-rank command derives two gradient accumulation steps.
+Use `NPROC_PER_NODE=4` for four GPUs (four accumulation steps), or `1` for one
+sufficiently large GPU (16 accumulation steps). Override `--batch-size`,
+`--global-batch-size` and `--workers` as needed; accumulation is derived from
+global batch / (GPUs × microbatch), which must be an integer.
+Per-device batch 8 passed four-rank tests on pilot captures; eight-rank execution
+and the completed collection package remain to be validated.
 DDP replicates the full backbone per GPU. This model processes up to six images,
 versus the classifier's two, so memory and throughput must be measured separately.
 GPU count does not change the data or model interface. See the shared guide for
@@ -225,7 +230,7 @@ set appropriately. It runs two updates with capped evaluation, not a quality tes
 `--stop-after-step` supports controlled interruption. Resume in the same output:
 
 ```bash
-NPROC_PER_NODE=4 bash scripts/train_predictor_judge.sh \
+NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
   --config configs/training/predictor_judge_27b_reference.json \
   --output outputs/predictor-judge-training/27b \
   --resume outputs/predictor-judge-training/27b/checkpoints/step-00000100
@@ -241,7 +246,7 @@ Finalization evaluates the selected model on **full validation and test**, witho
 label balancing. For independent full evaluation, including multi-GPU evaluation:
 
 ```bash
-NPROC_PER_NODE=4 bash scripts/evaluate_model.sh --task predictor_judge \
+NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task predictor_judge \
   --checkpoint outputs/predictor-judge-training/27b/final/model \
   --package datasets/predictor_judge/package --frame-cache datasets/cache/predictor_judge \
   --split test --workers 2 --output outputs/predictor-judge-test.json
