@@ -1,12 +1,16 @@
 """Rebuildable, lossless current-frame cache with transactional preparation."""
+from collections import deque
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import hashlib
 import io
 import json
 import math
+import multiprocessing
 import os
 from pathlib import Path
 import sqlite3
 import struct
+import time
 
 import numpy as np
 from PIL import Image
@@ -35,12 +39,47 @@ def _atomic_json(path, value):
     os.replace(temporary,path)
 
 
-def build_visual_cache(package, output, *, max_bytes=None):
+def _decode_video(path, fps, wanted):
+    """Decode one video without touching SQLite; each worker owns its decoder."""
+    import av
+    result=[]
+    with av.open(str(path)) as container:
+        stream=container.streams.video[0];stream.codec_context.thread_count=1
+        if not math.isclose(float(stream.average_rate),fps,abs_tol=1e-6):raise ValueError('Video rate differs from index')
+        start=stream.start_time or 0
+        for frame in container.decode(stream):
+            if frame.pts is None:raise ValueError('Video frame lacks timestamp')
+            position=float((frame.pts-start)*stream.time_base)*fps;index=round(position)
+            if abs(position-index)>.01:raise ValueError('Video frame clock is not aligned')
+            if index not in wanted:continue
+            pixels=frame.to_ndarray(format='rgb24');buffer=io.BytesIO()
+            Image.fromarray(pixels).save(buffer,format='PNG',compress_level=1);payload=buffer.getvalue()
+            result.append((index,payload,hashlib.sha256(payload).hexdigest(),wanted.pop(index)))
+            if not wanted:break
+    if wanted:raise ValueError('Missing requested frames: '+str(path))
+    return result
+
+
+def _decode_jobs(jobs, workers):
+    # Bound decoded results to one video per worker; SQLite has a single writer.
+    if workers==1:
+        for job in jobs:yield _decode_video(*job)
+        return
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending=deque()
+        for job in jobs:
+            pending.append(pool.submit(_decode_video,*job))
+            if len(pending)>=workers:yield pending.popleft().result()
+        while pending:yield pending.popleft().result()
+
+
+def build_visual_cache(package, output, *, max_bytes=None, workers=1):
     """Prepare all indexed splits. A byte-limited failure stays resumable, not complete."""
     from .visual_train import verify_package
     package=Path(package).resolve();output=Path(output).resolve()
     if output==package:raise ValueError('Cache must have its own directory')
     if max_bytes is not None and (type(max_bytes) is not int or max_bytes<1):raise ValueError('Invalid byte budget')
+    if type(workers) is not int or workers<1:raise ValueError('workers must be a positive integer')
     summary=verify_package(package)
     identity=file_hash(package/'dataset_metadata.json')
     output.mkdir(parents=True,exist_ok=True)
@@ -53,10 +92,10 @@ def build_visual_cache(package, output, *, max_bytes=None):
             previous=json.loads(manifest.read_text())
             if previous['package_sha256']!=identity:raise ValueError('Cache source identity differs')
             if previous['complete']:
-                validate_cache(output,package)
+                validate_cache(output,package,workers=workers)
                 return previous
         _atomic_json(manifest,{'format':1,'complete':False,'package_sha256':identity})
-        db=sqlite3.connect(output/'frames.sqlite')
+        db=sqlite3.connect(output/'frames.sqlite',timeout=60)
         try:
             db.execute('PRAGMA journal_mode=DELETE')
             db.execute('PRAGMA cache_size=-8192')
@@ -66,9 +105,14 @@ def build_visual_cache(package, output, *, max_bytes=None):
               CREATE TABLE IF NOT EXISTS samples (split TEXT, idx INTEGER, offset INTEGER, stratum INTEGER, PRIMARY KEY(split,idx));
               CREATE TABLE IF NOT EXISTS progress (key TEXT PRIMARY KEY, value TEXT);
             ''')
+            progress={'stage':'indexing','workers':workers,'ready_frames':None,'total_frames':None}
+            def publish_progress():
+                _atomic_json(output/'progress.json',{**progress,'updated_at':time.time()})
+            publish_progress()
             def budget():
                 size=sum(p.stat().st_size for p in output.iterdir() if p.is_file())
                 if max_bytes is not None and size>max_bytes:raise ValueError('Cache byte budget exceeded; incomplete cache retained for resume')
+                publish_progress()
             if not db.execute("SELECT 1 FROM progress WHERE key='indexed'").fetchone():
                 # Indexing is idempotent after interruption; frame payloads are filled only afterwards.
                 db.execute('DELETE FROM samples');db.execute('DELETE FROM frames');db.commit()
@@ -95,39 +139,35 @@ def build_visual_cache(package, output, *, max_bytes=None):
                             if idx%10000==0:db.commit();budget()
                 db.execute("INSERT OR REPLACE INTO progress VALUES ('indexed','true')");db.commit()
             budget()
-            videos=db.execute('SELECT DISTINCT resource,video,fps FROM frames WHERE png IS NULL').fetchall()
-            import av
-            for resource,video,fps in videos:
-                raw=(package/summary['resources'][resource]['raw_root']).resolve();path=(raw/video).resolve()
-                if not path.is_relative_to(raw):raise ValueError('Video escapes source root')
-                wanted=dict(db.execute('SELECT frame,key FROM frames WHERE resource=? AND video=? AND fps=? AND png IS NULL',(resource,video,fps)))
-                with av.open(str(path)) as container:
-                    stream=container.streams.video[0];stream.codec_context.thread_count=1
-                    if not math.isclose(float(stream.average_rate),fps,abs_tol=1e-6):raise ValueError('Video rate differs from index')
-                    start=stream.start_time or 0
-                    for frame in container.decode(stream):
-                        if frame.pts is None:raise ValueError('Video frame lacks timestamp')
-                        position=float((frame.pts-start)*stream.time_base)*fps;index=round(position)
-                        if abs(position-index)>.01:raise ValueError('Video frame clock is not aligned')
-                        if index not in wanted:continue
-                        pixels=frame.to_ndarray(format='rgb24');buffer=io.BytesIO()
-                        Image.fromarray(pixels).save(buffer,format='PNG',compress_level=1);payload=buffer.getvalue()
-                        db.execute('UPDATE frames SET png=?,sha=? WHERE key=?',(payload,hashlib.sha256(payload).hexdigest(),wanted.pop(index)))
-                        # Commit bounded groups, so interruption does not discard entire videos.
-                        if index%100==0:db.commit();budget()
-                        if not wanted:break
-                if wanted:raise ValueError('Missing requested frames: '+str(path))
+            videos=db.execute('SELECT resource,video,fps,count(*) FROM frames WHERE png IS NULL GROUP BY resource,video,fps').fetchall()
+            total=db.execute('SELECT count(*) FROM frames').fetchone()[0]
+            progress.update(stage='decoding',total_frames=total,ready_frames=total-sum(v[3] for v in videos))
+            publish_progress()
+            def jobs():
+                for resource,video,fps,_ in videos:
+                    raw=(package/summary['resources'][resource]['raw_root']).resolve();path=(raw/video).resolve()
+                    if not path.is_relative_to(raw):raise ValueError('Video escapes source root')
+                    wanted=dict(db.execute('SELECT frame,key FROM frames WHERE resource=? AND video=? AND fps=? AND png IS NULL',(resource,video,fps)))
+                    yield path,fps,wanted
+            for decoded in _decode_jobs(jobs(),workers):
+                for index,payload,digest,key in decoded:
+                    db.execute('UPDATE frames SET png=?,sha=? WHERE key=?',(payload,digest,key))
+                    progress['ready_frames']+=1
+                    if index%100==0:db.commit();budget()
                 db.commit();budget()
+                del decoded
             counts=dict(db.execute('SELECT split,count(*) FROM samples GROUP BY split'))
             report={'format':1,'complete':True,'package_sha256':identity,'frames':db.execute('SELECT count(*) FROM frames').fetchone()[0],
                     'samples':sum(counts.values()),'splits':counts,'database_bytes':(output/'frames.sqlite').stat().st_size}
             if db.execute('SELECT count(*) FROM frames WHERE png IS NULL').fetchone()[0]:raise ValueError('Cache is incomplete')
+            progress['stage']='verifying';publish_progress()
             # Full integrity check also verifies payloads from earlier interrupted invocations.
             for payload,digest in db.execute('SELECT png,sha FROM frames'):
                 if hashlib.sha256(payload).hexdigest()!=digest:raise ValueError('Cached image checksum mismatch')
             report['sample_index_sha256']={split:sample_index_digest(db.execute('SELECT idx,offset,stratum FROM samples WHERE split=? ORDER BY idx',(split,))) for split in counts}
             report['database_sha256']=file_hash(output/'frames.sqlite')
             budget();_atomic_json(manifest,report)
+            progress['stage']='complete';publish_progress()
             return report
         finally:db.close()
 
@@ -162,12 +202,53 @@ class FrameCache:
         state=self.__dict__.copy();state['db']=None;state['pid']=None;return state
 
 
-def validate_cache(root, package):
-    reader=FrameCache(root,package)
+def _verify_frame_range(job):
+    path,first,last=job
+    db=sqlite3.connect(Path(path).as_uri()+'?mode=ro',uri=True)
     try:
-        if file_hash(Path(root)/'frames.sqlite')!=reader.metadata['database_sha256']:raise ValueError('Cache database checksum mismatch')
+        db.execute('PRAGMA cache_size=-8192')
+        count=0
+        for payload,digest in db.execute('SELECT png,sha FROM frames WHERE rowid BETWEEN ? AND ?',(first,last)):
+            if payload is None or hashlib.sha256(payload).hexdigest()!=digest:
+                raise ValueError('Cached image checksum mismatch')
+            with Image.open(io.BytesIO(payload)) as image:image.convert('RGB').load()
+            count+=1
+        return count
+    finally:db.close()
+
+
+def validate_cache(root, package, *, workers=1):
+    """Check every payload using bounded row ranges and independent read-only workers."""
+    if type(workers) is not int or workers<1:raise ValueError('workers must be a positive integer')
+    root=Path(root).resolve();reader=FrameCache(root,package)
+    started=time.monotonic()
+    progress={'stage':'database_hash','workers':workers,'verified_frames':0,'total_frames':reader.metadata['frames']}
+    def publish():
+        _atomic_json(root/'verification.json',{**progress,'elapsed_seconds':time.monotonic()-started,'updated_at':time.time()})
+    publish()
+    try:
+        path=root/'frames.sqlite'
+        if file_hash(path)!=reader.metadata['database_sha256']:raise ValueError('Cache database checksum mismatch')
+        progress['stage']='sqlite_check';publish()
         db=reader.connection()
         if db.execute('PRAGMA quick_check').fetchone()[0]!='ok':raise ValueError('Cache database corruption')
-        for key, in db.execute('SELECT key FROM frames'):reader.read(key)
-        return json.loads((Path(root)/'cache.json').read_text())
+        last=db.execute('SELECT max(rowid) FROM frames').fetchone()[0] or 0
+        reader.close()
+        progress['stage']='frames';publish()
+        size=max(1,min(1024,math.ceil(last/max(1,workers*4))))
+        jobs=((str(path),first,min(first+size-1,last)) for first in range(1,last+1,size))
+        def consume(counts):
+            for count in counts:
+                progress['verified_frames']+=count;publish()
+        if workers==1:consume(map(_verify_frame_range,jobs))
+        else:
+            # Spawn avoids inherited SQLite connections; workers return counts, not pixels.
+            with ProcessPoolExecutor(max_workers=workers,mp_context=multiprocessing.get_context('spawn')) as pool:
+                consume(pool.map(_verify_frame_range,jobs))
+        if progress['verified_frames']!=progress['total_frames']:raise ValueError('Cache frame count mismatch')
+        progress['stage']='complete';publish()
+        return reader.metadata
+    except Exception:
+        progress['stage']='failed';publish()
+        raise
     finally:reader.close()

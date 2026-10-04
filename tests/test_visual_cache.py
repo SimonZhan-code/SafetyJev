@@ -26,6 +26,125 @@ class VisualCacheTests(unittest.TestCase):
         (root/'dataset_metadata.json').write_text(json.dumps(meta))
         return pixels,rows
 
+    def two_video_fixture(self, root):
+        pixels,rows=self.fixture(root)
+        raw=root/'raw';other=raw/'wrist.mp4';other.write_bytes((raw/'view.mp4').read_bytes())
+        manifest=raw/'manifest.jsonl'
+        record=json.loads(manifest.read_text())
+        record['files'].append({'path':other.name,'bytes':other.stat().st_size,'sha256':hashlib.sha256(other.read_bytes()).hexdigest()})
+        manifest.write_text(json.dumps(record)+'\n')
+        for row in rows:row['state']['observation_window']['videos']['wrist']='wrist.mp4'
+        split=root/'train.jsonl';split.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        meta=json.loads((root/'dataset_metadata.json').read_text())
+        meta['resources']['raw']['raw_manifest_sha256']=hashlib.sha256(manifest.read_bytes()).hexdigest()
+        meta['file_sha256']['train']=hashlib.sha256(split.read_bytes()).hexdigest()
+        (root/'dataset_metadata.json').write_text(json.dumps(meta))
+        return pixels,rows
+
+    def test_parallel_decode_matches_serial_and_runs_concurrently(self):
+        import sqlite3,threading
+        from unittest.mock import patch
+        from safetyjev import visual_cache as vc
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);self.two_video_fixture(root)
+            vc.build_visual_cache(root,root/'serial')
+            original=vc._decode_video;barrier=threading.Barrier(2)
+            def decode(*args):
+                barrier.wait(timeout=5)
+                return original(*args)
+            with patch.object(vc,'_decode_video',side_effect=decode):
+                report=vc.build_visual_cache(root,root/'parallel',workers=2)
+            self.assertEqual(report['frames'],6)
+            vc.validate_cache(root/'parallel',root)
+            with sqlite3.connect(root/'serial/frames.sqlite') as a, sqlite3.connect(root/'parallel/frames.sqlite') as b:
+                for query in ['SELECT key,png,sha FROM frames ORDER BY key','SELECT * FROM samples ORDER BY split,idx']:
+                    self.assertEqual(a.execute(query).fetchall(),b.execute(query).fetchall())
+
+    def test_parallel_failure_is_incomplete_and_resumable(self):
+        from unittest.mock import patch
+        from safetyjev import visual_cache as vc
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);self.two_video_fixture(root);cache=root/'cache'
+            original=vc._decode_video
+            def fail(path,*args):
+                if Path(path).name=='wrist.mp4':raise ValueError('decode failure')
+                return original(path,*args)
+            with patch.object(vc,'_decode_video',side_effect=fail):
+                with self.assertRaisesRegex(ValueError,'decode failure'):vc.build_visual_cache(root,cache,workers=2)
+            with self.assertRaisesRegex(ValueError,'complete'):vc.FrameCache(cache,root)
+            self.assertEqual(vc.build_visual_cache(root,cache,workers=2)['frames'],6)
+            vc.validate_cache(cache,root)
+            with self.assertRaisesRegex(ValueError,'workers'):vc.build_visual_cache(root,cache,workers=0)
+
+    def test_parallel_verification_reports_coverage_without_changing_cache(self):
+        from safetyjev import visual_cache as vc
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);self.two_video_fixture(root);cache=root/'cache'
+            expected=vc.build_visual_cache(root,cache)
+            before=vc.file_hash(cache/'frames.sqlite')
+            self.assertEqual(vc.validate_cache(cache,root,workers=2),expected)
+            progress=json.loads((cache/'verification.json').read_text())
+            self.assertEqual(progress['stage'],'complete')
+            self.assertEqual(progress['verified_frames'],6)
+            self.assertEqual(progress['total_frames'],6)
+            self.assertEqual(before,vc.file_hash(cache/'frames.sqlite'))
+            with self.assertRaisesRegex(ValueError,'workers'):vc.validate_cache(cache,root,workers=0)
+
+    def test_parallel_verification_rejects_bad_payloads_even_with_matching_database_hash(self):
+        import sqlite3
+        from safetyjev import visual_cache as vc
+        for mismatch in [True,False]:
+            with self.subTest(mismatch=mismatch),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder);self.two_video_fixture(root);cache=root/'cache'
+                vc.build_visual_cache(root,cache)
+                with sqlite3.connect(cache/'frames.sqlite') as db:
+                    db.execute('UPDATE frames SET png=?,sha=? WHERE rowid=6',
+                               (b'not an image','incorrect' if mismatch else hashlib.sha256(b'not an image').hexdigest()))
+                meta=json.loads((cache/'cache.json').read_text())
+                meta['database_sha256']=vc.file_hash(cache/'frames.sqlite')
+                (cache/'cache.json').write_text(json.dumps(meta))
+                with self.assertRaises((ValueError,OSError)):vc.validate_cache(cache,root,workers=2)
+                self.assertEqual(json.loads((cache/'verification.json').read_text())['stage'],'failed')
+
+    def test_writer_waits_for_a_slow_external_reader(self):
+        import sqlite3,threading
+        from unittest.mock import patch
+        from safetyjev import visual_cache as vc
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);self.fixture(root);cache=root/'cache'
+            locked=threading.Event()
+            def reader():
+                with sqlite3.connect(cache/'frames.sqlite') as db:
+                    db.execute('BEGIN');db.execute('SELECT count(*) FROM frames').fetchone()
+                    locked.set();threading.Event().wait(6);db.rollback()
+            original=vc._decode_video;thread=threading.Thread(target=reader)
+            def decode(*args):
+                result=original(*args);thread.start()
+                self.assertTrue(locked.wait(3));return result
+            try:
+                with patch.object(vc,'_decode_video',side_effect=decode):report=vc.build_visual_cache(root,cache)
+                self.assertEqual(report['frames'],3)
+            finally:
+                if thread.ident is not None:thread.join(10)
+
+    def test_progress_file_reports_only_committed_frames_and_resumes(self):
+        from unittest.mock import patch
+        from safetyjev import visual_cache as vc
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);self.two_video_fixture(root);cache=root/'cache'
+            original=vc._decode_video
+            def decode(path,*args):
+                if Path(path).name=='wrist.mp4':raise ValueError('interruption')
+                return original(path,*args)
+            with patch.object(vc,'_decode_video',side_effect=decode):
+                with self.assertRaisesRegex(ValueError,'interruption'):vc.build_visual_cache(root,cache)
+            progress=json.loads((cache/'progress.json').read_text())
+            self.assertEqual(progress['stage'],'decoding');self.assertEqual(progress['ready_frames'],3)
+            self.assertEqual(progress['total_frames'],6)
+            vc.build_visual_cache(root,cache)
+            progress=json.loads((cache/'progress.json').read_text())
+            self.assertEqual(progress['stage'],'complete');self.assertEqual(progress['ready_frames'],6)
+
     def test_cache_deduplicates_frames_and_preserves_samples(self):
         from safetyjev.visual_cache import build_visual_cache,FrameCache,frame_key
         from safetyjev.visual_dataset import APWindowDataset

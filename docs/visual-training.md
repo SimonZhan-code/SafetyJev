@@ -80,16 +80,24 @@ README, run from the repository root:
 
 ```bash
 .venv-visual/bin/python tools/prepare_visual_cache.py \
-  --package datasets/packages/five_family --output datasets/cache/five_family
+  --package datasets/packages/five_family --output datasets/cache/five_family --workers 8
 .venv-visual/bin/python tools/prepare_visual_cache.py \
-  --package datasets/packages/five_family --output datasets/cache/five_family --verify-only
+  --package datasets/packages/five_family --output datasets/cache/five_family --verify-only --workers 8
 ```
 
 Preparation indexes every split and sequentially decodes each needed source
-video. Identical video/frame references shared by AP questions are stored once
+video. `--workers 8` processes up to eight videos concurrently (default: one);
+reduce it on hosts with less CPU or RAM. Workers buffer at most one video each,
+and one writer preserves the same lossless cache and resume checks. Identical video/frame references shared by AP questions are stored once
 as lossless PNG records in `frames.sqlite`. No millions-of-files extraction and
 no repeated MP4 seeking during training. `cache.json` marks completion; incomplete
 caches are refused by the loader. Rerun the same preparation command to resume.
+Full verification checks the database hash, SQLite integrity, and every PNG hash
+and decoded image. `--verify-only --workers 8` uses eight CPU processes and
+sequential row blocks without changing the cache. Read `verification.json` for
+the current stage, verified-frame count, total count, and elapsed time.
+Read `progress.json` for live stage/frame counts; do not scan the SQLite database
+during preparation, since long read transactions can block writer commits.
 `--max-gib` stops a growing build at periodic disk-budget checks and leaves it
 incomplete; allow transaction headroom. Full preparation is intended for the
 training server's NVMe, not a duplicate local dataset release.
