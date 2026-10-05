@@ -11,6 +11,44 @@ def row(i,label,event=6,episode='u',split='train',cid='upright',stratum='ordinar
             'negative_stratum':stratum,'policy':'policy'}
 
 class JudgeSamplingTests(unittest.TestCase):
+    def test_reports_available_events_separately_from_resampled_draws(self):
+        rows=[row(0,1,episode='u0'),row(1,1,episode='u0'),row(2,1,episode='u1'),row(3,0)]
+        sampler=JudgeBatchSampler(rows,2,seed=42,epoch=0,samples_per_epoch=24)
+        report=sampler.report()
+        self.assertEqual(report['available']['positive_windows'],3)
+        self.assertEqual(report['available']['negative_windows'],1)
+        self.assertEqual(report['available']['positive_events'],2)
+        self.assertEqual(report['positive_draws_per_available_window'],4)
+        consumed=consumed_draw_report(rows,batch_size=2,seed=42,epoch=0,batch_offset=2,samples_per_epoch=24)
+        self.assertEqual(consumed['available'],report['available'])
+        self.assertEqual(consumed['draws'],4)
+
+    def test_validation_retains_all_positives_and_fixed_negative_subset(self):
+        from safetyjev import predictor_judge_sampling as s
+        self.assertTrue(hasattr(s,'diagnostic_validation_subset'))
+        rows=[row(i,i in (2,17,19),split='validation') for i in range(20)]
+        indices,report=s.diagnostic_validation_subset(rows,negative_samples=2,seed=42)
+        self.assertEqual(len(indices),5)
+        self.assertTrue({2,17,19}.issubset(indices))
+        self.assertEqual(indices,sorted(set(indices)))
+        self.assertEqual(report['population'],{'positive':3,'negative':17})
+        self.assertEqual(report['selected'],{'positive':3,'negative':2})
+        self.assertEqual((indices,report),s.diagnostic_validation_subset(iter(rows),negative_samples=2,seed=42))
+        self.assertFalse(report['full_split'])
+        for rank in range(2):
+            self.assertEqual(len(set(indices[rank::2])),len(indices[rank::2]))
+        self.assertEqual(set(indices[0::2])|set(indices[1::2]),set(indices))
+
+    def test_validation_handles_absent_labels_and_refuses_training_rows(self):
+        from safetyjev import predictor_judge_sampling as s
+        self.assertTrue(hasattr(s,'diagnostic_validation_subset'))
+        for label in (0,1):
+            rows=[row(i,label,split='validation') for i in range(3)]
+            indices,report=s.diagnostic_validation_subset(rows,negative_samples=5,seed=1)
+            self.assertEqual(indices,[0,1,2]);self.assertTrue(report['full_split'])
+        with self.assertRaisesRegex(ValueError,'validation'):
+            s.diagnostic_validation_subset([row(0,1)],negative_samples=5,seed=1)
+
     def test_balances_labels_events_and_resume_without_duplicate_claims(self):
         rows=[row(0,1,episode='u0')]+[row(i,1,episode='u1') for i in range(1,101)]
         rows += [row(101,0,episode='u0',stratum='near_event'),row(102,0,episode='s0')]

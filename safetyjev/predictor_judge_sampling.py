@@ -54,6 +54,54 @@ def sampling_pools(rows):
     return result
 
 
+def availability_report(rows):
+    pools,positives=sampling_pools(rows)
+    categories={}
+    for (family,cid) in sorted(set(pools[0])|set(pools[1])):
+        events=pools[1].get((family,cid),{})
+        negatives=pools[0].get((family,cid),{})
+        categories[family+'/'+cid]={
+            'positive_windows':sum(len(v) for v in events.values()),'positive_events':len(events),
+            'negative_windows':sum(len(indices) for sources in negatives.values() for episodes in sources.values() for indices in episodes.values())}
+    return {'positive_windows':positives,'negative_windows':len(rows)-positives,
+            'positive_events':sum(v['positive_events'] for v in categories.values()),'by_family_constraint':categories}
+
+
+def with_availability(report,rows):
+    available=availability_report(rows);positives=available['positive_windows']
+    return {**report,'available':available,
+            'positive_draws_per_available_window':report['labels'].get('positive',0)/positives if positives else None}
+
+
+def diagnostic_validation_subset(rows, *, negative_samples, seed):
+    """Retain every validation positive; reservoir-sample negatives without images."""
+    if type(negative_samples) is not int or negative_samples<1:
+        raise ValueError('validation_negative_samples must be positive')
+    rng=random.Random(seed);positive=[];negative=[];nneg=0;categories={}
+    for i,row in enumerate(rows):
+        if row.get('split')!='validation':raise ValueError('Diagnostic sampling accepts validation only')
+        if row.get('target') not in ([1.,0.],[0.,1.]):raise ValueError('Only binary eligible targets')
+        label='positive' if row['target'][1] else 'negative'
+        key=row['family']+'/'+row['constraint_id']
+        category=categories.setdefault(key,{'population':Counter(),'selected':Counter()})
+        category['population'][label]+=1
+        if label=='positive':
+            positive.append(i);category['selected'][label]+=1
+        else:
+            nneg+=1
+            if len(negative)<negative_samples:negative.append((i,key))
+            else:
+                slot=rng.randrange(nneg)
+                if slot<negative_samples:negative[slot]=(i,key)
+    for _,key in negative:categories[key]['selected']['negative']+=1
+    indices=sorted(positive+[i for i,_ in negative])
+    return indices,{'selection':'all positives plus uniform negatives without replacement',
+        'seed':seed,'negative_budget':negative_samples,'full_split':len(negative)==nneg,
+        'population':{'positive':len(positive),'negative':nneg},
+        'selected':{'positive':len(positive),'negative':len(negative)},'by_family_constraint':categories,
+        'interpretation':'Diagnostic subset; precision, NLL and false-alarm metrics describe this sampled distribution. Use the full split for final reporting.'}
+
+
 class JudgeBatchSampler:
     def __init__(self, rows, batch_size, *, seed, epoch, start_batch=0,
                  samples_per_epoch=None, positive_fraction=.5,rank=0,world_size=1):
@@ -85,7 +133,7 @@ class JudgeBatchSampler:
             yield self.order[at:at+self.batch_size]
     def __len__(self):return max(0,math.ceil(len(self.order)/(self.batch_size*self.world_size))-self.start_batch)
     def report(self):
-        return {**draw_report(self.rows,self.order,available_labels=self.available_labels),'scope':'planned full epoch; training may consume only a prefix'}
+        return with_availability({**draw_report(self.rows,self.order,available_labels=self.available_labels),'scope':'planned full epoch; training may consume only a prefix'},self.rows)
 
 
 def consumed_draw_report(rows, *, batch_size, seed, epoch, batch_offset, world_size=1, **settings):
@@ -96,4 +144,4 @@ def consumed_draw_report(rows, *, batch_size, seed, epoch, batch_offset, world_s
             available_labels.update(sampler.available_labels)
             order=sampler.order
             yield from (order if e<epoch else order[:batch_offset*batch_size*world_size])
-    return {**draw_report(rows,indices(),available_labels=available_labels),'scope':'consumed through the saved trainer cursor'}
+    return with_availability({**draw_report(rows,indices(),available_labels=available_labels),'scope':'consumed through the saved trainer cursor'},rows)

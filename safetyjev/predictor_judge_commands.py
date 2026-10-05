@@ -25,7 +25,8 @@ def main(argv=None):
     cap=sub.add_parser('capture');cap.add_argument('--maniguard-root',required=True);cap.add_argument('--output',required=True);cap.add_argument('--provenance',required=True);cap.add_argument('benchmark_args',nargs=argparse.REMAINDER)
     build=sub.add_parser('build');build.add_argument('--episodes',required=True);build.add_argument('--output',required=True);build.add_argument('--history-frames',type=int,default=3);build.add_argument('--seed',type=int,default=42)
     build.add_argument('--split-manifest',help='Frozen JSON mapping base-task group to train/validation/test')
-    build.add_argument('--unsafe-per-safe',type=float,default=4)
+    build.add_argument('--train-episodes',choices=['unsafe_only','unsafe_plus_safe'],default='unsafe_only',help='Training membership only; valid held-out episodes are all retained')
+    build.add_argument('--unsafe-per-safe',type=float,default=4,help='Safe supplement ratio, used only with unsafe_plus_safe')
     build.add_argument('--active-motion-rad',type=float,default=.05)
     a=p.parse_args(argv)
     if a.command=='capture':
@@ -35,6 +36,6 @@ def main(argv=None):
     if not directories:raise ValueError('No captured episode records')
     assignment=json.loads(Path(a.split_manifest).read_text()) if a.split_manifest else None
     build_package(directories,a.output,history_frames=a.history_frames,seed=a.seed,group_splits=assignment,
-                  unsafe_per_safe=a.unsafe_per_safe,active_motion_rad=a.active_motion_rad);return 0
+                  unsafe_per_safe=a.unsafe_per_safe,active_motion_rad=a.active_motion_rad,train_episodes=a.train_episodes);return 0
 
 if __name__=='__main__':raise SystemExit(main())

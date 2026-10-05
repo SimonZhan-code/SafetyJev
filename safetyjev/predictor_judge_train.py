@@ -10,7 +10,7 @@ from .predictor_judge_dataset import PredictorJudgeWindowDataset,collate_predict
 from .predictor_judge_eval import evaluate_predictor_judge
 from .visual_train import publish_final,_rank_zero_call
 from .visual_distributed import resolve_accumulation
-from .predictor_judge_sampling import JudgeBatchSampler,consumed_draw_report,SamplingRows
+from .predictor_judge_sampling import JudgeBatchSampler,consumed_draw_report,SamplingRows,diagnostic_validation_subset
 
 
 def training_source_hashes():
@@ -27,6 +27,8 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
     from jev.predictor_judge_model import PredictorJudgeModel
     from jev.visual_training import fit_updates
     config=copy.deepcopy(config);world=int(os.environ.get('WORLD_SIZE','1'));rank=int(os.environ.get('RANK','0'))
+    if 'validation_samples' in config['evaluation']:
+        raise ValueError('Use evaluation.validation_negative_samples: all validation positives are retained, this budget counts negatives only')
     if world>1 and not dist.is_initialized():
         local=int(os.environ['LOCAL_RANK'])
         if device.startswith('cuda'):torch.cuda.set_device(local);device=f'cuda:{local}'
@@ -71,17 +73,22 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         return DataLoader(datasets['train'],batch_sampler=sampler,**options,generator=torch.Generator().manual_seed(seed+epoch+100000+rank))
     limit=config['evaluation'].get('max_batches')
     if limit is not None and (type(limit) is not int or limit<1):raise ValueError('max_batches must be positive')
-    def eval_loader(split,subset_limit=None):
-        data=datasets[split];indices=list(range(len(data)))
-        if subset_limit is not None:
-            if type(subset_limit) is not int or subset_limit<1:raise ValueError('validation_samples must be positive')
-            if subset_limit<len(indices):indices=torch.randperm(len(data),generator=torch.Generator().manual_seed(seed+200001))[:subset_limit].sort().values.tolist()
-            if rank==0:(output/'validation-subset.json').write_text(json.dumps({'row_indices':indices,'split_sha256':meta['file_sha256'][split],
-                'selection':'uniform without replacement, fixed seed; diagnostic subset'})+'\n')
+    negative_budget=config['evaluation'].get('validation_negative_samples')
+    validation_indices=None;validation_sampling={'selection':'full split','full_split':True}
+    if negative_budget is not None:
+        def select_validation():
+            indices,report=diagnostic_validation_subset(SamplingRows(datasets['validation']),negative_samples=negative_budget,seed=seed+200001)
+            (output/'validation-subset.json').write_text(json.dumps({**report,'row_indices':indices,
+                'split_sha256':meta['file_sha256']['validation']},indent=2)+'\n')
+            return indices,report
+        validation_indices,validation_sampling=_rank_zero_call(select_validation)
+    def eval_loader(split,diagnostic=False):
+        data=datasets[split]
+        indices=validation_indices if diagnostic and validation_indices is not None else range(len(data))
         indices=indices[rank::world]
         if limit is not None:indices=indices[:limit*size]
         return DataLoader(Subset(data,indices),batch_size=size,shuffle=False,**options,generator=torch.Generator().manual_seed(seed+200000+rank))
-    loaders={s:eval_loader(s,config['evaluation'].get('validation_samples') if s=='validation' else None) for s in ('validation','test')}
+    loaders={s:eval_loader(s,diagnostic=s=='validation') for s in ('validation','test')}
     model=PredictorJudgeModel.from_pretrained(**model_cfg,device=device);model.set_normalization(**meta['normalization'])
     model.model_config['state_features']=meta['state_features'];model.model_config['normalization_source']='training groups only'
     params={'total':sum(p.numel() for p in model.parameters()),'trainable':sum(p.numel() for p in model.parameters() if p.requires_grad),
@@ -95,6 +102,7 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
     if device.startswith('cuda'):torch.cuda.reset_peak_memory_stats(device)
     def validation(current,step):
         report=evaluate_predictor_judge(current,loaders['validation'],output=output/'evaluations'/f'validation-{step:08d}.jsonl')
+        report['sampling']={**validation_sampling,'max_batches_per_rank':limit}
         if rank==0:(output/'evaluations'/f'validation-{step:08d}.json').write_text(json.dumps(report,indent=2)+'\n')
         return report['nll']
     if world>1:model=torch.nn.parallel.DistributedDataParallel(model,device_ids=[int(os.environ['LOCAL_RANK'])] if device.startswith('cuda') else None,broadcast_buffers=False)
@@ -113,6 +121,7 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         import shutil
         shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl');model.save(stage/'model')
         report={'training':trained,'parameters':params,'sampling':sampling_report,'validation':validation_report,'test':test,
+                'checkpoint_selection':{'metric':'diagnostic_validation_nll','sampling':validation_sampling},
                 'data_counts':meta['counts'],'label_reasons':meta['label_reasons'],'identity':identity,
                 'target':'new constraint violation during the actual remaining command suffix','checkpoint':str(output/'final/model'),
                 'peak_cuda_allocated_bytes':torch.cuda.max_memory_allocated(device) if device.startswith('cuda') else None,

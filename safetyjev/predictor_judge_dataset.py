@@ -16,7 +16,7 @@ def file_hash(path):
 
 
 def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.1,.1),
-                  group_splits=None,unsafe_per_safe=4,active_motion_rad=.05):
+                  group_splits=None,unsafe_per_safe=4,active_motion_rad=.05,train_episodes='unsafe_only'):
     from PIL import Image
     from .predictor_judge_curation import inventory_episode,select_episodes,composition_report,write_summary
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False);(output/'BUILDING').touch()
@@ -51,7 +51,7 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     groups=[r for r in inventory if r['group_id'] is not None]
     assignment=dict(group_splits) if group_splits is not None else split_groups(groups,seed=seed,fractions=fractions)
     if any(v not in ('train','validation','test') for v in assignment.values()):raise ValueError('Invalid frozen split')
-    selected=select_episodes(groups,assignment,seed=seed,unsafe_per_safe=unsafe_per_safe)
+    selected=select_episodes(groups,assignment,seed=seed,unsafe_per_safe=unsafe_per_safe,train_episodes=train_episodes)
     # Unidentified failed attempts stay in the inventory, never join a split.
     for r in inventory:
         if r['group_id'] is None:
@@ -92,9 +92,9 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     finally:
         for writer in writers.values():writer.close()
     report=composition_report(selected,windows)
-    report['selection']={'unsafe_per_safe':unsafe_per_safe,'active_motion_rad':active_motion_rad,
+    report['selection']={'train_episodes':train_episodes,'unsafe_per_safe':unsafe_per_safe,'active_motion_rad':active_motion_rad,
                          'split_source':'frozen_manifest' if group_splits is not None else 'engineering_auto_split',
-                         'safe_quota':'per training family, ceil(unsafe/ratio); one active safe if no unsafe'}
+                         'safe_quota':'none' if train_episodes=='unsafe_only' else 'per training family, ceil(unsafe/ratio); one active safe if no unsafe'}
     (output/'composition.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n');write_summary(output/'DATA_SUMMARY.md',report)
     normalization={}
     for key,(total,square,n) in sums.items():

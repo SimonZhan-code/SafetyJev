@@ -1,5 +1,5 @@
 {
-  "purpose": "Action-conditioned Predictor Judge reference; choose training budget after target-host acceptance",
+  "purpose": "Initial Predictor Judge learning pilot; review validation and event exposure before extending training",
   "seed": 42,
   "deterministic": true,
   "model": {
@@ -20,25 +20,24 @@
     "prepare_in_workers": true,
     "prefetch_factor": 2,
     "sampling": {
-      "positive_fraction": 0.5,
-      "samples_per_epoch": 128000
+      "positive_fraction": 0.5
     }
   },
   "training": {
-    "max_steps": 1000,
+    "max_steps": 100,
     "lr": 2e-05,
     "head_lr": 0.0001,
     "weight_decay": 0.01,
-    "warmup_steps": 100,
+    "warmup_steps": 10,
     "clip_grad_norm": 1.0,
     "brier_weight": 0.1,
-    "eval_every": 500,
-    "save_every": 100,
+    "eval_every": 25,
+    "save_every": 25,
     "global_batch_size": 128
   },
   "evaluation": {
     "max_batches": null,
-    "validation_samples": 4096
+    "validation_negative_samples": 4096
   },
   "task": "predictor_judge"
 }

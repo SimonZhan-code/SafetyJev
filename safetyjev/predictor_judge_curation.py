@@ -52,7 +52,9 @@ def inventory_episode(record, *, active_motion_rad=.05):
             'active_motion_threshold_rad':active_motion_rad}
 
 
-def select_episodes(inventory, assignments, *, seed=42, unsafe_per_safe=4):
+def select_episodes(inventory, assignments, *, seed=42, unsafe_per_safe=4, train_episodes='unsafe_only'):
+    if train_episodes not in ('unsafe_only','unsafe_plus_safe'):
+        raise ValueError('Unknown training episode selection')
     if not math.isfinite(unsafe_per_safe) or unsafe_per_safe<=0:
         raise ValueError('Positive unsafe_per_safe required')
     rows=sorted((dict(r) for r in inventory),key=lambda r:r['episode_id'])
@@ -65,9 +67,11 @@ def select_episodes(inventory, assignments, *, seed=42, unsafe_per_safe=4):
         if not r['quality_ok']:continue
         if r['split']!='train':r.update(selected=True,selection_reason='heldout_complete')
         elif r['safety']=='unsafe':r.update(selected=True,selection_reason='unsafe_training_core')
+        elif train_episodes=='unsafe_only':r['selection_reason']='safe_training_reserve'
         elif not r['active']:r['selection_reason']='inactive_safe'
         else:r['selection_reason']='safe_training_quota'
         if r['split']=='train':by_family[r['family']].append(r)
+    if train_episodes=='unsafe_only':return rows
     rng=random.Random(seed)
     for family in sorted(by_family):
         candidates=by_family[family];unsafe=sum(r['safety']=='unsafe' for r in candidates)
@@ -118,7 +122,7 @@ def composition_report(inventory, windows):
         pool=[r for r in selected if r['split']=='train' and r['family']==fam]
         unsafe=sum(r['safety']=='unsafe' for r in pool);safe=sum(r['safety']=='safe' for r in pool)
         report['training_coverage'].append({'family':fam,'unsafe':unsafe,'safe':safe,
-             'unsafe_fraction':unsafe/len(pool) if pool else None,'needs_unsafe_collection':unsafe==0})
+             'unsafe_fraction':unsafe/len(pool) if pool else None,'has_unsafe_episodes':unsafe>0})
     return report
 
 
@@ -135,5 +139,5 @@ def write_summary(path, report):
     lines+=['',f"Selected first-rejection events: {report['events']['selected']}. {report['events']['definition']}.",'',
             'Full episode inventory: `episode_inventory.jsonl`. Counts by family, checkpoint, constraint, remaining length and exclusion reason: `composition.json`.',
             'The training pool is not duplicated to balance labels. Actual epoch draws, unique samples and repetition are reported separately by the training sampler.',
-            'A family without positive events requires additional training collection; duplicated windows do not supply new events.']
+            'Absent or rare violations are retained as observed. Recall is undefined without held-out positives; duplicated windows do not supply new events.']
     path.write_text('\n'.join(lines)+'\n')

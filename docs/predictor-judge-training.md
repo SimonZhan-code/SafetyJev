@@ -63,7 +63,7 @@ source; preview MP4 playback FPS is not the control clock.
 python -m safetyjev.predictor_judge_commands build \
   --episodes datasets/predictor_judge/raw \
   --output datasets/predictor_judge/package --history-frames 3 --seed 42 \
-  --split-manifest /path/to/group-splits.json
+  --split-manifest /path/to/group-splits.json --train-episodes unsafe_only
 ```
 
 Freeze `group-splits.json` before reviewing collection outcomes. It maps base-task
@@ -77,13 +77,15 @@ Collection and training admission are separate:
 - Keep every attempt in the raw archive, including failures. The builder inventories
   incomplete episode directories when their metadata exists. Failures before the
   recorder starts must also be retained in the campaign's attempt ledger.
-- Complete, valid, post-initialization unsafe episodes form the training core.
-  Add up to `ceil(unsafe / 4)` active safe episodes per family. If no unsafe episode
-  exists for a family, retain at most one active safe episode and report the shortage.
-  This is an approximate 4:1 admission target, not a claimed observed prevalence.
-- Active safe selection uses a disclosed heuristic: maximum range of an arm joint
-  exceeds 0.05 radians (`--active-motion-rad`). It does not prove object engagement
-  or success. `--unsafe-per-safe` adjusts the ratio.
+- By default, train uses only complete, valid, post-initialization **unsafe episodes**.
+  Their nonviolating intervals and other constraints provide negative windows.
+  Training-side safe episodes remain inventoried as a reserve. Missing or rare
+  predicate violations are reported as observed, without requiring equal counts.
+- To add safe training episodes explicitly, use `--train-episodes unsafe_plus_safe`.
+  This adds up to `ceil(unsafe / 4)` active safe episodes per family (at most one if
+  no unsafe episode exists); `--unsafe-per-safe` changes this optional ratio.
+  Active means an arm joint range exceeds `--active-motion-rad` (default 0.05 radians),
+  which does not establish object engagement or success.
 - Validation/test keep **all valid episodes** from their assigned groups, including
   safe and inactive ones. They are never balanced by outcome. Initially violated,
   incomplete, invalid-GT or invalid-media attempts remain listed with reasons.
@@ -122,13 +124,17 @@ The default draw budget is twice the positive window count at a 50% target. Set
 `data.sampling.samples_per_epoch` for an explicit budget, and
 `data.sampling.positive_fraction` to change the target. Sampling uses replacement;
 more draws do not create new events. A single-class pool remains single-class and
-reports the missing label, rather than fabricating balance. Validation/test use
-all eligible windows in their original proportions.
+reports the missing label, rather than fabricating balance. Final validation/test
+use all eligible windows in their original proportions.
 
 `sampling/epoch-*.json` reports the **planned** full-epoch composition.
 `sampling-consumed.json` reconstructs actual consumed draws from the saved trainer
 cursor, including positive/negative counts, unique samples, repeated draws and
-distinct positive events. Deterministic epoch/cursor reconstruction supports resume.
+distinct positive events. Both reports include available positive/negative windows,
+positive events by family/constraint, and positive draws per available positive window.
+Category balancing may repeat rare events more often; these reports distinguish
+sampling exposure from the naturally uneven raw dataset.
+Deterministic epoch/cursor reconstruction supports resume.
 Model selection uses validation; a score trained under rebalanced sampling is not
 a claim of calibrated deployment probability.
 
@@ -209,6 +215,12 @@ NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
 
 The reference uses per-device batch 8, global batch 128 and two loader workers
 per rank. The eight-rank command derives two gradient accumulation steps.
+Its initial learning budget is 100 optimizer updates, with validation and saves
+every 25 updates and 10 warmup updates. This is a starting experiment, not a
+validated convergence recipe. At global batch 128 it consumes 12,800 draws; a
+50% positive target yields approximately 6,400 positive draws. Review validation
+and event exposure before extending the budget. Changing `samples_per_epoch`
+alone does not reduce total draws: `max_steps` and global batch determine them.
 Use `NPROC_PER_NODE=4` for four GPUs (four accumulation steps), or `1` for one
 sufficiently large GPU (16 accumulation steps). Override `--batch-size`,
 `--global-batch-size` and `--workers` as needed; accumulation is derived from
@@ -233,17 +245,26 @@ set appropriately. It runs two updates with capped evaluation, not a quality tes
 NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
   --config configs/training/predictor_judge_27b_reference.json \
   --output outputs/predictor-judge-training/27b \
-  --resume outputs/predictor-judge-training/27b/checkpoints/step-00000100
+  --resume outputs/predictor-judge-training/27b/checkpoints/step-00000025
 ```
 
 Resume requires matching model, data, source, training configuration and world size;
 it restores optimizer, per-rank RNG and sampler cursor. Changing GPU count is a new
 run, not an exact resume. Shared checkpoints are published by rank zero atomically.
 
-During training a fixed, uniformly sampled 4,096-row validation subset selects the
-checkpoint by NLL. Its indices are saved; rare events may be absent from this subset.
+During training, **all validation positive windows** plus a fixed uniform sample
+of up to 4,096 negative windows select the checkpoint by diagnostic NLL.
+`evaluation.validation_negative_samples` sets the negative budget; omit it or use
+null for full validation. The former `validation_samples` key is rejected to avoid
+silently applying a different sampling meaning. Selection runs once on rank zero;
+indices, split hash and per-constraint population/selected counts are saved in
+`validation-subset.json` and reproduced on resume. Each diagnostic report identifies
+its sampled distribution: its precision and NLL are not population estimates.
+Constraints with no positive events remain without recall evidence.
 Finalization evaluates the selected model on **full validation and test**, without
-label balancing. For independent full evaluation, including multi-GPU evaluation:
+label balancing. A smoke-only `max_batches` cap can truncate either evaluation and
+is recorded explicitly; leave it null for training-quality evaluation.
+For independent full evaluation, including multi-GPU evaluation:
 
 ```bash
 NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task predictor_judge \
