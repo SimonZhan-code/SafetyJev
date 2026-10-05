@@ -29,12 +29,13 @@
     "warmup_steps": 100,
     "clip_grad_norm": 1.0,
     "brier_weight": 0.1,
-    "eval_every": 500,
+    "eval_every": 100,
     "save_every": 100,
     "global_batch_size": 128
   },
   "evaluation": {
     "max_batches": null,
-    "validation_samples": 4096
+    "validation_samples": 4096,
+    "run_test": false
   }
 }

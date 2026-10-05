@@ -8,7 +8,7 @@ in `[No, Yes]` order. It does not generate answer text.
 
 The text-only Open-Jev path remains available. Visual checkpoints are explicitly
 identified and rejected by the text-only loader rather than silently losing
-their image input. Yiqi's specialized fast kernels are not used by this reference
+their image input. The specialized inference kernels are not used by this reference
 visual forward. It is also separate from the action-conditioned runtime guard.
 
 ## Environment
@@ -59,8 +59,11 @@ sampler reconstructs each epoch and batch cursor deterministically.
 The reference uses train, validation and test. During training, validation NLL
 on a fixed 4,096-row subset selects the checkpoint. The subset is drawn uniformly
 without replacement, independently of model results, and recorded in
-`validation-subset.json`; small-query coverage is not guaranteed. Finalization
-runs full validation and test once using the selected model. The smoke config
+`validation-subset.json`; small-query coverage is not guaranteed. The 27B reference sets `evaluation.run_test=false`: finalization runs full
+validation and saves the selected model without constructing a test loader.
+Run complete test evaluation explicitly after selecting the experiment, as
+shown in [classifier handoff](classifier-handoff.md). Older configurations that
+omit this option retain automatic final test evaluation. The smoke config
 instead caps evaluation batches and must not be used for quality claims.
 
 Temperature stays at 1. Reports include per-question and pooled confusion counts,
@@ -187,7 +190,7 @@ run/
   evaluations/                   # development validation results
   final/
     model/                       # selected checkpoint
-    test.jsonl
+    test.jsonl                   # only when evaluation.run_test=true
     report.json
 ```
 
@@ -269,3 +272,10 @@ The two trainers share batch scaling, prepared CPU inputs, frozen vision/languag
 LoRA, optimizer, exact-cursor resume and rank-safe finalization. Each has its own
 cache/loader to preserve its dataset contract. Model-quality and target-hardware
 acceptance remain separate from a successful small-model functional smoke.
+
+## Experiment tracking and model delivery
+
+[Classifier handoff](classifier-handoff.md) describes optional W&B logging,
+validation-only development, complete standalone test evaluation, and an
+inference-only HF model export. Tracking is disabled by default and does not
+change the dataset, sampler, model inputs or training objective.

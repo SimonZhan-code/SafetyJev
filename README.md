@@ -98,6 +98,8 @@ separate calibration stage.
 preprocessing, GPU-count/batch controls, checkpoint resume, metrics and inference.
 Prepare the cache before using the 27B reference configuration.
 [Data preparation](docs/data-preparation.md) documents rebuilding the dataset.
+[Classifier handoff](docs/classifier-handoff.md) gives the deployment sequence,
+optional experiment tracking, final test command and model export.
 
 ## Safety judgment and the existing guarded loop
 
