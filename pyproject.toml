@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 data = ["numpy>=1.24", "av>=12", "Pillow>=9"]
+tracking = ["wandb>=0.19,<1"]
 train-data = ["numpy>=1.24", "av>=12", "Pillow>=9", "torch>=2"]
 
 [project.scripts]

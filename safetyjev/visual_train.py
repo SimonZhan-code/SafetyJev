@@ -193,9 +193,23 @@ def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=N
     return _rank_zero_call(merge),[],[]
 
 def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
+    from .experiment_tracking import ExperimentTracker
+    tracker = ExperimentTracker(output, resume=resume)
+    status = 'failed'
+    try:
+        result = _run(config, output, device=device, resume=resume, stop_after=stop_after, tracker=tracker)
+        status = result.get('status', result.get('training', {}).get('status', 'completed'))
+        return result
+    finally:
+        tracker.finish(status)
+
+
+def _run(config, output, *, device, resume, stop_after, tracker):
     from jev.visual_model import VisualDecisionModel
     from jev.visual_training import fit_updates
     config=copy.deepcopy(config)
+    run_test=config["evaluation"].get("run_test", True)
+    if type(run_test) is not bool:raise ValueError("evaluation.run_test must be Boolean")
     world=int(os.environ.get("WORLD_SIZE","1"));rank=int(os.environ.get("RANK","0"))
     if world>1 and not dist.is_initialized():
         local=int(os.environ['LOCAL_RANK'])
@@ -229,9 +243,10 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
         output.mkdir(parents=True,exist_ok=True)
         if (output/"final/report.json").exists():raise ValueError("This run has already finished")
     _rank_zero_call(create_output)
+    _rank_zero_call(lambda:tracker.start(config))
     seed=config["seed"];random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
     if device.startswith("cuda"):torch.cuda.manual_seed_all(seed)
-    datasets={split:APWindowDataset(package,split,**({'frame_cache':frame_cache} if frame_cache else {})) for split in ("train","validation","test")}
+    datasets={split:APWindowDataset(package,split,**({'frame_cache':frame_cache} if frame_cache else {})) for split in (("train","validation","test") if run_test else ("train","validation"))}
     workers=config["data"]["num_workers"];batch_size=config["data"]["batch_size"]
     balance=config["data"].get("balance","uniform")
     weights=None if balance=="uniform" else datasets["train"].training_weights(balance)
@@ -264,7 +279,7 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
         return DataLoader(Subset(dataset,indices),batch_size=batch_size,**loader_options,shuffle=False,
                           generator=torch.Generator().manual_seed(seed+200000+rank))
     eval_loaders={s:eval_loader(s,config['evaluation'].get('validation_samples') if s=='validation' else None)
-                  for s in ('validation','test')}
+                  for s in (('validation','test') if run_test else ('validation',))}
     import jev.visual_model as vm
     import jev.visual_training as vt
     from . import visual_dataset,visual_distributed,visual_cache
@@ -286,12 +301,13 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
         metrics,_,_=evaluate_visual(current,eval_loaders["validation"],max_batches=max_batches,
                                     output=output/"evaluations"/f"validation-{step:08d}.jsonl")
         if rank==0:(output/"evaluations"/f"validation-{step:08d}.json").write_text(json.dumps(metrics,indent=2)+"\n")
+        tracker.evaluation(metrics,step)
         return metrics["nll"]
     if world>1:
         model=torch.nn.parallel.DistributedDataParallel(model,device_ids=[int(os.environ['LOCAL_RANK'])] if device.startswith('cuda') else None,
                                                         broadcast_buffers=False)
     trained=fit_updates(model,train_loader,config["training"],output,identity=identity,
-                        validation_fn=validation,resume=resume,stop_after=stop_after)
+                        validation_fn=validation,resume=resume,stop_after=stop_after,step_fn=tracker.step)
     if trained["status"]!="completed":return trained
     del model
     if device.startswith("cuda"):torch.cuda.empty_cache()
@@ -299,12 +315,17 @@ def run(config, output, *, device="cuda:0", resume=None, stop_after=None):
     temperature=1.
     model.set_temperature(temperature)
     full_validation,_,_=evaluate_visual(model,eval_loader('validation'),output=output/'evaluations/final-validation.jsonl',max_batches=max_batches)
-    test,_,_=evaluate_visual(model,eval_loaders["test"],temperature=temperature,max_batches=max_batches,output=output/'evaluations/final-test.jsonl')
+    test=None
+    if run_test:
+        test,_,_=evaluate_visual(model,eval_loaders["test"],temperature=temperature,max_batches=max_batches,output=output/'evaluations/final-test.jsonl')
+        tracker.evaluation(test,trained['completed_step'],'test')
+    tracker.evaluation(full_validation,trained['completed_step'],'final_validation')
     def finalize(stage):
-        shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl')
+        if run_test:shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl')
         model.save(stage/"model")
         report={"training":trained,"parameters":params,"identity":identity,
                 "temperature":temperature,"validation":full_validation,"test":test,
+                "test_status":"evaluated" if run_test else "not_evaluated",
                 "checkpoint":str(output/"final/model"),"target":"current-question yes/no, not action-conditioned forecasting",
                 "peak_cuda_allocated_bytes":torch.cuda.max_memory_allocated(device) if device.startswith("cuda") else None}
         (stage/"report.json").write_text(json.dumps(report,indent=2,allow_nan=False)+"\n")

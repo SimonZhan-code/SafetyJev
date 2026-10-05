@@ -9,6 +9,12 @@ import tempfile
 @unittest.skipUnless(importlib.util.find_spec("torch"), "visual training tests require the training environment")
 class VisualTrainTests(unittest.TestCase):
     def test_train_validation_test_pipeline_has_no_calibration_dependency(self):
+        self.exercise_pipeline(None)
+
+    def test_validation_only_does_not_construct_or_evaluate_test(self):
+        self.exercise_pipeline(False)
+
+    def exercise_pipeline(self, run_test):
         from unittest.mock import patch
         import numpy as np
         import torch
@@ -41,12 +47,13 @@ class VisualTrainTests(unittest.TestCase):
                 path.mkdir();(path/'model.json').write_text(json.dumps({'temperature': self.temperature}))
         def train(model, loader, config, output, **kwargs):
             kwargs['validation_fn'](model,1)
-            return {'status':'completed','best_checkpoint':str(output/'checkpoints/step-00000001')}
+            return {'status':'completed','completed_step':1,'best_checkpoint':str(output/'checkpoints/step-00000001')}
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);package=root/'package';package.mkdir()
             (package/'dataset_metadata.json').write_text('{}')
             config={'model':{'dtype':'float32'},'data':{'package':str(package),'num_workers':0,'batch_size':2,'balance':'uniform'},
                     'seed':42,'training':{},'evaluation':{'max_batches':1}}
+            if run_test is not None:config['evaluation']['run_test']=run_test
             with patch('safetyjev.visual_train.verify_package',return_value={'window':{'history_frames':1},'file_sha256':{}}), \
                  patch('safetyjev.visual_train.APWindowDataset',Dataset), \
                  patch('safetyjev.visual_train.DataLoader',side_effect=loader), \
@@ -54,12 +61,15 @@ class VisualTrainTests(unittest.TestCase):
                  patch('jev.visual_model.VisualDecisionModel.load',side_effect=lambda *args,**kwargs:Model()), \
                  patch('jev.visual_training.fit_updates',side_effect=train):
                 report=run(config,root/'run',device='cpu')
-            self.assertEqual(requested,['train','validation','test'])
-            self.assertEqual(eval_sizes,[2,2,2])
+            self.assertEqual(requested,['train','validation'] if run_test is False else ['train','validation','test'])
+            self.assertEqual(eval_sizes,[2,2] if run_test is False else [2,2,2])
             self.assertEqual(report['temperature'],1.)
             self.assertNotIn('calibration',report)
             self.assertFalse((root/'run/final/calibration.jsonl').exists())
-            self.assertTrue((root/'run/final/test.jsonl').is_file())
+            self.assertEqual((root/'run/final/test.jsonl').is_file(),run_test is not False)
+            if run_test is False:
+                self.assertIsNone(report['test'])
+                self.assertEqual(report['test_status'],'not_evaluated')
 
     def test_epoch_sampler_resumes_at_batch_boundary(self):
         from safetyjev.visual_train import EpochBatchSampler

@@ -33,7 +33,10 @@ def distributed_worker(rank, rendezvous, folder):
     try:
         cfg=dict(max_steps=3,accumulation=2,lr=.01,head_lr=.01,weight_decay=0.,warmup_steps=0,clip_grad_norm=100.,brier_weight=.1,save_every=1,eval_every=0)
         torch.manual_seed(7);model=DistributedDataParallel(TinyModel())
-        fit_updates(model,batches(rank),cfg,Path(folder)/'ddp',identity={})
+        def on_step(record):
+            with (Path(folder)/f'telemetry-rank{rank}.jsonl').open('a') as stream:
+                stream.write(json.dumps(record)+'\n')
+        fit_updates(model,batches(rank),cfg,Path(folder)/'ddp',identity={},step_fn=on_step)
         full={k:v.clone() for k,v in model.module.state_dict().items()}
         torch.manual_seed(7);model=DistributedDataParallel(TinyModel())
         first=fit_updates(model,batches(rank),cfg,Path(folder)/'resume',identity={},stop_after=1)
@@ -96,6 +99,8 @@ class DistributedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)
             mp.spawn(distributed_worker,args=(str(root/'rendezvous'),folder),nprocs=2,join=True)
+            self.assertTrue((root/'telemetry-rank0.jsonl').is_file())
+            self.assertFalse((root/'telemetry-rank1.jsonl').exists())
             torch.manual_seed(7);model=TinyModel()
             cfg=dict(max_steps=3,accumulation=1,lr=.01,head_lr=.01,weight_decay=0.,warmup_steps=0,clip_grad_norm=100.,brier_weight=.1,save_every=1,eval_every=0)
             fit_updates(model,batches(),cfg,root/'single',identity={})
