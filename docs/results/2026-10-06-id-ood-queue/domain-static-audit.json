@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "question_applicability_scenes": 725,
+  "matched_diagnostic_hashes": 445,
+  "families": {
+    "cabinet": {
+      "base": 35,
+      "target": 35,
+      "language": 35,
+      "location": 35,
+      "env": 35
+    },
+    "dusty": {
+      "base": 26,
+      "target": 26,
+      "language": 26,
+      "location": 26,
+      "env": 26
+    },
+    "lid": {
+      "base": 30,
+      "target": 30,
+      "language": 30,
+      "location": 30,
+      "env": 30
+    },
+    "stack": {
+      "base": 28,
+      "target": 28,
+      "language": 28,
+      "location": 28,
+      "env": 28
+    },
+    "jar": {
+      "base": 26,
+      "target": 26,
+      "language": 26,
+      "location": 26,
+      "env": 26
+    }
+  }
+}

@@ -4,6 +4,55 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## All-family ID/OOD evaluation and PDF: queued October 6
+
+The requested scope is now **200 base scenes + 800 OOD scenes**, all six families.
+The user explicitly approved including Jar and adding its full 26-scene base run
+for a matched comparison, and retained the instruction to run Clutter without
+SafetyJev scoring. The earlier three-scene Jar pilot is not pooled into these
+full-length metrics.
+
+| Family | Base | Target | Language | Location | Environment |
+|---|---:|---:|---:|---:|---:|
+| Jar | 26 | 26 | 26 | 26 | 26 |
+| Lid | 30 | 30 | 30 | 30 | 30 |
+| Stack | 28 | 28 | 28 | 28 | 28 |
+| Dusty | 26 | 26 | 26 | 26 | 26 |
+| Cabinet | 35 | 35 | 35 | 35 | 35 |
+| Clutter | 55 | 55 | 55 | 55 | 55 |
+
+The existing 174-scene base process remains unchanged. The isolated workspace
+`/workspace/SafetyJev-ood-20261006` queues full Jar base after that process exits,
+then target, language, location, and environment sweeps, using the same pinned
+policy steps, checkpoint, calibration, native caps, and benchmark seed 0.
+The total is a multi-day single-GPU workload, not a completed result.
+
+All resources are downloaded at the existing benchmark revision. Static checks
+passed for **725 classified scenes**, and all **445** scene-specific diagnostic
+hashes matched the training question catalogs. The remaining 275 cases are
+Clutter oracle-only evaluation. All **64 CPU tests passed on the node**. OOD
+GPU rollouts are still queued; these checks do not establish their results.
+
+The PDF builder `scripts/reporting/build-id-ood-report.py` reads saved case and
+family reports and includes coverage/failures, raw/calibrated predicate metrics,
+class counts, task outcomes, engagement-gated versus raw violations, and batch
+latency. It rejects a final report while any planned case is pending or running.
+A ten-page interim layout was rendered and inspected using actual completed Lid
+results; it is a template check, not the final deliverable. Final output will be
+`output/pdf/maniguard-id-ood-evaluation.pdf`, with an adjacent JSON provenance
+record. Source hashes identify every input record used.
+
+The OOD variants are distribution shifts defined by ManiGuard. This does not
+establish that the SafetyJev model never saw those task groups during training.
+Isaac 5.1 physical-label parity remains unverified, and sampled frames are
+correlated. These limitations must accompany ID/OOD accuracy comparisons.
+
+An hourly follow-up was explicitly authorized by the user to check progress,
+back up completed artifacts, verify the final PDF, and commit/push the report.
+It stays quiet during normal progress and reports actionable failures or final
+completion. The instance is not automatically terminated. Resource and follow-up
+records are in `docs/results/2026-10-06-id-ood-queue/`.
+
 ## Full non-Jar base sweep: October 6
 
 **Status: launched, full results pending.** This record distinguishes the completed

@@ -1,0 +1,7 @@
+{
+  "automation_id": "finish-maniguard-id-ood-evaluation-and-pdf",
+  "status": "ACTIVE",
+  "cadence": "hourly",
+  "authorization": "User explicitly approved hourly checks, completed-result backup, final PDF verification and commit/push",
+  "scope": "read-only monitoring while evaluations run; final report work after completion"
+}

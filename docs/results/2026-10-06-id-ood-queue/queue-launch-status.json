@@ -1,0 +1,6 @@
+{
+  "status": "waiting_for_base",
+  "base_root": "/workspace/SafetyJev/artifacts/base-sweep-20261006",
+  "planned_base": 200,
+  "planned_ood": 800
+}

@@ -694,3 +694,78 @@ successful evaluation. `cases/*.json`, full source hashes, policy identities,
 per-frame records, original simulator outputs, and GPU samples support diagnosis.
 Both model services stop when the runner exits; instance shutdown is separate.
 Back up the complete run off-node before releasing the rental.
+
+
+## All-family OOD queue and combined PDF
+
+The active base run freezes source hashes. Do not modify its workspace while it
+runs. The OOD deployment is a separate archive at
+`/workspace/SafetyJev-ood-20261006`, with the same runtime modules and new isolated
+scripts/configs. `configs/domain-sweep-policies.json` adds Jar step 7400 and its
+native 2000-action cap. Other policy/model/benchmark revisions remain unchanged.
+
+`prepare-domain-sweep.py` downloads the pinned scene files for all six families
+and all five levels, reusing policy checkpoints already installed under
+`/workspace/checkpoints`. It writes `artifacts/domain-sweep-resources.json`, with
+explicit scene lists by level. `*-domain-visual.json` and
+`domain-visual-server.json` contain the complete trained question catalogs.
+The model receives resolved question text and images only.
+
+Supervisor programs on the node:
+
+- `safetyjev-domain-download`: resource preparation; completed before GPU work.
+- `safetyjev-domain-queue`: runs `scripts/remote/queue-domain-evaluation.py`.
+- `safetyjev-domain-policy`: runs `serve-domain-policy.py`, localhost:8001.
+- `safetyjev-domain-visual`: visual server with `domain-visual-server.json`,
+  localhost:8793, the same pinned step-20000 weights and frozen calibration.
+
+All are non-autostarting and non-autorestarting. Model services use the existing
+policy/visual Python environments; the queue and capture use behavior51. The
+queue waits for `safetyjev-base-sweep` to finish and exit, checks resource and
+question applicability, then invokes `domain-task-sweep.py` for Jar/base followed
+by all six families at each OOD level. It shares the original sweep's lock to
+prevent overlapping GPU runs. Each phase preserves attempts, source hashes,
+traces, reports, audits, and GPU samples. A stopped-early phase is recorded as a
+queue failure rather than silently skipped. Completed phases are skipped on a
+queue restart; evaluation parameters stay fixed.
+
+Inspect the queued run:
+
+```bash
+supervisorctl status safetyjev-base-sweep safetyjev-domain-queue
+cat /workspace/SafetyJev-ood-20261006/artifacts/domain-evaluation-20261006/queue-status.json
+```
+
+Completed non-Jar ID data remains at
+`/workspace/SafetyJev/artifacts/base-sweep-20261006`. New phase roots are under
+`/workspace/SafetyJev-ood-20261006/artifacts/domain-evaluation-20261006/`:
+`jar-base`, `target`, `language`, `location`, and `env`. Each contains family
+subdirectories. The final queue status is `evaluation_finished`; PDF compilation
+and visual review are a separate local step.
+
+After backing up the complete runs locally, generate the requested report using
+Python with ReportLab installed:
+
+```bash
+python scripts/reporting/build-id-ood-report.py \
+  --base-root /path/to/base-sweep-20261006 \
+  --domain-root /path/to/domain-evaluation-20261006 \
+  --resources /path/to/domain-sweep-resources.json \
+  --output output/pdf/maniguard-id-ood-evaluation.pdf
+```
+
+The final command refuses pending/running cases. `--interim` is only for an
+explicitly labeled progress/layout preview. The adjacent JSON records coverage,
+metrics, failures, resource identities, and SHA-256 source hashes. Classifier
+metrics are suppressed if the report's episode IDs do not match completed case
+IDs. Undefined class metrics remain unavailable, not zero. Render and inspect
+every final PDF page and check numbers before delivery; failed runs must remain
+visible. Keep raw captures/video/logs in ignored backups and commit concise
+results and the final PDF after verification.
+
+The user explicitly authorized the hourly thread follow-up
+`finish-maniguard-id-ood-evaluation-and-pdf` for read-only monitoring during runs,
+then backup, final PDF verification, and commit/push. It should stay quiet during
+healthy progress and pause after delivery. Changes to evaluation parameters or
+active hashed files are not part of that monitoring authorization. Do not stop
+or destroy the rental instance automatically.

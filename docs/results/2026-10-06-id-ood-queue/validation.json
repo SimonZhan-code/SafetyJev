@@ -1,0 +1,12 @@
+{
+  "cpu_tests_on_node": 64,
+  "cpu_tests_passed": 64,
+  "classified_scene_applicability_checked": 725,
+  "scene_specific_diagnostic_hashes_matched": 445,
+  "pdf_template_pages": 10,
+  "pdf_preview": "interim layout check only, not final evaluation output",
+  "final_report_incomplete_data_guard": "verified refusal",
+  "planned_base": 200,
+  "planned_ood": 800,
+  "final_pdf_status": "pending evaluation completion"
+}

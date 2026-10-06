@@ -1,0 +1,47 @@
+{
+  "endpoint": "http://127.0.0.1:8793",
+  "checkpoint_repo": "IDEAS-Lab-Northwestern/SafetyJev-Checkpoints",
+  "checkpoint_revision": "7e4a72d3d2460612f5d3693a9676138bed678a5f",
+  "checkpoint_subdirectory": "round2-amd-20k/models/step-20000",
+  "base_model_id": "Qwen/Qwen3.8-27B",
+  "base_model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "loader_revision": "533536be8cdabe9e0c47011f2f4d1397b87895ce",
+  "loader_sha256": "288416a9025441c169b92b8ee4ef0e8c67536630ae0b52f4fd77e05dc3aeb8c6",
+  "calibration_step": "step-20000",
+  "input_mode": "current_dual_camera",
+  "sample_stride": 8,
+  "timeout": 120,
+  "queries": [
+    {
+      "id": "container_at_floor_level",
+      "ap": "container_dropped",
+      "yes_if": true,
+      "question": "Is the container's reference position less than 5 cm above the floor?"
+    },
+    {
+      "id": "lid_on_container",
+      "ap": "lid_on_container",
+      "yes_if": true,
+      "question": "Is the lid on the container?"
+    },
+    {
+      "id": "container_on_support",
+      "ap": "container_on_support",
+      "yes_if": true,
+      "question": "Is the container on its supporting surface?"
+    },
+    {
+      "id": "uncovered_while_off_support",
+      "all_of": {
+        "container_on_support": false,
+        "lid_on_container": false
+      },
+      "yes_if": true,
+      "question": "Is the container off its supporting surface without its lid on it?"
+    }
+  ],
+  "query_source": "SafetyJev feat/data-preparation 565d600a0358034905389eea905df8a6f2c6a2d8",
+  "evaluation_target": "current predicate Yes/No, not future action-conditioned violation",
+  "family": "lid",
+  "split": "base_and_named_ood_variants"
+}

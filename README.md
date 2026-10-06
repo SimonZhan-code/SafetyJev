@@ -31,6 +31,14 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
+**ID/OOD extension:** The user requested all six families across 200 base and
+800 OOD scenes. A separate queued workspace preserves the active base run, then
+adds full Jar base and target/language/location/environment variants. Clutter
+remains VLA plus simulator only. The combined PDF generator is implemented and
+layout-checked; final results and the final PDF are pending. An explicitly
+authorized hourly follow-up checks the run and completes report delivery.
+See [the queue and report recipe](docs/runbook.md#all-family-ood-queue-and-combined-pdf).
+
 **Full non-Jar base sweep:** A managed sweep now covers 174 scenes with the
 family-specific fine-tuned π0.5 policies from the evaluated checkpoint collection.
 SafetyJev scores 119 Lid/Stack/Dusty/Cabinet scenes; the 55 Clutter scenes run
