@@ -739,7 +739,9 @@ Node B (154.59.156.14, SSH 39237):
   that exact output directory. A copy of Jar results on A is not a second rollout.
 
 Both nodes have isolated `safetyjev-domain-policy` and `safetyjev-domain-visual`
-services (localhost:8001 and :8793). Each node uses its local sweep lock. Static
+services (localhost:8001 and :8793). The visual server command must explicitly
+include `--port 8793`: the JSON `endpoint` field configures clients but does not
+override the server CLI default of 8792. Each node uses its local sweep lock. Static
 ownership prevents cross-node overlap; local locks prevent simultaneous GPU
 phases on a single node. Assignment/source hashes and worker IDs are recorded.
 Completed phases are skipped on restart. Do not mutate active hashed source or

@@ -4,6 +4,17 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Node B startup correction: October 6
+
+The complete runtime transfer, 71 CPU tests, all three CUDA environment checks,
+and Vulkan validation passed on B. Its first queue launch then timed out before
+any case ran: the Supervisor visual-server command omitted `--port 8793`, so the
+server listened on its default 8792 while clients waited on 8793. The explicit
+port argument is now present in the isolated service configurations on both nodes.
+The endpoint health check passed and B began its first assigned Jar case,
+`task_0025/base`. No completed case was repeated and no hashed evaluation file was
+changed. The original startup logs and empty run manifest remain preserved.
+
 ## Stop both instances after the base sweep: October 6 update
 
 The user explicitly requested stopping both Vast.ai instances after the full
