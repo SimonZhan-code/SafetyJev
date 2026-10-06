@@ -31,14 +31,14 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Current two-node plan:** 200 base and 800 OOD scenes have exclusive ownership
-in `configs/two-node-assignments.json`. Node A finishes the original 174 non-Jar
-base cases, then target and language OOD. Node B runs full Jar base first, then
-environment and location OOD with families/scenes in reverse order. Clutter
-remains VLA plus simulator only. The first complete PDF covers all 200 base cases
-without waiting for OOD. The hourly chat follow-up is paused at the user's request.
-Node B provisioning and final reports are still pending; see
-[the queue and report recipe](docs/runbook.md#two-node-queue-and-base-first-pdf).
+**Current scope: finish 200 base cases, then stop both instances.** Node A owns
+174 non-Jar base cases; node B owns 26 Jar base cases. OOD phases are deferred
+by the user's shutdown request. The fixed assignment still records future OOD
+ownership, but both queues are configured base-only. After base completion the
+pipeline saves the report and full result archive, attempts a verified local
+backup, then stops each Vast.ai instance using only its own scoped credential.
+Stopping preserves disk data; neither instance is destroyed. The hourly chat
+follow-up remains paused. See [the runbook](docs/runbook.md#two-node-queue-and-base-first-pdf).
 
 **Full non-Jar base sweep:** A managed sweep now covers 174 scenes with the
 family-specific fine-tuned π0.5 policies from the evaluated checkpoint collection.

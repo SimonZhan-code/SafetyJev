@@ -698,6 +698,11 @@ Back up the complete run off-node before releasing the rental.
 
 ## Two-node queue and base-first PDF
 
+**Latest instruction:** finish only the 200 base cases, preserve the report and
+results, then stop both Vast.ai instances. OOD work is deferred. Both partitioned
+queue configurations now include `--base-only`; node A's waiting queue is stopped.
+The ownership table below is retained for a possible future OOD resume.
+
 The active base run freezes source hashes. Do not modify its workspace at
 `/workspace/SafetyJev`. New queues use `/workspace/SafetyJev-ood-20261006` on both
 nodes. `configs/two-node-assignments.json` is the immutable ownership authority:
@@ -738,8 +743,9 @@ services (localhost:8001 and :8793). Each node uses its local sweep lock. Static
 ownership prevents cross-node overlap; local locks prevent simultaneous GPU
 phases on a single node. Assignment/source hashes and worker IDs are recorded.
 Completed phases are skipped on restart. Do not mutate active hashed source or
-assignment files. Revoke the temporary transfer keys when their copies finish;
-never commit their private material. Do not stop or destroy either rental.
+assignment files. Keep the restricted transfer keys available until the completion handshake
+finishes; never commit their private material. The user now authorizes automatic
+instance stop after the base sweep. Never destroy either rental.
 
 Resource manifest: `artifacts/domain-sweep-resources.json`. Base results:
 `/workspace/SafetyJev/artifacts/base-sweep-20261006` on A. Domain phase outputs:
@@ -772,3 +778,38 @@ The hourly heartbeat `finish-maniguard-id-ood-evaluation-and-pdf` is **PAUSED**
 at the user's request. Do not re-enable it or replace it with another recurring
 monitor. The one-time report job is part of the evaluation pipeline and exits
 after generation or an actionable audit failure. It does not send chat updates.
+
+### Completion-triggered stop and local backup
+
+`safetyjev-auto-stop` on each node runs `stop-after-base.py --worker node-a|node-b`.
+B's bootstrap starts this service after runtime validation. The hooks use only
+local `CONTAINER_ID` and `CONTAINER_API_KEY`; a credential is never sent to another
+node or written into result/log files. Instance identity is checked against the
+authorized IDs. The command is `vastai stop instance`, never `destroy`.
+
+Node A requires both run manifests to be finished and the report collector to
+reconcile exactly 200 terminal base cases, with none pending or running. It waits
+for base service cleanup and the report's terminal status, then writes
+`artifacts/base-complete-20261006.tar.gz` and `base-archive-ready.json`. The archive
+includes full base capture directories, the copied Jar run, provenance/resources,
+and the generated PDF/JSON when available. Audit/report errors are retained for
+offline investigation; they do not prevent saving the completed raw evaluation.
+
+`scripts/reporting/backup-base-on-completion.py` is a one-shot local dependency job,
+not a recurring chat monitor. It waits for the archive, copies it to
+`artifacts/base-completed-20261006/`, verifies SHA-256 and length, safely extracts
+it, and acknowledges the verified backup. A keeps a maximum 1,200-second grace
+period for this local copy. If the Mac is unavailable, the completed archive is
+preserved on A's stopped disk rather than keeping GPU charges running forever.
+
+After that, A publishes `base-stop-ready.json`. B reads it with its read-only
+transfer key, sends `jar-base/node-b-stop-ack.json` through its narrowly scoped
+result key, then stops itself. A waits for that receipt and stops itself. Stop
+requests retry transient failures; Supervisor restarts an unexpectedly failed
+hook. `automatic-stop-status.json` records the safe stage and accepted request.
+Acceptance is not independent confirmation that the provider finished stopping.
+
+Stopping retains instance storage and ends GPU charges once stopped; storage
+charges remain. Do not destroy the disks. Inspect the locally backed-up final PDF
+pages, reconcile any audit issue, and update/commit the report after shutdown.
+The hourly Codex heartbeat stays paused.

@@ -4,9 +4,16 @@
   "node_a": 574,
   "node_b": 426,
   "intersection": 0,
-  "cpu_tests_passed_on_node_a": 68,
+  "cpu_tests_passed_on_node_a": 71,
   "hourly_monitor": "PAUSED",
   "first_report_scope": "200 base cases",
   "node_b_status": "runtime transfer in progress; GPU evaluation pending",
-  "base_pdf_status": "pending all base cases and visual verification"
+  "base_pdf_status": "pending all base cases and visual verification",
+  "active_scope": "200 base cases only",
+  "ood_status": "deferred by user",
+  "automatic_stop": "configured after exactly 200 terminal base cases and archival",
+  "instance_a": "54498592",
+  "instance_b": "54533396",
+  "local_backup_grace_seconds": 1200,
+  "credentials": "remain on original node; no cross-node API credential transfer"
 }

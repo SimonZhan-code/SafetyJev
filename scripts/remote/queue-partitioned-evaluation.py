@@ -25,6 +25,7 @@ def save(value):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--worker', choices=['node-a', 'node-b'], required=True)
+    parser.add_argument('--base-only',action='store_true',help='User requested stop after the 200 base cases')
     args = parser.parse_args()
     path = ROOT / 'configs/two-node-assignments.json'
     assignment = json.loads(path.read_text())
@@ -34,7 +35,8 @@ def main():
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     common = {'worker':args.worker, 'assignment_file_sha256':digest,
               'owned_cases':len(worker['cases']), 'scope':'200 base + 800 OOD across both workers',
-              'base_pdf':'deliver after all 200 base cases; do not wait for OOD'}
+              'base_pdf':'deliver after all 200 base cases; do not wait for OOD',
+              'base_only':args.base_only,'ood_status':'deferred by user' if args.base_only else 'assigned'}
     if worker['wait_for_original_base']:
         save(dict(common, status='waiting_for_base'))
         while True:
@@ -63,6 +65,7 @@ def main():
                 resolve_queries(config['queries'], scene, json.loads(diagnostic.read_text().splitlines()[0])['ltl_safety']['propositions'])
     finished = []
     for phase in worker['phases']:
+        if args.base_only and phase['level']!='base':continue
         if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             raise ValueError('Assignment changed while queue was active')
         run = OUT / phase['name']

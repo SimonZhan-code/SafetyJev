@@ -4,6 +4,30 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Stop both instances after the base sweep: October 6 update
+
+The user explicitly requested stopping both Vast.ai instances after the full
+200-case base sweep to save credits. The original OOD queues are now deferred;
+node A's current 174-case run continues, and node B will run only the 26 Jar
+base cases. The hourly chat monitor remains paused.
+
+A completion hook checks both finished run manifests and all 200 terminal case
+records. It archives the original captures/images/logs, Jar outputs, resource
+manifest, report status and generated PDF/JSON. A one-shot local backup copies
+and verifies that archive by SHA-256 before acknowledging it. The hook allows a
+maximum 20-minute local-backup grace period; if the Mac is unavailable, the
+archive stays on the stopped instance's preserved disk for later retrieval.
+An incomplete report or audit issue remains documented for offline review and
+does not justify keeping finished GPUs running indefinitely.
+
+Node B acknowledges the non-secret completion record, then each instance issues
+its own Vast.ai stop request. No cloud API credential crosses nodes. Instance IDs
+are pinned (A 54498592, B 54533396); the hook rejects a mismatched identity and
+never destroys an instance. GPU usage charges end after the provider completes
+stopping; retained storage remains chargeable. All **71 CPU tests passed** on A,
+including incomplete-coverage rejection, wrong-instance rejection and credential
+redaction. These are implementation checks; neither instance has stopped yet.
+
 ## Two-node execution and base-first PDF: October 6 update
 
 The user requested the hourly monitor be disabled and the complete base report
