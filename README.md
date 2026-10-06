@@ -31,13 +31,14 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**ID/OOD extension:** The user requested all six families across 200 base and
-800 OOD scenes. A separate queued workspace preserves the active base run, then
-adds full Jar base and target/language/location/environment variants. Clutter
-remains VLA plus simulator only. The combined PDF generator is implemented and
-layout-checked; final results and the final PDF are pending. An explicitly
-authorized hourly follow-up checks the run and completes report delivery.
-See [the queue and report recipe](docs/runbook.md#all-family-ood-queue-and-combined-pdf).
+**Current two-node plan:** 200 base and 800 OOD scenes have exclusive ownership
+in `configs/two-node-assignments.json`. Node A finishes the original 174 non-Jar
+base cases, then target and language OOD. Node B runs full Jar base first, then
+environment and location OOD with families/scenes in reverse order. Clutter
+remains VLA plus simulator only. The first complete PDF covers all 200 base cases
+without waiting for OOD. The hourly chat follow-up is paused at the user's request.
+Node B provisioning and final reports are still pending; see
+[the queue and report recipe](docs/runbook.md#two-node-queue-and-base-first-pdf).
 
 **Full non-Jar base sweep:** A managed sweep now covers 174 scenes with the
 family-specific fine-tuned π0.5 policies from the evaluated checkpoint collection.

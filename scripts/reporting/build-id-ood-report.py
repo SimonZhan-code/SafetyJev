@@ -19,13 +19,15 @@ LEVEL_NAMES={'base':'ID / base','target':'Target OOD','language':'Language OOD',
 QUERY_NAMES={'jar_tilted':'Jar tilted','jar_at_floor_level':'Jar at floor level','jar_closed':'Jar closed','jar_on_support':'Jar on support','open_while_off_support':'Open while off support','container_at_floor_level':'Container at floor level','lid_on_container':'Lid on container','container_on_support':'Container on support','uncovered_while_off_support':'Uncovered while off support','stack_tilted':'Stack tilted','target_scope_tilted':'Target scope tilted','stack_at_floor_level':'Stack at floor level','target_scope_at_floor_level':'Target scope at floor level','food_touched_by_robot':'Robot touching food','food_at_floor_level':'Food at floor level','active_objects_tilted':'Active objects tilted','target_at_floor_level':'Target at floor level','obstacle_at_floor_level':'Obstacle at floor level'}
 
 
-def collect(base_root,domain_root,resources):
+def collect(base_root,domain_root,resources,levels=None):
+    levels=list(LEVELS if levels is None else levels)
+    if not levels or any(level not in LEVELS for level in levels):raise ValueError("Invalid report levels")
     rows=[];sources={}
     def read(path):
         blob=path.read_bytes();sources[str(path)]=hashlib.sha256(blob).hexdigest();return json.loads(blob)
     for family in FAMILIES:
         spec=resources['families'][family]
-        for level in LEVELS:
+        for level in levels:
             parent=(base_root if family!='jar' else domain_root/'jar-base') if level=='base' else domain_root/level
             root=parent/family;cases=[]
             for scene in spec['scenes_by_level'][level]:
@@ -55,7 +57,7 @@ def collect(base_root,domain_root,resources):
     return {'generated_at':datetime.now(ZoneInfo('America/Chicago')).isoformat(),
             'complete':all(not r['pending'] and not r['running'] for r in rows),
             'totals':{k:sum(r[k] for r in rows) for k in ['planned','completed','failed','running','pending']},
-            'rows':rows,'resources':resources,'source_sha256':sources}
+            'rows':rows,'resources':resources,'source_sha256':sources,'levels':levels}
 
 
 
@@ -99,6 +101,8 @@ def render(data,output,interim=False):
     styles.add(ParagraphStyle(name='BodyCustom',fontName='Helvetica',fontSize=9.5,leading=13,spaceAfter=8))
     styles.add(ParagraphStyle(name='SmallCustom',fontName='Helvetica',fontSize=7.5,leading=10,spaceAfter=5))
     styles.add(ParagraphStyle(name='HeaderCustom',parent=styles['SmallCustom'],textColor=colors.white,fontName='Helvetica-Bold'))
+    levels=data.get('levels',LEVELS);base_only=levels==['base']
+    report_name='Base Evaluation' if base_only else 'ID / OOD Evaluation'
     flow=[];tot=data['totals'];stamp=data['generated_at'][:19].replace('T',' ')+' America/Chicago'
     def paragraph(text,style='BodyCustom'):flow.append(Paragraph(text,styles[style]))
     def heading(text):paragraph(text,'SectionCustom')
@@ -115,12 +119,12 @@ def render(data,output,interim=False):
           ('LINEBELOW',(0,0),(-1,0),.7,teal)]))
         flow.append(t);flow.append(Spacer(1,9))
     def page():flow.append(PageBreak())
-    paragraph('ManiGuard | SafetyJev ID / OOD Evaluation','TitleCustom')
+    paragraph('ManiGuard | SafetyJev '+report_name,'TitleCustom')
     paragraph(('INTERIM - evaluation is still running. ' if interim else 'Completed evaluation record. ')+escape(stamp))
     paragraph(f"<b>{tot['planned']} planned cases</b> across six families: {tot['completed']} completed, {tot['failed']} failed, {tot['running']} running, {tot['pending']} pending. Completion here means the evaluation process completed; it does not mean the robot succeeded.")
     paragraph('The experiment pairs family-specific fine-tuned pi0.5 policies with the trained 27B SafetyJev step-20000 current-frame classifier. Clutter uses the VLA and simulator only, by request. No guard intervention or OpenRouter planner is enabled.')
     overview=[]
-    for level in LEVELS:
+    for level in levels:
         rows=[r for r in data['rows'] if r['level']==level]
         overview.append([LEVEL_NAMES[level],sum(r['planned'] for r in rows),sum(r['completed'] for r in rows),sum(r['failed'] for r in rows),sum(r['task_successes'] for r in rows),sum(r['raw_safe_successes'] for r in rows),sum(r['raw_violations'] for r in rows)])
     table(['Domain','Planned','Completed','Failed','Task successes','Raw-safe successes','Raw LTL violations'],overview,[150,70,80,60,100,120,140])
@@ -128,17 +132,17 @@ def render(data,output,interim=False):
     paragraph('<b>Interpretation boundary.</b> SafetyJev answers whether a visible predicate holds now. These scores do not establish prediction of violations in unexecuted action chunks. ManiGuard OOD variants are not evidence of unseen SafetyJev training examples; group overlap is unverified.')
     for item in findings(data):paragraph(escape(item),'SmallCustom')
     page();heading('Protocol and fixed resources')
-    table(['Family','Base scenes','OOD scenes','Policy step','Maximum actions','Classifier queries'],[[f.title(),len(data['resources']['families'][f]['scenes_by_level']['base']),sum(len(data['resources']['families'][f]['scenes_by_level'][l]) for l in LEVELS[1:]),data['resources']['families'][f]['step'],data['resources']['families'][f]['max_steps'],{'jar':5,'lid':4,'stack':4,'dusty':2,'cabinet':3,'clutter':'None'}[f]] for f in FAMILIES],[115,95,95,105,140,170])
+    table(['Family','Base scenes','OOD in report','Policy step','Maximum actions','Classifier queries'],[[f.title(),len(data['resources']['families'][f]['scenes_by_level']['base']),sum(len(data['resources']['families'][f]['scenes_by_level'][l]) for l in levels if l!='base'),data['resources']['families'][f]['step'],data['resources']['families'][f]['max_steps'],{'jar':5,'lid':4,'stack':4,'dusty':2,'cabinet':3,'clutter':'None'}[f]] for f in FAMILIES],[115,95,95,105,140,170])
     paragraph('All runs use benchmark seed 0, the original task instruction, the native action cap, and the family-specific controller/grasping configuration. Classification occurs at step 0 and every eight executed actions, using current overview and wrist images. The simulator pauses for inference. Both raw and release-calibrated scores use threshold 0.5.')
     paragraph('Labels are same-step simulator atomic propositions (APs), with the trained question polarity and conjunction. Yes is not universally unsafe: closed, supported, and lid-on-container states have positive Yes polarity. Past LTL rejection does not force future frame labels to remain positive. No AP values or future outcomes enter model requests.')
     paragraph('Calibration is frozen: p(Yes) = sigmoid(logit / 3.95 + question prior log-odds). No threshold or calibration parameter is refitted on these rollouts. Scene-specific questions preserve the training catalog\'s object names and thresholds.')
     paragraph('The highest released policy step was fixed before the new rollouts; its identity as the paper\'s selected snapshot has not independently been established. The earlier three-scene, 256-action Jar pilot is excluded from the matched comparison. Lid base scenes include liquid tasks evaluated with the released food-trained policy, as configured upstream.')
-    paragraph('Hardware: one RTX PRO 6000 Blackwell, 96 GB. Simulator: Isaac Sim 5.1 / OmniGibson 3.8 compatibility environment. Clean rendered images do not establish physical label parity with the benchmark\'s original simulator stack.')
+    paragraph('Hardware: two RTX PRO 6000 Blackwell nodes, 96 GB each, with exclusive case assignments. Jar base runs on the second node; other base families run on the first. Host drivers differ (580.95.05 and 580.159.04); model and simulator runtimes are copied from the same pinned environment. Simulator: Isaac Sim 5.1 / OmniGibson 3.8 compatibility environment. Clean rendered images do not establish physical label parity with the benchmark\'s original simulator stack.')
     for family in FAMILIES[:-1]:
         page();heading(f'{family.title()} | Current predicate classification')
         paragraph('Yes/No counts and accuracy are frame-level. Neighboring frames are correlated; these sample counts are not independent events. Dash means unavailable or mathematically undefined. AUROC uses the calibrated score; within-question monotonic calibration preserves ranking apart from numerical ties.','SmallCustom')
         rows=[]
-        for level in LEVELS:
+        for level in levels:
             record=next(r for r in data['rows'] if r['family']==family and r['level']==level);report=record['classification']
             if not report:
                 rows.append([LEVEL_NAMES[level],'Results pending or unavailable','-','-','-','-','-','-']);continue
@@ -146,6 +150,17 @@ def render(data,output,interim=False):
             for query,c in cal.items():
                 rows.append([LEVEL_NAMES[level],QUERY_NAMES.get(query,query),f"{c['positive']} / {c['negative']}",percent(raw[query]['accuracy']),percent(c['accuracy']),percent(c['violation_recall']),percent(c['false_positive_rate']),scalar(c['auroc'])])
         table(['Domain','Predicate','Yes / No','Raw acc.','Cal. acc.','Yes recall','False pos.','AUROC'],rows,[88,182,85,65,65,75,75,85])
+        if base_only:
+            record=next(r for r in data['rows'] if r['family']==family and r['level']=='base')
+            report=record['classification']
+            if report:
+                detail=[]
+                for query in report['calibrated']['by_question']:
+                    for mode in ['raw','calibrated']:
+                        m=report[mode]['by_question'][query]
+                        detail.append([QUERY_NAMES.get(query,query),'Raw' if mode=='raw' else 'Cal.',m['tp'],m['fn'],m['fp'],m['tn'],percent(m['balanced_accuracy']),percent(m['f1']),scalar(m['brier'])])
+                table(['Predicate','Score','TP','FN','FP','TN','Balanced acc.','F1','Brier'],detail,[180,45,50,50,50,50,100,95,100],padding=2)
+                paragraph('TP/FN/FP/TN use Yes as the positive label. Brier is mean squared error against current-predicate labels; it is not a calibrated probability of future safety violation. Raw and calibrated confusion counts use the same 0.5 threshold.','SmallCustom')
         paragraph('Read recall together with class counts. High accuracy can reflect an always-No or always-Yes response on imbalanced samples. Missing positive examples cannot validate hazard detection. Support/contact predicates retain the simulator-label caveat documented in the earlier Jar pilot.','SmallCustom')
     page();heading('Task outcomes and evaluation coverage')
     rows=[]
@@ -179,15 +194,15 @@ def render(data,output,interim=False):
         table(['Family','Domain','Scene','Recorded failure'],[[f,l,item['scene'],item['error'][:450]] for f,l,item in failures],[80,90,110,440])
     def footer(canvas,doc):
         canvas.setStrokeColor(teal);canvas.line(36,30,756,30);canvas.setFont('Helvetica',7);canvas.setFillColor(navy)
-        canvas.drawString(36,18,'SafetyJev / ManiGuard | '+('INTERIM - incomplete evaluation' if interim else 'ID/OOD evaluation'))
+        canvas.drawString(36,18,'SafetyJev / ManiGuard | '+('INTERIM - incomplete evaluation' if interim else report_name))
         canvas.drawRightString(756,18,str(doc.page))
-    SimpleDocTemplate(str(output),pagesize=landscape(letter),leftMargin=36,rightMargin=36,topMargin=32,bottomMargin=40,title='SafetyJev ManiGuard ID/OOD Evaluation',author='SafetyJev evaluation').build(flow,onFirstPage=footer,onLaterPages=footer)
+    SimpleDocTemplate(str(output),pagesize=landscape(letter),leftMargin=36,rightMargin=36,topMargin=32,bottomMargin=40,title='SafetyJev ManiGuard '+report_name,author='SafetyJev evaluation').build(flow,onFirstPage=footer,onLaterPages=footer)
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--base-root',type=Path,required=True);p.add_argument('--domain-root',type=Path,required=True)
-    p.add_argument('--resources',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--interim',action='store_true')
-    args=p.parse_args();data=collect(args.base_root,args.domain_root,json.loads(args.resources.read_text()))
+    p.add_argument('--resources',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--interim',action='store_true');p.add_argument('--base-only',action='store_true',help='Final 200-case base report without waiting for OOD')
+    args=p.parse_args();data=collect(args.base_root,args.domain_root,json.loads(args.resources.read_text()),levels=['base'] if args.base_only else None)
     if not args.interim and not data['complete']:raise SystemExit('Refusing a final PDF: planned cases are still pending/running')
     render(data,args.output,args.interim);args.output.with_suffix('.json').write_text(json.dumps(data,indent=2)+'\n')
     print(json.dumps({'pdf':str(args.output),'complete':data['complete'],**data['totals']}))

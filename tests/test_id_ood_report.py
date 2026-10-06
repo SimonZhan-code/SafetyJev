@@ -24,6 +24,20 @@ class DomainReportTests(unittest.TestCase):
             self.assertEqual(row['task_successes'],1);self.assertEqual(row['raw_safe_successes'],0)
             self.assertEqual(sum(r['raw_safe_successes'] for r in data['rows']),0)
 
+    def test_base_report_does_not_wait_for_ood(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            resources={'families':{f:{'scenes_by_level':{l:['task_0000/'+l] for l in report.LEVELS}} for f in report.FAMILIES}}
+            for family in report.FAMILIES:
+                parent=root/'domain/jar-base' if family=='jar' else root/'base'
+                cases=parent/family/'cases';cases.mkdir(parents=True)
+                (cases/'task_0000-base.json').write_text(json.dumps({'status':'completed','episode_id':family,'result':{'success':False}}))
+            full=report.collect(root/'base',root/'domain',resources)
+            base=report.collect(root/'base',root/'domain',resources,levels=['base'])
+            self.assertFalse(full['complete']);self.assertTrue(base['complete'])
+            self.assertEqual(base['totals']['planned'],6)
+            self.assertTrue(all(row['level']=='base' for row in base['rows']))
+
     def test_single_class_rows_do_not_create_balanced_accuracy_comparison(self):
         def row(level,balanced):
             return {'family':'jar','level':level,'classification':{'calibrated':{'by_question':{'jar_tilted':{'balanced_accuracy':balanced,'positive':0,'violation_recall':None}}}}}

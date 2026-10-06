@@ -40,24 +40,39 @@ def main():
     parser.add_argument('--max-scenes',type=int)
     parser.add_argument('--max-steps',type=int)
     parser.add_argument('--retry-failed',action='store_true')
+    parser.add_argument('--fail-fast',action='store_true')
+    parser.add_argument('--assignment',type=Path)
+    parser.add_argument('--worker',choices=['node-a','node-b'])
+    parser.add_argument('--reverse-scenes',action='store_true')
     args=parser.parse_args();out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
     lock=Path('/workspace/SafetyJev/artifacts/base-sweep.lock').open('w')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     resources=json.loads((ROOT/'artifacts/domain-sweep-resources.json').read_text())
     selected={f:{**resources['families'][f], 'scenes':resources['families'][f]['scenes_by_level'][args.level]} for f in args.families}
     if not all(s.get('ready') for s in selected.values()):raise RuntimeError('Downloads incomplete')
+    assignment_hash=None
+    if (ROOT/'configs/two-node-assignments.json').exists() and not args.assignment:
+        raise ValueError('Partitioned deployment requires --assignment and --worker')
+    if bool(args.assignment)!=bool(args.worker):raise ValueError('Assignment and worker must be provided together')
+    if args.assignment:
+        from partitioned_plan import authorize_selection
+        assignment_hash=authorize_selection(json.loads(args.assignment.read_text()),resources,args.worker,selected)
+    if args.reverse_scenes:
+        for spec in selected.values():spec['scenes']=list(reversed(spec['scenes']))
     plan={'families':selected,'seed':0,'max_scenes_override':args.max_scenes,
           'max_steps_override':args.max_steps,'sample_stride':8,'threshold':.5,
           'scope':args.level+' current predicate classification; no interventions', 'benchmark_level':args.level,
           'clutter':'VLA and simulator oracle only, requested by user',
           'checkpoint_selection':resources['checkpoint_selection'],
-          'benchmark_revision':resources['benchmark_revision']}
+          'benchmark_revision':resources['benchmark_revision'],
+          'worker':args.worker,'assignment_sha256':assignment_hash,'reverse_scenes':args.reverse_scenes}
     if (out/'plan.json').exists():
         if json.loads((out/'plan.json').read_text())!=plan:raise ValueError('Resume plan differs')
     else:save(out/'plan.json',plan)
     source_paths=[*sorted((ROOT/'safetyjev').glob('*.py')), *sorted((ROOT/'configs').glob('*visual*.json')),
                   ROOT/'configs/domain-sweep-policies.json', ROOT/'scripts/remote/reset-domain-policy.py',
                   ROOT/'scripts/remote/domain-task-sweep.py']
+    if args.assignment:source_paths += [args.assignment,ROOT/'scripts/remote/partitioned_plan.py']
     def source_hashes():
         return {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths}
     hashes=source_hashes()
@@ -109,7 +124,7 @@ def main():
                 if source_hashes()!=hashes:raise ValueError('Runtime source changed during sweep')
                 attempt=1
                 if path.exists():attempt=json.loads(path.read_text()).get('attempt',1)+1
-                rec={'family':family,'level':args.level,'scene':scene,'attempt':attempt,'status':'running','start_unix_s':time.time()}
+                rec={'worker':args.worker,'assignment_sha256':assignment_hash,'family':family,'level':args.level,'scene':scene,'attempt':attempt,'status':'running','start_unix_s':time.time()}
                 if path.exists():save(path.with_name(path.stem+f'.previous-{attempt-1}.json'),json.loads(path.read_text()))
                 save(path,rec);save(out/'progress.json',{'status':'running','current':rec,'finished':len(records),'planned':sum(len(s['scenes'][:args.max_scenes] if args.max_scenes else s['scenes']) for s in selected.values())})
                 print('START',family,scene,'attempt',attempt,flush=True)
@@ -140,6 +155,7 @@ def main():
                 save(path,rec);records.append(rec);save(out/'sweep.json',records)
                 subprocess.run([PY,str(ROOT/'scripts/remote/summarize-base-sweep.py'),str(out)],check=True)
                 print('DONE',family,scene,rec['status'],rec.get('error',''),flush=True)
+                if args.fail_fast and rec['status']=='failed':raise RuntimeError('Stopping on failed case: '+family+'/'+scene)
             if family!='clutter':
                 subprocess.run([PY,'-m','safetyjev.visual_runtime','report','--episodes',str(out/family/'episodes'),'--output',str(out/family/'report.json')],env=ENV,cwd=ROOT,check=True)
                 audited=subprocess.run([PY,str(ROOT/'scripts/remote/audit-visual-evaluation.py'),str(out/family),

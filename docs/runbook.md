@@ -696,76 +696,79 @@ Both model services stop when the runner exits; instance shutdown is separate.
 Back up the complete run off-node before releasing the rental.
 
 
-## All-family OOD queue and combined PDF
+## Two-node queue and base-first PDF
 
-The active base run freezes source hashes. Do not modify its workspace while it
-runs. The OOD deployment is a separate archive at
-`/workspace/SafetyJev-ood-20261006`, with the same runtime modules and new isolated
-scripts/configs. `configs/domain-sweep-policies.json` adds Jar step 7400 and its
-native 2000-action cap. Other policy/model/benchmark revisions remain unchanged.
+The active base run freezes source hashes. Do not modify its workspace at
+`/workspace/SafetyJev`. New queues use `/workspace/SafetyJev-ood-20261006` on both
+nodes. `configs/two-node-assignments.json` is the immutable ownership authority:
+A owns the original 174 non-Jar base cases and target/language OOD; B owns 26 Jar
+base cases and environment/location OOD. `partitioned_plan.py` rejects overlap,
+missing cases, repeated phases, and unauthorized selections. Never run the older
+unpartitioned `queue-domain-evaluation.py` concurrently with this plan.
 
-`prepare-domain-sweep.py` downloads the pinned scene files for all six families
-and all five levels, reusing policy checkpoints already installed under
-`/workspace/checkpoints`. It writes `artifacts/domain-sweep-resources.json`, with
-explicit scene lists by level. `*-domain-visual.json` and
-`domain-visual-server.json` contain the complete trained question catalogs.
-The model receives resolved question text and images only.
+Node A (87.192.101.6, SSH 15019):
 
-Supervisor programs on the node:
+- `safetyjev-base-sweep` continues the original base run unchanged.
+- `safetyjev-domain-queue` invokes `queue-partitioned-evaluation.py --worker node-a`.
+  It waits for the original base process to finish and exit, then runs target and
+  language. It does not run Jar base, environment, or location.
+- `safetyjev-base-report` runs `build-base-report-when-ready.py` using the separate
+  `/workspace/report-env` environment. It waits for 174 terminal original cases
+  and the completed Jar transfer receipt, verifies the 200-case coverage and
+  trace audits, then builds the base PDF. Audit failures require review.
 
-- `safetyjev-domain-download`: resource preparation; completed before GPU work.
-- `safetyjev-domain-queue`: runs `scripts/remote/queue-domain-evaluation.py`.
-- `safetyjev-domain-policy`: runs `serve-domain-policy.py`, localhost:8001.
-- `safetyjev-domain-visual`: visual server with `domain-visual-server.json`,
-  localhost:8793, the same pinned step-20000 weights and frozen calibration.
+Node B (154.59.156.14, SSH 39237):
 
-All are non-autostarting and non-autorestarting. Model services use the existing
-policy/visual Python environments; the queue and capture use behavior51. The
-queue waits for `safetyjev-base-sweep` to finish and exit, checks resource and
-question applicability, then invokes `domain-task-sweep.py` for Jar/base followed
-by all six families at each OOD level. It shares the original sweep's lock to
-prevent overlapping GPU runs. Each phase preserves attempts, source hashes,
-traces, reports, audits, and GPU samples. A stopped-early phase is recorded as a
-queue failure rather than silently skipped. Completed phases are skipped on a
-queue restart; evaluation parameters stay fixed.
+- `safetyjev-runtime-copy` copies the pinned Python environments, model weights,
+  assets and source trees directly from A, excluding secrets and prior outputs.
+  Its temporary key permits read-only rsync under A's `/workspace`.
+- `safetyjev-worker-bootstrap` waits for successful transfer, applies the current
+  code payload, runs the CPU tests, checks CUDA in all three Python environments,
+  checks Vulkan, then starts B's exclusive queue. No evaluation runs before this.
+- `safetyjev-domain-queue` invokes `queue-partitioned-evaluation.py --worker node-b`.
+  It runs Jar base with descending scene IDs, then environment and location with
+  descending family order and scene IDs. Every phase stops on the first failed
+  case; preserve its artifacts and diagnose before an explicitly chosen retry.
+- After Jar base, `sync-jar-base.py` copies its full output to A and publishes
+  `jar-base/transfer-complete.json` last. Its separate key is restricted to writing
+  that exact output directory. A copy of Jar results on A is not a second rollout.
 
-Inspect the queued run:
+Both nodes have isolated `safetyjev-domain-policy` and `safetyjev-domain-visual`
+services (localhost:8001 and :8793). Each node uses its local sweep lock. Static
+ownership prevents cross-node overlap; local locks prevent simultaneous GPU
+phases on a single node. Assignment/source hashes and worker IDs are recorded.
+Completed phases are skipped on restart. Do not mutate active hashed source or
+assignment files. Revoke the temporary transfer keys when their copies finish;
+never commit their private material. Do not stop or destroy either rental.
 
-```bash
-supervisorctl status safetyjev-base-sweep safetyjev-domain-queue
-cat /workspace/SafetyJev-ood-20261006/artifacts/domain-evaluation-20261006/queue-status.json
-```
+Resource manifest: `artifacts/domain-sweep-resources.json`. Base results:
+`/workspace/SafetyJev/artifacts/base-sweep-20261006` on A. Domain phase outputs:
+`artifacts/domain-evaluation-20261006/{jar-base,target,language,location,env}`;
+target/language live on A, environment/location on B, Jar on B plus its A copy.
+Preserve the complete captures, images, videos, original logs, GPU samples and
+manifests in local ignored `artifacts/` backups before releasing any instance.
+Merge the disjoint domain directories without overwriting distinct case records.
 
-Completed non-Jar ID data remains at
-`/workspace/SafetyJev/artifacts/base-sweep-20261006`. New phase roots are under
-`/workspace/SafetyJev-ood-20261006/artifacts/domain-evaluation-20261006/`:
-`jar-base`, `target`, `language`, `location`, and `env`. Each contains family
-subdirectories. The final queue status is `evaluation_finished`; PDF compilation
-and visual review are a separate local step.
-
-After backing up the complete runs locally, generate the requested report using
-Python with ReportLab installed:
+For the first, complete 200-case base PDF:
 
 ```bash
 python scripts/reporting/build-id-ood-report.py \
   --base-root /path/to/base-sweep-20261006 \
   --domain-root /path/to/domain-evaluation-20261006 \
   --resources /path/to/domain-sweep-resources.json \
-  --output output/pdf/maniguard-id-ood-evaluation.pdf
+  --base-only --output output/pdf/maniguard-base-evaluation.pdf
 ```
 
-The final command refuses pending/running cases. `--interim` is only for an
-explicitly labeled progress/layout preview. The adjacent JSON records coverage,
-metrics, failures, resource identities, and SHA-256 source hashes. Classifier
-metrics are suppressed if the report's episode IDs do not match completed case
-IDs. Undefined class metrics remain unavailable, not zero. Render and inspect
-every final PDF page and check numbers before delivery; failed runs must remain
-visible. Keep raw captures/video/logs in ignored backups and commit concise
-results and the final PDF after verification.
+For the eventual full 1,000-case ID/OOD report, use the merged roots, omit
+`--base-only`, and output `output/pdf/maniguard-id-ood-evaluation.pdf`. A final
+report refuses pending/running cases in its chosen scope. `--interim` is only for
+labeled progress/layout previews. The adjacent JSON includes source hashes,
+counts, detailed metrics and failures. The base report prints raw/calibrated
+confusion counts, balanced accuracy, F1 and Brier as well as the main metrics.
+Render and inspect every final PDF page and verify the saved numbers before
+user delivery; automatically generated PDFs are pending visual review.
 
-The user explicitly authorized the hourly thread follow-up
-`finish-maniguard-id-ood-evaluation-and-pdf` for read-only monitoring during runs,
-then backup, final PDF verification, and commit/push. It should stay quiet during
-healthy progress and pause after delivery. Changes to evaluation parameters or
-active hashed files are not part of that monitoring authorization. Do not stop
-or destroy the rental instance automatically.
+The hourly heartbeat `finish-maniguard-id-ood-evaluation-and-pdf` is **PAUSED**
+at the user's request. Do not re-enable it or replace it with another recurring
+monitor. The one-time report job is part of the evaluation pipeline and exits
+after generation or an actionable audit failure. It does not send chat updates.

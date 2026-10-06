@@ -4,6 +4,39 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Two-node execution and base-first PDF: October 6 update
+
+The user requested the hourly monitor be disabled and the complete base report
+be delivered before OOD finishes. The heartbeat is now **PAUSED**. The evaluation
+processes themselves continue under Supervisor.
+
+| Worker | Exclusive base ownership | Exclusive OOD ownership | Order |
+|---|---|---|---|
+| A: 87.192.101.6:15019 | 174 non-Jar cases | Target + language, 400 cases | Existing forward order |
+| B: 154.59.156.14:39237 | 26 Jar cases | Environment + location, 400 cases | Jar first; then reverse family and scene order |
+
+The assignment enumerates every case. Validation confirms 1,000 unique keys,
+574 assigned to A and 426 to B, with no overlap or missing scenes. Each new
+runner checks ownership before model startup, records worker/assignment identity,
+and stops on its first failed case. Node A's active base files are unchanged.
+All **68 tests passed in the original node's ManiGuard environment**, including
+ownership rejection and base-report scope tests. Node B is provisioning from
+copied pinned runtimes; its GPU and full Jar rollouts are not yet validated.
+
+Node B has a 96 GB RTX PRO 6000 and driver 580.95.05; node A uses 580.159.04.
+This hardware difference is retained in report caveats. Model checkpoints,
+calibration, simulator packages, scene assets, seed and action caps remain fixed.
+
+After Jar base finishes, a restricted rsync transfer publishes its outputs and
+then a completion receipt on A. A one-time pipeline step waits for all 200 base
+cases and passing family trace audits, then generates
+`output/pdf/maniguard-base-evaluation.pdf` and its provenance JSON. This is a
+completion-dependent evaluation step, not a recurring chat monitor. Final visual
+review and off-node backup remain required before delivery. The report includes
+raw/calibrated predicate metrics, confusion counts, F1, balanced accuracy, Brier
+scores, task/oracle outcomes, latency, failures and limitations. OOD completion is
+not a prerequisite. No final base PDF exists yet.
+
 ## All-family ID/OOD evaluation and PDF: queued October 6
 
 The requested scope is now **200 base scenes + 800 OOD scenes**, all six families.
@@ -47,10 +80,9 @@ establish that the SafetyJev model never saw those task groups during training.
 Isaac 5.1 physical-label parity remains unverified, and sampled frames are
 correlated. These limitations must accompany ID/OOD accuracy comparisons.
 
-An hourly follow-up was explicitly authorized by the user to check progress,
-back up completed artifacts, verify the final PDF, and commit/push the report.
-It stays quiet during normal progress and reports actionable failures or final
-completion. The instance is not automatically terminated. Resource and follow-up
+An hourly follow-up was initially authorized, then paused at the user's request
+as recorded above. The original single-node plan is superseded by the exclusive
+two-node assignment. Neither rental instance is automatically terminated. Resource and follow-up
 records are in `docs/results/2026-10-06-id-ood-queue/`.
 
 ## Full non-Jar base sweep: October 6
