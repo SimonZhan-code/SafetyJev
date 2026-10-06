@@ -1,0 +1,42 @@
+[
+  {
+    "file": "calibration.json",
+    "sha256": "39a21b29331b036f806db09d634587eda08a93b7a137846cf03b92de75bd89cc"
+  },
+  {
+    "file": "models/step-20000/adapter/README.md",
+    "sha256": "f9e934433c6ae81516474d416c6b1dcf5193fe08bf41205363cf0b5b33760c1e"
+  },
+  {
+    "file": "models/step-20000/adapter/adapter_config.json",
+    "sha256": "2651169141fd72b3cbba6b58d4aaf033e3398d5c13c4dc6e212ab1cd8b0a08f6"
+  },
+  {
+    "file": "models/step-20000/adapter/adapter_model.safetensors",
+    "sha256": "feaa576d81d0410a9f50d97870aaa96096855d97584f555a5b25d7d1985095d5"
+  },
+  {
+    "file": "models/step-20000/head.pt",
+    "sha256": "681338c52689febeb9c0c8a2ac7277eb5bf93e7d747559976273c16e7c14658d"
+  },
+  {
+    "file": "models/step-20000/model.json",
+    "sha256": "11fdc36164e6d319b3d80151b7c37101554a2b436bcfb87f94b3dce46056fcbc"
+  },
+  {
+    "file": "models/step-20000/processor/chat_template.jinja",
+    "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041"
+  },
+  {
+    "file": "models/step-20000/processor/processor_config.json",
+    "sha256": "6041530a55cd74ebea84eb213c5f6d43df73e4e84b86dd2fcfeb23ee74982151"
+  },
+  {
+    "file": "models/step-20000/processor/tokenizer.json",
+    "sha256": "b6d27c11283798debbfbcb1bd3bbdbcebac6c9b20d0be0c5b79231c97de97501"
+  },
+  {
+    "file": "models/step-20000/processor/tokenizer_config.json",
+    "sha256": "9c151bbb26e2cd78ff6b03d7ea59b0339b11399b1e99bb83e26de4d38d04f6aa"
+  }
+]

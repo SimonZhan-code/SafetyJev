@@ -1,0 +1,14 @@
+{
+  "scenes": [
+    "task_0000/base",
+    "task_0001/base",
+    "task_0002/base"
+  ],
+  "seed": 0,
+  "max_steps": 256,
+  "sample_stride": 8,
+  "threshold": 0.5,
+  "execution": "unchanged_pi05",
+  "checkpoint_selection": "released final step-20000, chosen before new rollout results",
+  "split_note": "base-only development evaluation; training-group overlap not yet verified"
+}

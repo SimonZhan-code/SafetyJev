@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .io import append_jsonl, read_jsonl, write_json
 from .labels import label_forecasts
-from .metrics import evaluate
+from .metrics import evaluate_scopes
 from .predictors import OpenJevHTTP
 
 
@@ -168,7 +168,7 @@ def main(argv=None):
                 raise ValueError("Missing prediction provenance: " + str(path))
             if prediction_meta.exists():
                 metadata.append(json.loads(prediction_meta.read_text()))
-            result = evaluate(labels, predictions, args.threshold)
+            result = evaluate_scopes(labels, predictions, args.threshold)
             episode_result_path = path / "maniguard_result.json"
             outcome = json.loads(episode_result_path.read_text()) if episode_result_path.exists() else {}
             per_episode.append({"episode_id": meta["episode_id"], "scene": meta.get("scene_name"),
@@ -185,17 +185,12 @@ def main(argv=None):
             raise ValueError("Cannot pool different prediction models/revisions/input modes")
         if len(execution_signatures) > 1:
             raise ValueError("Cannot pool different execution modes or guard configurations")
-        summary = evaluate(all_labels, all_predictions, args.threshold)
+        summary = evaluate_scopes(all_labels, all_predictions, args.threshold)
         summary.update({"episodes": per_episode, "incomplete_episode_ids": incomplete,
                         "execution_metadata": [json.loads(s) for s in execution_signatures],
                         "prediction_metadata": metadata[:1],
-                        "by_family_level": {"/".join(key): evaluate(*rows, threshold=args.threshold)
+                        "by_family_level": {"/".join(key): evaluate_scopes(*rows, threshold=args.threshold)
                                             for key, rows in group_rows.items()}})
-        # Do not mix global and per-constraint rows in the headline metric.
-        global_rows = [r for r in all_labels if r["constraint_id"] == "__all__"]
-        global_ids = {r["forecast_id"] for r in global_rows}
-        summary["global_task_forecast"] = evaluate(global_rows,
-            [r for r in all_predictions if r["forecast_id"] in global_ids], args.threshold)
         write_json(args.output, summary)
         print(json.dumps({"report": str(Path(args.output).resolve()),
                           "episodes": len(per_episode), "incomplete": len(incomplete),

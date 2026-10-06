@@ -219,6 +219,28 @@ class ReportTests(unittest.TestCase):
             self.assertEqual(result["episodes"][0]["outcome"], outcome)
             self.assertEqual(result["eligible_labels"], 0)
 
+    def test_global_query_cannot_change_constraint_classification_metrics(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_json(root / "episode.json", {"episode_id": "e", "pipeline": "jar_transport",
+                                                "scene_name": "task_0000/base"})
+            write_json(root / "complete.json", {})
+            write_json(root / "prediction.meta.json", {"model_id": "fixture", "mode": "synthetic"})
+            for row in oracle([False, False, False, True]):
+                append_jsonl(root / "oracle.jsonl", row)
+            for cid, fid, score in (("a", "constraint", .1), ("__all__", "global", .9)):
+                append_jsonl(root / "forecasts.jsonl", forecast(cid=cid, fid=fid))
+                append_jsonl(root / "predictions.jsonl", {"forecast_id": fid, "score": score})
+            with patch("sys.stdout", new=io.StringIO()):
+                main(["report", "--episodes", str(root), "--output", str(root / "report.json")])
+            report = json.loads((root / "report.json").read_text())
+            for metrics in (report, report["episodes"][0]["metrics"], report["by_family_level"]["jar_transport/base"]):
+                self.assertEqual(metrics["micro"]["n"], 1)
+                self.assertEqual(metrics["micro"]["fn"], 1)
+                self.assertEqual(metrics["micro"]["tp"], 0)
+                self.assertEqual(metrics["global_task_forecast"]["micro"]["tp"], 1)
+                self.assertNotIn("__all__", metrics["by_constraint"])
+
     def test_report_from_recorded_fixture_and_missing_run(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

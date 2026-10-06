@@ -1,0 +1,7 @@
+{
+  "filename": "raw-backup.tar.gz",
+  "sha256": "ed9edbae88d1547ce66b81fb7f2c697da91c49725ccf69d92747364464b1459d",
+  "bytes": 11907501,
+  "local_backup": "artifacts/pro6000-visual-20261006/",
+  "note": "Remote archive before local audit-summary was added; unpacked local backup also retains that audit."
+}

@@ -1,0 +1,138 @@
+{
+ "description": "Post-hoc calibration: p_yes = sigmoid(s / T + log_odds[query_id]), where s = logits[1]-logits[0] from the model head (logits are [0, s]). log_odds = training-split prior log-odds of Yes per question. T fitted on the fixed 5,000-sample validation subset (sample_seed 20261003) by NLL; test split never used.",
+ "temperature": {
+  "step-0": 26.0,
+  "step-3000": 1.86,
+  "step-7000": 2.93,
+  "step-13000": 2.98,
+  "step-20000": 3.95
+ },
+ "prior_log_odds": {
+  "jar_tilted": {
+   "family": "jar",
+   "train_yes": 62806,
+   "train_no": 31840,
+   "train_yes_rate": 0.6635885298903281,
+   "log_odds": 0.6793272493354554
+  },
+  "jar_at_floor_level": {
+   "family": "jar",
+   "train_yes": 1020,
+   "train_no": 93626,
+   "train_yes_rate": 0.01077700061280984,
+   "log_odds": -4.519505495392041
+  },
+  "jar_closed": {
+   "family": "jar",
+   "train_yes": 22312,
+   "train_no": 72334,
+   "train_yes_rate": 0.23574160556177756,
+   "log_odds": -1.1761696310945513
+  },
+  "jar_on_support": {
+   "family": "jar",
+   "train_yes": 77581,
+   "train_no": 17065,
+   "train_yes_rate": 0.8196965534729412,
+   "log_odds": 1.5142929694901586
+  },
+  "open_while_off_support": {
+   "family": "jar",
+   "train_yes": 10040,
+   "train_no": 84606,
+   "train_yes_rate": 0.10607949622804978,
+   "log_odds": -2.131428071819565
+  },
+  "container_at_floor_level": {
+   "family": "lid",
+   "train_yes": 608,
+   "train_no": 24834,
+   "train_yes_rate": 0.023897492335508214,
+   "log_odds": -3.7097940790106203
+  },
+  "lid_on_container": {
+   "family": "lid",
+   "train_yes": 9,
+   "train_no": 25433,
+   "train_yes_rate": 0.0003537457747032466,
+   "log_odds": -7.946578245022438
+  },
+  "container_on_support": {
+   "family": "lid",
+   "train_yes": 14716,
+   "train_no": 10726,
+   "train_yes_rate": 0.5784136467258864,
+   "log_odds": 0.3162646366817946
+  },
+  "uncovered_while_off_support": {
+   "family": "lid",
+   "train_yes": 10726,
+   "train_no": 14716,
+   "train_yes_rate": 0.42158635327411365,
+   "log_odds": -0.3162646366817946
+  },
+  "stack_tilted": {
+   "family": "stack",
+   "train_yes": 106738,
+   "train_no": 85710,
+   "train_yes_rate": 0.5546329398071167,
+   "log_odds": 0.219407728701234
+  },
+  "target_scope_tilted": {
+   "family": "stack",
+   "train_yes": 78700,
+   "train_no": 113748,
+   "train_yes_rate": 0.40894163618224144,
+   "log_odds": -0.3683423198355474
+  },
+  "stack_at_floor_level": {
+   "family": "stack",
+   "train_yes": 35470,
+   "train_no": 156978,
+   "train_yes_rate": 0.18430952776854007,
+   "log_odds": -1.4874183993554828
+  },
+  "target_scope_at_floor_level": {
+   "family": "stack",
+   "train_yes": 26059,
+   "train_no": 166389,
+   "train_yes_rate": 0.13540800631858996,
+   "log_odds": -1.8539652224577758
+  },
+  "active_objects_tilted": {
+   "family": "cabinet",
+   "train_yes": 189473,
+   "train_no": 84382,
+   "train_yes_rate": 0.6918734366726917,
+   "log_odds": 0.8088924254457092
+  },
+  "target_at_floor_level": {
+   "family": "cabinet",
+   "train_yes": 30075,
+   "train_no": 243780,
+   "train_yes_rate": 0.10982089061729748,
+   "log_odds": -2.0925719173669477
+  },
+  "obstacle_at_floor_level": {
+   "family": "cabinet",
+   "train_yes": 18965,
+   "train_no": 254890,
+   "train_yes_rate": 0.06925197641087437,
+   "log_odds": -2.5982369044006406
+  },
+  "food_touched_by_robot": {
+   "family": "dusty",
+   "train_yes": 6940,
+   "train_no": 130355,
+   "train_yes_rate": 0.050548089879456644,
+   "log_odds": -2.9329597233913445
+  },
+  "food_at_floor_level": {
+   "family": "dusty",
+   "train_yes": 32027,
+   "train_no": 105268,
+   "train_yes_rate": 0.23327142284861066,
+   "log_odds": -1.1899301822748798
+  }
+ }
+}

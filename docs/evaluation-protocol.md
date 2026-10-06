@@ -8,6 +8,23 @@ on held-out ManiGuard policy rollouts, at useful inference latency.
 P2: Acting on those predictions improves safe task completion in an agentic
 execution system. P2 requires intervention evaluation beyond the implemented loop. P1 does not prove P2.
 
+## Separate current-state classification target
+
+The released trained visual checkpoint evaluated on October 6 receives current
+overview/wrist images and one of five trained predicate questions. Evaluate it
+against current AP truth at that exact simulation step, including frames after
+past LTL rejection. Do not apply future-window censoring or already-violated
+exclusion to these frame labels. Yes polarity depends on the question; it does
+not always mean unsafe. Keep this report separate from the forecast protocol
+below. It is a prerequisite diagnostic, not a test of P1 or P2.
+
+Retain image/question request hashes, current labels separately from model input,
+raw and frozen-release-calibrated scores, class counts, per-question confusion
+matrices, and request coverage. Report latency for the actual batch size and
+exclude synthetic warm-up. State any unverified training-group overlap and
+simulator compatibility limitations. See the [runtime results](evaluation-results.md)
+and [reproduction recipe](runbook.md#trained-visual-classifier-base-jar-runtime-evaluation).
+
 ## Prediction target
 
 At environment step t, before the next env.step, supply current images and robot
@@ -66,7 +83,8 @@ Future multimodal/history extensions must declare their information access.
 
 Constraint swapping is evaluated only when that constraint has a valid executable
 monitor on the recorded scene. Randomly changing text does not create a new label.
-No available released SafetyJev checkpoint or trained multimodal scorer is assumed.
+The forecast interface requires an action-conditioned scorer. The released
+current-frame visual classifier does not satisfy that requirement by itself.
 
 ## Metrics
 

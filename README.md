@@ -31,19 +31,26 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
-**Status:** The full π0.5 + Open-Jev 2B + Isaac Sim 5.1 + DeepSeek V4.1 Flash
-loop ran on one RTX PRO 6000 Blackwell (256 GiB disk). Five live planner calls
-returned valid instructions; three repaired replacement chunks passed the guard
-and executed. The planner case reached its 64-action cap, while guard-only
-regeneration stopped at 24 actions after retry exhaustion. Peak total GPU memory
-was 18.2 GiB; median planner latency was 2.06 s. All 55 CPU tests pass.
+**Latest result (October 6):** The supplied trained 27B visual SafetyJev,
+ManiGuard fine-tuned π0.5, and Isaac Sim 5.1 ran together on one RTX PRO 6000.
+Three base Jar scenes produced 495 current-state classifications over 99 camera
+pairs with no failed requests. Accuracy was 79.8% raw / 83.0% calibrated, but
+both variants missed all 39 oracle-positive open-while-off-support frames.
+Support/contact labels need further physical validation. Median HTTP latency
+was 309 ms for all five questions; peak combined memory was 65.3 GiB.
+All 61 CPU tests passed on the node.
 
-This validates integration, **not improved safety**. All three short cases failed
-the task, never contacted the target objects, and had a raw violation at step 3.
-The 0.35 guard threshold deliberately exercises rejection; the critic is still
-an untuned, text-only baseline. Initial proposals also differ slightly across
-same-seed runs, so this is not a controlled performance comparison.
-See [evaluation results](docs/evaluation-results.md) and the [runbook](docs/runbook.md).
+This checkpoint consumes images and trained predicate questions. It does **not**
+condition on proposed actions or forecast their future violations. The new
+`visual_classification` observer evaluates current AP labels separately from
+the future-window pipeline. These three development scenes do not establish
+held-out generalization or improved closed-loop safety. See
+[evaluation results](docs/evaluation-results.md) and the [runbook](docs/runbook.md).
+
+The earlier π0.5 + untuned Open-Jev 2B + DeepSeek planner integration executed
+three repaired replacement chunks on the same GPU as simulation. It validates
+controller wiring; it did not improve task success. That experiment and its
+limits remain documented separately.
 
 Earlier shadow evaluation: on an RTX PRO
 6000 Blackwell with driver 580.126.09, the ManiGuard fine-tuned π0.5 jar policy,
@@ -93,13 +100,15 @@ See [the runbook](docs/runbook.md) for capture and model comparison commands and
 - Per-constraint and combined-task (`__all__`) bad-prefix labels.
 - Offline replay, synchronous shadow prediction, or synchronous guard-and-regenerate execution.
 - Open-Jev HTTP Noul connector for the explicitly named **proprio-only ablation**.
+- Trained native visual SafetyJev current-frame classification with two cameras,
+  exact trained questions, frozen release calibration, and step-aligned AP labels.
 
-Zefan-Cai/Open-Jev's current loader discards the vision tower. The included
-connector therefore sends robot states, recent robot-state history, action
-commands, task instruction, and static constraint definitions, **not images or
-simulator object-state ground truth**. This is an intentionally information-limited
-baseline, not the intended full SafetyJev model. PNGs are retained for a future
-multimodal scorer, which can emit predictions in the same JSONL contract.
+The older text-only Open-Jev connector discards the vision tower and receives
+robot state, history, action commands, instructions, and static constraints.
+The new `visual_server` uses the release's pinned native visual loader, preserving
+the image encoder, LoRA, and classification head. Its image/question-only contract
+is separate from action-conditioned forecasting; neither connector receives
+simulator AP truth or outcome labels.
 
 ## Implementation
 
@@ -113,6 +122,8 @@ multimodal scorer, which can emit predictions in the same JSONL contract.
 | `safetyjev/predictors.py` | Explicit input allowlist and Open-Jev HTTP scoring |
 | `safetyjev/metrics.py` | Confusion matrix, ranking, calibration diagnostics, coverage, timing |
 | `safetyjev/cli.py` | Capture, predict, report, and integration verification |
+| `safetyjev/visual_runtime.py` | Current-camera classification capture, aligned AP labels, raw/calibrated reporting |
+| `safetyjev/visual_server.py` | Pinned native visual checkpoint serving and batched trained questions |
 
 The adapter does not modify upstream files. It refuses unknown source versions.
 Action arrays are copied for prediction; gripper binarization and clipping match

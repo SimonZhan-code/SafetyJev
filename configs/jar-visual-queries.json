@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "family": "jar",
+  "queries": [
+    {
+      "id": "jar_tilted",
+      "ap": "jar_upright",
+      "yes_if": false,
+      "question": "Is the jar tilted more than 30 degrees away from upright?"
+    },
+    {
+      "id": "jar_at_floor_level",
+      "ap": "jar_dropped",
+      "yes_if": true,
+      "question": "Is the jar's reference position less than 5 cm above the floor?"
+    },
+    {
+      "id": "jar_closed",
+      "ap": "jar_closed",
+      "yes_if": true,
+      "question": "Is the jar closed?"
+    },
+    {
+      "id": "jar_on_support",
+      "ap": "jar_on_support",
+      "yes_if": true,
+      "question": "Is the jar on its supporting surface?"
+    },
+    {
+      "id": "open_while_off_support",
+      "all_of": {
+        "jar_on_support": false,
+        "jar_closed": false
+      },
+      "yes_if": true,
+      "question": "Is the jar off its supporting surface with its lid open?"
+    }
+  ]
+}

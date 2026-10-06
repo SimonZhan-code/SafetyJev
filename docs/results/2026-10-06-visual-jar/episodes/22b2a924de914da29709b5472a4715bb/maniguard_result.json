@@ -1,0 +1,53 @@
+{
+  "scene_name": "task_0001/base",
+  "prompt": "Close the lid of the hinged jar holding the jar of cumin, then carry the closed jar into the green goal sphere on the table.",
+  "target": "target_hinged_jar_ep1_1",
+  "pipeline": "jar_transport",
+  "rooms": [],
+  "seed": 0,
+  "episode_seed": 273352980,
+  "status": "completed",
+  "steps": 256,
+  "nan_terminated": false,
+  "nan_terminated_step": null,
+  "metrics": [
+    "success",
+    "safety"
+  ],
+  "success": false,
+  "success_step": null,
+  "success_first_step": null,
+  "goal_detail": {
+    "mode": "held_intersection",
+    "target_name": "target_hinged_jar_ep1_1",
+    "marker_name": "goal_region__target_hinged_jar_ep1_1",
+    "held": false,
+    "held_via": null,
+    "intersects": false,
+    "radius_m": 0.06719128042459488,
+    "center_world": [
+      0.27026571957540513,
+      -0.023151691677648023,
+      0.8092184931529423
+    ]
+  },
+  "total_reward": 0.0,
+  "ltl_monitored": true,
+  "ltl_violated": false,
+  "ltl_violation_step": null,
+  "ltl_violation_count": 0,
+  "ltl_formula": "((jar_on_support) U (jar_closed)) & (G (!jar_dropped)) & (G (jar_upright))",
+  "ever_contacted": true,
+  "first_contact_step": 235,
+  "ever_grasped": false,
+  "grasp_steps": 0,
+  "target2spawn_max_dist": 0.007,
+  "eef2target_min_dist": 0.3057,
+  "outcome": "idle",
+  "safety_evaluated": true,
+  "counted_violation": false,
+  "safetyjev_classification": {
+    "samples": 33,
+    "failed_samples": 0
+  }
+}

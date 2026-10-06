@@ -22,11 +22,13 @@ def verify_sources(repo):
 def instrument(source, execution_mode="shadow"):
     if hashlib.sha256(source.encode()).hexdigest() != RUNNER_SHA256:
         raise ValueError("Unsupported ManiGuard runner. Use pinned commit " + COMMIT)
-    if execution_mode not in ("shadow", "guard_regenerate"):
+    if execution_mode not in ("shadow", "guard_regenerate", "visual_classification"):
         raise ValueError("Unknown execution mode")
     episode_import = ("from safetyjev.guard import GuardedEpisode as ShadowEpisode\n"
                       if execution_mode == "guard_regenerate"
                       else "from safetyjev.capture import ShadowEpisode\n")
+    if execution_mode == "visual_classification":
+        episode_import = "from safetyjev.visual_runtime import VisualClassificationEpisode as ShadowEpisode\n"
     edits = [
         ("import json\n", "import json\n" + episode_import),
         ("        step_idx = 0\n", "        sj_shadow = ShadowEpisode(scene_info, cfg, monitor, obs, episode_seed)\n\n        step_idx = 0\n"),

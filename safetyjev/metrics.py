@@ -117,3 +117,17 @@ def evaluate(labels, predictions, threshold=0.5):
                           "Latency includes HTTP/serialization and failures; lead steps apply only to true positives. "
                           "Raw constraint violations, not engagement-gated episode safety.",
     }
+
+
+def evaluate_scopes(labels, predictions, threshold=0.5):
+    """Keep global-task queries separate from per-constraint headline metrics."""
+    # Validate the complete input before filtering, including unmatched predictions.
+    all_queries = evaluate(labels, predictions, threshold)
+    global_ids = {r["forecast_id"] for r in labels if r["constraint_id"] == "__all__"}
+    summary = evaluate([r for r in labels if r["constraint_id"] != "__all__"],
+                       [r for r in predictions if r["forecast_id"] not in global_ids], threshold)
+    summary["global_task_forecast"] = evaluate(
+        [r for r in labels if r["constraint_id"] == "__all__"],
+        [r for r in predictions if r["forecast_id"] in global_ids], threshold)
+    summary["all_query_latency_s"] = all_queries["latency_s"]
+    return summary

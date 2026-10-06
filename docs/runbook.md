@@ -518,3 +518,110 @@ was exercised and a replacement actually executed; completion alone does not
 establish either. Preserve failed runs as well as successful ones. Back up raw
 captures and videos, remove temporary credentials, and stop the test services
 when finished. Rental-instance shutdown is a separate user decision.
+
+
+## Trained visual classifier: base Jar runtime evaluation
+
+The step-20,000 checkpoint in `IDEAS-Lab-Northwestern/SafetyJev-Checkpoints`
+is a **current-state visual predicate classifier**, not an action-conditioned
+forecast model. Use `safetyjev.visual_runtime`, not the text-only Open-Jev adapter
+or the guard threshold. Its inputs are current overview/wrist RGB images and
+one of five trained questions. No robot state, action chunk, AP truth, outcome,
+or cumulative monitor rejection enters the classifier request.
+
+The five questions cover jar tilt, floor level, lid closed, on support, and
+open while off support. Yes is not always unsafe: a closed lid or supported jar
+is normally desirable. Ground truth comes from the matching current AP values
+at the image's simulation step, with the exact polarity/conjunction in
+`configs/jar-visual-queries.json`. A past temporal violation does not force later
+frame labels to remain positive.
+
+The pinned release is `7e4a72d3d2460612f5d3693a9676138bed678a5f`, subdirectory
+`round2-amd-20k/models/step-20000`. Download that directory, `calibration.json`,
+and `SHA256SUMS`; verify all ten model/calibration files. Its base is
+`Qwen/Qwen3.8-27B` at `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`.
+Use the visual loader from `https://github.com/666harrypeng/Open-Jev.git`, commit
+`533536be8cdabe9e0c47011f2f4d1397b87895ce`. The loader's SHA-256 is
+`288416a9025441c169b92b8ee4ef0e8c67536630ae0b52f4fd77e05dc3aeb8c6`, matching
+the release's training identity. The old text-only upstream loader discards the
+vision tower and is not a substitute.
+
+The new node keeps this loader at `/workspace/Open-Jev-visual-pinned`, with its
+own `.venv`: Python 3.11, `torch==2.14.0`, `torchvision==0.29.1`,
+`transformers==5.10.2`, `peft==0.19.1`, `numpy==1.26.4`, and `pillow==11.0.0`.
+Install its `.[train]` extra. Set `HF_HOME=/workspace/.hf_home` during download
+and serving. After all pinned resources are cached, serving can use
+`HF_HUB_OFFLINE=1`. Credentials belong in temporary runtime storage and must not
+be included in source or artifacts.
+
+Start the fine-tuned policy as above. In the visual environment, with
+`PYTHONPATH=/workspace/SafetyJev`:
+
+```bash
+python -m safetyjev.visual_server \
+  --checkpoint /workspace/checkpoints/safetyjev/round2-amd-20k/models/step-20000 \
+  --config /workspace/SafetyJev/configs/jar-visual-step20000.json \
+  --calibration /workspace/checkpoints/safetyjev/round2-amd-20k/calibration.json
+```
+
+The endpoint binds only `127.0.0.1:8792`. It batches the five questions, performs
+one warm-up on synthetic images, and exposes readiness only after model loading
+and warm-up. Warm-up scores are excluded from evaluation. The client checks the
+served checkpoint/base/loader identities and exact question definitions.
+The checkpoint is loaded in BF16 with a frozen visual encoder and its trained
+LoRA/head; it is not quantized or further trained during evaluation.
+
+From the configured simulator environment:
+
+```bash
+python /workspace/SafetyJev/scripts/remote/jar-visual-quick-eval.py
+```
+
+This fixed development plan uses `task_0000/base`, `task_0001/base`, and
+`task_0002/base`, seed 0, 256 actions maximum per scene, and a sample every eight
+actions including step 0. It resets policy sampling between cases, retains
+failed/incomplete outcomes, records GPU memory every second, and does not alter
+the policy. The output directory is
+`artifacts/jar-visual-step20000-20261006`. It refuses to overwrite an existing run.
+Scenes are base-only; training-group independence has not been established.
+
+The simulator process stores `classification-inputs.jsonl` (question text,
+image paths/hashes and request hash), `classification-labels.jsonl` (evaluator-only
+current truth), and `classification-predictions.jsonl` (logits, raw/calibrated Yes
+scores and latency), plus normal monitor traces and outcome files. No future
+window labels are generated for these classifications. Raw images/videos stay
+in the ignored artifact backup.
+
+```bash
+python -m safetyjev.visual_runtime report \
+  --episodes artifacts/jar-visual-step20000-20261006/episodes \
+  --output artifacts/jar-visual-step20000-20261006/report.json
+```
+
+Raw Yes probability is `sigmoid(logit)`. The release's calibration is
+`sigmoid(logit / 3.95 + prior_log_odds[question_id])`; parameters are frozen before
+these rollouts and are not refitted to their labels. Both are classified at 0.5.
+Report TP/FN/FP/TN, Yes/No counts, recall, specificity/false-positive rate,
+balanced accuracy, AUROC, and calibration diagnostics per question. Undefined
+metrics for a missing class remain null. Recorded client latency covers the five-question HTTP round trip and inference,
+but excludes PNG writing and request serialization before the timer. Dividing it
+by five is a throughput
+normalization, not independently measured single-question latency. Simulator
+time pauses during calls, so this does not demonstrate a real-time controller.
+
+The forecast-report path also now keeps global `__all__` queries out of
+per-constraint headline, episode, and family metrics. Its global results remain
+in `global_task_forecast`; all-request timing is in `all_query_latency_s`.
+Historical saved reports have not been silently rewritten.
+
+Audit the saved raw captures without restarting GPU services:
+
+```bash
+PYTHONPATH=. python scripts/remote/audit-visual-evaluation.py \
+  artifacts/jar-visual-step20000-20261006 \
+  --calibration /workspace/checkpoints/safetyjev/round2-amd-20k/calibration.json \
+  --output artifacts/jar-visual-step20000-20261006/audit-summary.json
+```
+
+This verifies recorded alignment, image/request hashes, and score formulas;
+it does not independently validate contact-based simulator labels.
