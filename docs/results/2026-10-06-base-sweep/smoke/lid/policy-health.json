@@ -1,0 +1,1 @@
+{"status": "ready", "family": "lid", "metadata": {"serve_config": "pi05-base_datagen_v1_lid_joint_2cam_lora", "checkpoint": "/workspace/checkpoints/pi05-lid/8250"}}

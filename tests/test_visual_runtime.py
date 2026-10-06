@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from safetyjev.visual_runtime import predicate_label, image_request, validate_answers, report, VisualClassificationEpisode
+from safetyjev.visual_runtime import predicate_label, image_request, validate_answers, report, VisualClassificationEpisode, resolve_queries, allowed_questions
 from safetyjev.capture import ShadowEpisode
 from safetyjev.io import write_json, append_jsonl
 
@@ -20,6 +20,18 @@ class VisualRuntimeTests(unittest.TestCase):
         ap.update(jar_closed=True)
         self.assertEqual([predicate_label(q,ap) for q in QUERIES],[0,0,1,0,0])
         with self.assertRaises(ValueError):predicate_label(QUERIES[0],{})
+
+    def test_scene_questions_and_static_scope_selection(self):
+        queries=[{'id':'target','ap':'target_upright','yes_if':False,'question':'generic',
+                  'question_by_scene':{'task_0000/base':'Is the plate tilted?'}},
+                 {'id':'stack','ap':'all_stack_upright','yes_if':False,'question':'Is the stack tilted?'}]
+        selected=resolve_queries(queries,'task_0000/base',{'target_upright':{}})
+        self.assertEqual([q['id'] for q in selected],['target'])
+        self.assertEqual(selected[0]['question'],'Is the plate tilted?')
+        self.assertIn(('target','Is the plate tilted?'),allowed_questions(queries))
+        self.assertNotIn(('target','Is the cup tilted?'),allowed_questions(queries))
+        with self.assertRaises(ValueError):resolve_queries(queries,'task_0001/base',{'target_upright':{}})
+        with self.assertRaises(ValueError):resolve_queries(queries,'task_0000/base',{})
 
     def test_request_contains_only_images_and_question_text(self):
         request=image_request({'overview':b'image1','wrist':b'image2'},QUERIES)

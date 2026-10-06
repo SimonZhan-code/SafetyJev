@@ -1,0 +1,16 @@
+{
+  "experiment": "nonjar_base_runtime_sweep",
+  "split": "base_only_development",
+  "policy_repo": "IDEAS-Lab-Northwestern/pi05-base-datagen-v1-lid-joint-2cam-lora",
+  "policy_revision": "6500653ddd20624e2452620e63b23e1fd3399ac6",
+  "policy_checkpoint_subdirectory": "8250",
+  "policy_checkpoint_selection": "largest released step, fixed before new results; paper evaluation snapshot not independently established",
+  "benchmark_repo": "IDEAS-Lab-Northwestern/ManiGuard-Bench",
+  "benchmark_revision": "2ea32a1451669fb736ae78ffce9cc82aad4cceac",
+  "resource_metadata_checked_on": "2026-09-28",
+  "simulator": "Isaac Sim 5.1.0.0",
+  "omnigibson": "3.8.0",
+  "behavior_revision": "d89aae4e0e9a1de3cf8285cb9669c11d8c8bb864",
+  "asset_version": "3.7.2rc1",
+  "compatibility_note": "Experimental upstream feat/isaac-5.0 branch supporting Isaac 5.1 and legacy robot API; not validated as benchmark-equivalent"
+}

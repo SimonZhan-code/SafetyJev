@@ -18,6 +18,39 @@ from .io import append_jsonl, read_jsonl, write_json
 from .metrics import binary_metrics, quantile
 
 
+def allowed_questions(queries):
+    """Fixed question IDs/text from the trained catalog, including object names."""
+    return {(q['id'], text) for q in queries
+            for text in [q['question'], *q.get('question_by_scene', {}).values()]}
+
+
+def resolve_queries(queries, scene_name, propositions):
+    """Select by static proposition definitions, never their realized values."""
+    result = []
+    for template in queries:
+        required = set(template['all_of']) if 'all_of' in template else {template['ap']}
+        if not required.issubset(propositions):
+            continue
+        query = copy.deepcopy(template)
+        by_scene = query.pop('question_by_scene', None)
+        if by_scene is not None:
+            if scene_name not in by_scene:
+                raise ValueError('No trained scene-specific question: ' + scene_name)
+            query['question'] = by_scene[scene_name]
+        result.append(query)
+    if not result:
+        raise ValueError('No applicable trained questions for ' + scene_name)
+    return result
+
+
+class OracleEpisode(ShadowEpisode):
+    """Unchanged VLA execution and simulator truth, without model scoring."""
+    execution_mode = 'oracle_only'
+
+    def before_action(self, *args):
+        pass
+
+
 def predicate_label(query, ap):
     conditions = query.get('all_of', {query.get('ap'): query.get('yes_if')})
     for name, expected in conditions.items():
@@ -52,11 +85,12 @@ class VisualClassificationEpisode(ShadowEpisode):
 
     def __init__(self, *args):
         from .capture import OPTIONS
-        self.visual_config = OPTIONS['visual_config']
-        self.queries = self.visual_config['queries']
+        self.visual_config = copy.deepcopy(OPTIONS['visual_config'])
         self.classification_count = self.classification_failures = 0
         self.ready = False
         super().__init__(*args)
+        self.queries = resolve_queries(self.visual_config['queries'], args[0]['name'], self.spec['propositions'])
+        self.provenance['classification_queries'] = self.queries
         self.provenance.update(label_semantics='Current AP truth at the image step; not cumulative LTL rejection or future-chunk risk',
                                visual_classifier=self.visual_config)
         write_json(self.directory/'episode.json', self.provenance)
@@ -117,7 +151,7 @@ def report(root, output):
     if not paths:
         raise ValueError('No classification episodes')
     pairs = {'raw':{}, 'calibrated':{}}
-    episodes, latencies, signatures, incomplete = [], [], set(), []
+    episodes, latencies, signatures, incomplete, invalid = [], [], set(), [], []
     expected = failures = 0
     for path in paths:
         ep=path.parent
@@ -126,7 +160,7 @@ def report(root, output):
             incomplete.append(ep.name); continue
         completion=json.loads((ep/'complete.json').read_text())
         if completion.get('status')!='completed' or completion.get('monitor_valid') is not True:
-            raise ValueError('Invalid completed classification episode: '+ep.name)
+            invalid.append({'episode_id':ep.name,'completion':completion}); continue
         signatures.add(json.dumps(meta['visual_classifier'],sort_keys=True))
         labels=read_jsonl(ep/'classification-labels.jsonl')
         predictions=read_jsonl(ep/'classification-predictions.jsonl')
@@ -140,9 +174,10 @@ def report(root, output):
             pred=lookup.get(label['sample_id'])
             if not pred or pred.get('error'):
                 failures += len(label['labels']); continue
-            validate_answers(pred,meta['visual_classifier']['queries'])
+            queries = meta.get('classification_queries', meta['visual_classifier']['queries'])
+            validate_answers(pred,queries)
             latencies.append(pred['latency_s'])
-            if set(label['labels'])!={q['id'] for q in meta['visual_classifier']['queries']}:
+            if set(label['labels'])!={q['id'] for q in queries}:
                 raise ValueError('Missing or unexpected classification label')
             for q,y in label['labels'].items():
                 if type(y) is not int or y not in (0,1):raise ValueError('Expected binary predicate label')
@@ -152,7 +187,7 @@ def report(root, output):
                          'samples':len(labels),'outcome':json.loads((ep/'maniguard_result.json').read_text())})
     if len(signatures)>1:raise ValueError('Mixed classifier configurations')
     result={'scope':'Current-state predicate classification; Yes polarity depends on question',
-            'threshold':.5,'episodes':episodes,'incomplete_episode_ids':incomplete,
+            'threshold':.5,'episodes':episodes,'incomplete_episode_ids':incomplete,'invalid_episode_ids':invalid,
             'expected_classifications':expected,'failed_or_missing_classifications':failures,
             'coverage':(expected-failures)/expected if expected else None,
             'frame_latency_s':{'n':len(latencies),'p50':quantile(latencies,.5),'p95':quantile(latencies,.95)},
@@ -169,7 +204,8 @@ def main():
     sub=parser.add_subparsers(dest='command',required=True)
     run=sub.add_parser('capture')
     run.add_argument('--maniguard-root',required=True);run.add_argument('--output',required=True)
-    run.add_argument('--provenance',required=True);run.add_argument('--classifier-config',required=True)
+    run.add_argument('--provenance',required=True);run.add_argument('--classifier-config')
+    run.add_argument('--oracle-only',action='store_true')
     run.add_argument('benchmark_args',nargs=argparse.REMAINDER)
     rep=sub.add_parser('report');rep.add_argument('--episodes',required=True);rep.add_argument('--output',required=True)
     args=parser.parse_args()
@@ -177,12 +213,21 @@ def main():
         result=report(args.episodes,args.output)
         print(json.dumps({k:result[k] for k in ('coverage','expected_classifications','frame_latency_s')},indent=2));return
     from .maniguard import launch, SOURCE_HASHES, COMMIT
+    if args.oracle_only:
+        provenance=json.loads(Path(args.provenance).read_text())
+        provenance.update(source_hashes=SOURCE_HASHES,maniguard_reference_commit=COMMIT)
+        bench=args.benchmark_args[1:] if args.benchmark_args[:1]==['--'] else args.benchmark_args
+        launch(args.maniguard_root,bench,{'output':args.output,'provenance':provenance,
+               'execution_mode':'oracle_only','recheck_every':0})
+        return
+    if not args.classifier_config:raise ValueError('Classifier config required for visual scoring')
     config=json.loads(Path(args.classifier_config).read_text())
     if type(config['sample_stride']) is not int or config['sample_stride']<1:raise ValueError('Invalid sample stride')
     with urlopen(config['endpoint']+'/health',timeout=10) as response: health=json.load(response)
     for field in ('checkpoint_revision','checkpoint_subdirectory','base_model_revision','loader_revision'):
         if health[field]!=config[field]:raise ValueError('Serving identity mismatch: '+field)
-    if health['queries']!=config['queries']:raise ValueError('Serving question definitions mismatch')
+    if not allowed_questions(config['queries']).issubset(allowed_questions(health['queries'])):
+        raise ValueError('Serving question definitions mismatch')
     provenance=json.loads(Path(args.provenance).read_text())
     provenance.update(source_hashes=SOURCE_HASHES,maniguard_reference_commit=COMMIT)
     bench=args.benchmark_args[1:] if args.benchmark_args[:1]==['--'] else args.benchmark_args

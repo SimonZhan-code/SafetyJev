@@ -22,6 +22,7 @@ def audit(root, calibration_path):
         complete = json.loads((ep / 'complete.json').read_text())
         assert complete['status'] == 'completed' and complete['monitor_valid'] is True
         config = meta['visual_classifier']
+        queries = meta.get('classification_queries', config['queries'])
         oracle = rows(ep / 'oracle.jsonl')
         assert [r['step'] for r in oracle] == list(range(complete['final_step'] + 1))
         assert all(r['valid'] is True for r in oracle)
@@ -31,21 +32,21 @@ def audit(root, calibration_path):
         expected_steps = list(range(0, complete['final_step'] + 1, config['sample_stride']))
         assert [r['step'] for r in labels] == expected_steps
         assert len(labels) == len(inputs) == len(predictions)
-        counts = {q['id']: 0 for q in config['queries']}
+        counts = {q['id']: 0 for q in queries}
         temperature = calibration['temperature'][config['calibration_step']]
         for label, request, prediction in zip(labels, inputs, predictions):
             step = label['step']
             assert request['step'] == prediction['step'] == step
             assert label['sample_id'] == request['sample_id'] == prediction['sample_id'] == f'{ep.name}:{step}'
             assert prediction['error'] is None
-            validate_answers(prediction, config['queries'])
-            expected = {q['id']: predicate_label(q, oracle[step]['ap']) for q in config['queries']}
+            validate_answers(prediction, queries)
+            expected = {q['id']: predicate_label(q, oracle[step]['ap']) for q in queries}
             assert label['labels'] == expected
             frames = {}
             for camera, image in request['images'].items():
                 frames[camera] = (ep / image['path']).read_bytes()
                 assert hashlib.sha256(frames[camera]).hexdigest() == image['sha256']
-            body = image_request(frames, config['queries'])
+            body = image_request(frames, queries)
             assert request['questions'] == body['questions']
             assert hashlib.sha256(json.dumps(body).encode()).hexdigest() == request['request_sha256']
             for q, y in expected.items():

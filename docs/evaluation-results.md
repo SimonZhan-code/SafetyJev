@@ -4,6 +4,74 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Full non-Jar base sweep: October 6
+
+**Status: launched, full results pending.** This record distinguishes the completed
+integration checks from the ongoing full-length sweep. The user requested all
+remaining base tasks and explicitly selected **VLA/simulator only for Clutter**,
+whose questions/calibration are absent from the SafetyJev release.
+
+| Family | Base scenes | Fine-tuned π0.5 step | Native action cap | SafetyJev questions per sampled frame |
+|---|---:|---:|---:|---:|
+| Lid | 30 | 8250 | 1900 | 4 |
+| Stack | 28 | 20750 | 4200 | 4 |
+| Dusty | 26 | 14700 | 5100 | 2 |
+| Cabinet | 35 | 32650 | 5700 | 3 |
+| Clutter | 55 | 7100 | 1100 | None, by request |
+
+Policies come from the supplied
+[evaluated VLA collection](https://huggingface.co/collections/IDEAS-Lab-Northwestern/maniguard-evaluated-vla-checkpoints).
+The largest released step is fixed for each family before results, as in the
+Jar development pilot; it has not independently been established as the paper's
+selected snapshot. Exact policy revisions and all 174 base scene names are in
+`docs/results/2026-10-06-base-sweep/base-sweep-download.json`. No stock policy,
+Jar task, or named OOD scene variant is included. Upstream Lid configuration uses
+a food-trained policy for both food and liquid base scenes; those base liquid
+scenes should not be described as confirmed in-distribution for that policy.
+
+The trained 27B step-20000 checkpoint, frozen calibration, simulator compatibility
+stack, seed 0, eight-action sampling stride, and current-state label semantics
+match the documented Jar setup. Family-native episode limits replace the earlier
+256-action pilot cap. Policies may terminate earlier on benchmark completion.
+There is no safety intervention, action regeneration, or OpenRouter use.
+
+Scene-specific object names and thresholds come from the training branch's
+question catalog, not arbitrary prompts generated at evaluation time. All 35
+Cabinet, 26 Dusty, and 28 Stack base diagnostic files match the catalog's source
+hashes. Lid has four generic trained questions. Query selection uses static AP
+definitions, never their realized truth. Requests still contain images and
+question text only. Each family's metrics remain separate; no classifier score
+or inferred accuracy is assigned to Clutter.
+
+### Completed integration checks
+
+Each family completed its first base scene for 64 actions, using its own pinned
+policy. All five processes completed with valid monitor traces. The four
+classified cases yielded nine frame pairs each and **117 classifications total,
+with zero failures**. Exact request/image hashes, AP alignment, question polarity,
+and raw/frozen-calibrated formulas passed audits for all four. Inspected Lid and
+Cabinet overview images render cleanly. None of these short checks completed the
+task; they establish integration, not benchmark quality.
+
+Median batch HTTP latency was 258 ms (Lid, four questions), 260 ms (Stack, four),
+178 ms (Dusty, two), and 223 ms (Cabinet, three). These are small warm-service
+checks, not controlled per-question speed comparisons. All **62 CPU tests passed
+on the node**, including the actual pinned ManiGuard runner; local execution
+skips the two upstream-dependent tests when that checkout is absent.
+
+Small records and full model/resource pins are committed under
+`docs/results/2026-10-06-base-sweep/`; raw smoke images are backed up under ignored
+`artifacts/pro6000-base-sweep-20261006/`. Full sweep records accumulate on the node
+in `/workspace/SafetyJev/artifacts/base-sweep-20261006`. `summary.json` counts
+completed, failed, running, and pending cases; family reports are produced after
+each family finishes. Do not quote the smoke summary as full-sweep completion.
+
+The managed runner resumes completed cases, preserves failed attempts, checks
+source hashes between scenes, records one-second GPU samples, and stops its
+model services at exit. The rented instance itself remains running. Physical
+AP correctness, Isaac 5.1 benchmark parity, and training-group independence
+remain unverified; more base scenes alone does not resolve these limitations.
+
 ## October 6: trained 27B visual SafetyJev on base Jar
 
 Completed a small runtime evaluation on `87.192.101.6:15019`: the fine-tuned

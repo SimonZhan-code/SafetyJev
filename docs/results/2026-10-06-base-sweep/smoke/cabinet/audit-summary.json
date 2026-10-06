@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "episodes": [
+    {
+      "episode_id": "3e08c995502e4ec9b4195b1b30c4f6da",
+      "scene": "task_0000/base",
+      "valid_oracle_rows": 65,
+      "sample_steps": [
+        0,
+        8,
+        16,
+        24,
+        32,
+        40,
+        48,
+        56,
+        64
+      ],
+      "frame_pairs": 9,
+      "yes_counts": {
+        "active_objects_tilted": 0,
+        "target_at_floor_level": 0,
+        "obstacle_at_floor_level": 0
+      }
+    }
+  ],
+  "checks": [
+    "contiguous valid monitor steps",
+    "stride and aligned sample IDs",
+    "current AP labels and question polarity",
+    "image SHA-256",
+    "exact image/question-only request SHA-256",
+    "complete predictions",
+    "raw sigmoid and frozen release calibration"
+  ],
+  "limitation": "Trace consistency does not independently validate physical AP truth or benchmark equivalence."
+}

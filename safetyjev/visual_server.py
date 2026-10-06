@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 import time
 
+from .visual_runtime import allowed_questions
+
 
 def main():
     import numpy as np
@@ -28,9 +30,10 @@ def main():
         raise ValueError('Unexpected base revision')
     model.eval()
     questions=[{'id':q['id'],'question':q['question']} for q in config['queries']]
+    approved_questions=allowed_questions(config['queries'])
 
     @torch.inference_mode()
-    def infer(images):
+    def infer(images, questions):
         observations={name:torch.from_numpy(np.array(img.convert('RGB'),copy=True)).permute(2,0,1)[None,None]
                       .expand(len(questions),1,3,img.height,img.width) for name,img in images.items()}
         torch.cuda.synchronize()
@@ -47,9 +50,9 @@ def main():
                            for i,q in enumerate(questions)},
                 'server_latency_s':time.perf_counter()-started,'input_tokens':model.last_input_tokens}
 
-    warm=infer({camera:Image.new('RGB',(256,256)) for camera in ('overview','wrist')})
+    warm=infer({camera:Image.new('RGB',(256,256)) for camera in ('overview','wrist')}, questions[:4])
     health={**config,'status':'ready','method':model.model_config['method'],
-            'batch_size':len(questions),'calibration_temperature':temperature,
+            'max_batch_size':len(questions),'calibration_temperature':temperature,
             'checkpoint_temperature':float(model.temperature),
             'warmup_latency_s':warm['server_latency_s']}
     print(json.dumps({'status':'ready','port':args.port,'warmup_latency_s':warm['server_latency_s']}),flush=True)
@@ -68,8 +71,15 @@ def main():
                 length=int(self.headers['Content-Length'])
                 if not 0<length<16*1024*1024:raise ValueError('Invalid body size')
                 body=json.loads(self.rfile.read(length))
-                if set(body)!={'images','questions'} or body['questions']!=questions:
-                    raise ValueError('Expected exact trained question definitions')
+                if set(body)!={'images','questions'}:
+                    raise ValueError('Expected images and trained questions only')
+                requested=body['questions']
+                if not isinstance(requested,list) or not 0<len(requested)<=len(questions):
+                    raise ValueError('Invalid question batch')
+                if any(set(q)!={'id','question'} or (q['id'],q['question']) not in approved_questions for q in requested):
+                    raise ValueError('Unrecognized trained question')
+                if len({q['id'] for q in requested})!=len(requested):
+                    raise ValueError('Duplicate question ID')
                 if set(body['images'])!={'overview','wrist'}:raise ValueError('Expected both cameras')
                 images={}
                 for camera,value in body['images'].items():
@@ -78,7 +88,7 @@ def main():
                     image=Image.open(BytesIO(blob))
                     if image.width*image.height>1024*1024:raise ValueError('Image too large')
                     images[camera]=image.convert('RGB')
-                result=infer(images)
+                result=infer(images, requested)
                 self.send_json(result)
             except Exception as exc:
                 print('classification_error',type(exc).__name__,flush=True)

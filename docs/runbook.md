@@ -625,3 +625,72 @@ PYTHONPATH=. python scripts/remote/audit-visual-evaluation.py \
 
 This verifies recorded alignment, image/request hashes, and score formulas;
 it does not independently validate contact-based simulator labels.
+
+
+## Full non-Jar base sweep
+
+Use `configs/base-sweep-policies.json` for pinned family policies and native
+ManiGuard limits. `scripts/remote/prepare-base-sweep.py` downloads only each
+selected policy step and all non-Jar `task_*/base/*` benchmark resources, then
+records exact scene names in `artifacts/base-sweep-download.json`. The checkpoint
+collection and base benchmark revision are pinned in that configuration.
+
+`configs/base-sweep-visual-server.json` permits only the trained question IDs and
+texts; family configs select their subset. Scene-specific wording is resolved
+from the training catalogs under `configs/visual-queries/`. The client records
+resolved `classification_queries` in episode metadata. Static AP presence can
+select an applicable query, but realized AP truth never enters model input.
+
+Run the services through Supervisor on the configured node. The policy service
+`safetyjev-sweep-policy` executes `scripts/remote/serve-sweep-policy.py`, which
+reads `artifacts/active-sweep-policy.json`. It binds to localhost:8000 and uses
+`/workspace/openpi/.venv/bin/python`. The trained classifier service
+`safetyjev-base-visual` uses the same checkpoint/calibration/environment as the
+Jar recipe, with `--config configs/base-sweep-visual-server.json`, localhost:8792.
+Both services have `autostart=false`, `autorestart=false`, `stopasgroup=true`, and
+`killasgroup=true`. Do not run the older policy/classifier services concurrently.
+
+The managed `safetyjev-base-sweep` command is:
+
+```bash
+/workspace/conda/behavior51/bin/python -u \
+  /workspace/SafetyJev/scripts/remote/base-task-sweep.py
+```
+
+The script owns the service lifecycle, checks readiness and policy identity,
+resets policy sampling between cases, and runs Lid → Stack → Dusty → Cabinet →
+Clutter. Clutter uses `visual_runtime capture --oracle-only`: normal VLA execution
+and monitor capture with no classifier requests. Default output is
+`artifacts/base-sweep-20261006`. There are 174 planned scenes at seed 0, with no
+max-scenes or max-steps overrides. Use a separate output for smoke checks:
+
+```bash
+python scripts/remote/base-task-sweep.py \
+  --output /workspace/SafetyJev/artifacts/base-smoke-20261006 \
+  --max-scenes 1 --max-steps 64
+```
+
+These short checks are not included in full-sweep accuracy. A lock prevents two
+sweeps from sharing the services. Resume the same command/output to skip recorded
+completed and failed cases; add `--retry-failed` to retry failures. The plan and
+source hashes must match the original run. Do not edit runtime source/configs
+while the sweep is active. Intentional fixes require a new run/output to keep
+versions separable. Historical attempts remain available.
+
+Inspect progress without restarting anything:
+
+```bash
+supervisorctl status safetyjev-base-sweep
+cat /workspace/SafetyJev/artifacts/base-sweep-20261006/progress.json
+python scripts/remote/summarize-base-sweep.py \
+  /workspace/SafetyJev/artifacts/base-sweep-20261006
+```
+
+`summary.json` gives planned/completed/failed/pending counts and separate family
+outcomes. Classifier reports and trace audits are generated after each classified
+family finishes. Failed or monitor-invalid captures are excluded and explicitly
+listed; retain their logs. A finished sweep with failed cases is not a fully
+successful evaluation. `cases/*.json`, full source hashes, policy identities,
+per-frame records, original simulator outputs, and GPU samples support diagnosis.
+Both model services stop when the runner exits; instance shutdown is separate.
+Back up the complete run off-node before releasing the rental.

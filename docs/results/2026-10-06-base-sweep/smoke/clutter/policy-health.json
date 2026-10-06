@@ -1,0 +1,1 @@
+{"status": "ready", "family": "clutter", "metadata": {"serve_config": "pi05-base_datagen_v1_clutter_joint_2cam_lora", "checkpoint": "/workspace/checkpoints/pi05-clutter/7100"}}

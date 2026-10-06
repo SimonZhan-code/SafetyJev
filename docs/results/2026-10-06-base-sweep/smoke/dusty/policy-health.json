@@ -1,0 +1,1 @@
+{"status": "ready", "family": "dusty", "metadata": {"serve_config": "pi05-base_datagen_v1_dusty_joint_2cam_lora", "checkpoint": "/workspace/checkpoints/pi05-dusty/14700"}}

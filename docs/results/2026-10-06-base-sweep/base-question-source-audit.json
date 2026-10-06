@@ -1,0 +1,14 @@
+{
+  "cabinet": {
+    "matched": 35,
+    "mismatched": []
+  },
+  "dusty": {
+    "matched": 26,
+    "mismatched": []
+  },
+  "stack": {
+    "matched": 28,
+    "mismatched": []
+  }
+}

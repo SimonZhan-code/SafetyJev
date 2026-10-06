@@ -1,0 +1,12 @@
+{
+  "collection": "https://huggingface.co/collections/IDEAS-Lab-Northwestern/maniguard-evaluated-vla-checkpoints",
+  "benchmark_revision": "2ea32a1451669fb736ae78ffce9cc82aad4cceac",
+  "checkpoint_selection": "largest released step, fixed before new results; paper evaluation snapshot not independently established",
+  "families": {
+    "cabinet": {"pipeline": "cabinet_pickup", "revision": "a26eb80446af577e46e716e194ec919c407b6013", "step": "32650", "eval_config": "cabinet_pickup_joint.yaml", "max_steps": 5700},
+    "dusty": {"pipeline": "dusty_transfer", "revision": "2b3c46224dd2a32ca33ad42eee38de12f6cacbf3", "step": "14700", "eval_config": "dusty_transfer_joint.yaml", "max_steps": 5100},
+    "lid": {"pipeline": "lid_transport", "revision": "6500653ddd20624e2452620e63b23e1fd3399ac6", "step": "8250", "eval_config": "lid_transport_food_joint.yaml", "max_steps": 1900},
+    "stack": {"pipeline": "stack_retrieve", "revision": "98e5381eb08e71cc0a38b846b6c81b0504cfbf05", "step": "20750", "eval_config": "stack_retrieve_joint.yaml", "max_steps": 4200},
+    "clutter": {"pipeline": "clutter_pickup", "revision": "f572e33bdb498a8d9992a72312ee849be868a2b6", "step": "7100", "eval_config": "clutter_pickup_joint.yaml", "max_steps": 1100}
+  }
+}

@@ -31,6 +31,15 @@ ManiGuard observation -> π0.5 action chunk -> original controller -> simulator
                   +---------- horizon-aligned comparison ----------+
 ```
 
+**Full non-Jar base sweep:** A managed sweep now covers 174 scenes with the
+family-specific fine-tuned π0.5 policies from the evaluated checkpoint collection.
+SafetyJev scores 119 Lid/Stack/Dusty/Cabinet scenes; the 55 Clutter scenes run
+VLA plus simulator truth only, as requested. All five 64-action integration
+checks passed (117 classifications, zero request failures). Full-length results
+are pending; these checks must not be presented as the completed sweep.
+See the [sweep record](docs/evaluation-results.md#full-non-jar-base-sweep-october-6)
+and [operations recipe](docs/runbook.md#full-non-jar-base-sweep).
+
 **Latest result (October 6):** The supplied trained 27B visual SafetyJev,
 ManiGuard fine-tuned π0.5, and Isaac Sim 5.1 ran together on one RTX PRO 6000.
 Three base Jar scenes produced 495 current-state classifications over 99 camera
