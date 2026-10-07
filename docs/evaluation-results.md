@@ -7,6 +7,11 @@ The user requested an interim PDF using available results while both rented
 workers are stopped. The report is `output/pdf/maniguard-base-176-case-draft.pdf`,
 with an adjacent JSON source record and 136-row CSV outcome ledger.
 
+The revised opening page compares all 15 available predicates across Jar, Lid,
+Stack and Dusty, with raw/calibrated accuracy, Yes recall and positive counts.
+Clutter is excluded from that comparison. Calibration effects and family analyses
+now precede coverage and protocol; all underlying evidence is unchanged.
+
 - Last live progress: 176/200 completed (Jar 26, Lid 30, Stack 28, Dusty 26,
   Cabinet 34, Clutter 32). Completion after that observation is unconfirmed.
 - Locally recovered outcomes: 136 cases; eight additional Cabinet and all 32

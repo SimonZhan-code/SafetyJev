@@ -2,7 +2,7 @@
 
 Replay a saved analysis JSON with --data. No remote jobs or model calls are used.
 """
-import argparse, csv, hashlib, json, math
+import argparse, csv, hashlib, json, math, re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -92,7 +92,7 @@ def render(d,out):
     styles.add(ParagraphStyle(name='HeaderA',fontName='Helvetica-Bold',fontSize=8,leading=10,textColor=colors.white))
     flow=[]
     def p(t,style='BodyA'):flow.append(Paragraph(t,styles[style]))
-    def h(t):p(t,'HeadingA')
+    def h(t):p(re.sub(r'^\d+\. ', '', t),'HeadingA')
     def page():flow.append(PageBreak())
     def table(head,rows,widths):
         assert sum(widths)<=720.1
@@ -115,38 +115,35 @@ def render(d,out):
                 dr.add(Rect(left,y+off,length*v,7,fillColor=color,strokeColor=None));dr.add(String(left+length*v+5,y+off,f'{v*100:.1f}%',fontSize=8,fillColor=navy))
         dr.add(Rect(180,height-10,9,7,fillColor=gold,strokeColor=None));dr.add(String(194,height-10,labela,fontSize=8,fillColor=navy))
         dr.add(Rect(355,height-10,9,7,fillColor=teal,strokeColor=None));dr.add(String(369,height-10,labelb,fontSize=8,fillColor=navy));flow.append(dr);flow.append(Spacer(1,8))
-    p('ManiGuard / SafetyJev','TitleA');h('Base evaluation: detailed evidence draft')
-    p('<b>176 of 200 cases confirmed complete at the last live check (88%).</b> Quantitative task-outcome analysis below covers 136 recovered episodes; classifier analysis covers 110 episodes. The remaining 40 progress-confirmed outcomes were not backed up. This is an incomplete, descriptive report, not the final 200-case evaluation.')
-    table(['Evidence level','Cases','What can be concluded'],[
-      ['Completion confirmed by prior progress checks',176,'Operational progress only; includes 32 Clutter and 8 additional Cabinet cases without recovered results.'],
-      ['Recovered per-case outcomes',136,'Task success, raw LTL violations, engagement-gated violations and robot interaction counts.'],
-      ['Recovered classifier metrics',110,'Jar 26, Lid 30, Stack 28, Dusty 26; saved frame-level statistics, with uneven raw-trace availability.'],
-      ['Completion not confirmed',24,'1 Cabinet + 23 Clutter at the last live check; do not classify as failures or successes.']],[245,55,420])
-    p('<b>Main result:</b> the released calibration does not consistently preserve safety-relevant recall. Dusty contact recall falls from 97.8% raw to 2.2% calibrated; Stack floor-level recall falls from 95.0% to 21.6%. These are current-predicate measurements, not future action-chunk predictions.')
-    p('<b>Controller result:</b> 21/136 recovered episodes succeed (15.4%); 7/136 succeed without a raw LTL violation (5.1%). No feedback intervention was enabled, so this experiment does not measure safety improvement from an agentic loop.')
-    p('Prepared '+escape(d['generated_at'][:19].replace('T',' '))+' America/Chicago. Both workers were stopped at the latest provider check. OOD experiments remain outside this draft.','SmallA')
+    h('SafetyJev accuracy by family and safety predicate')
+    p('<b>110 episodes | 4 families | 15 predicates | 136,363 question answers.</b> Current-frame Yes/No predictions against simulator labels. Raw and release-calibrated decisions use threshold 0.5.','SmallA')
+    headers=['Family','Safety predicate','Yes / frames','Raw accuracy','Cal. accuracy','Raw Yes recall','Cal. Yes recall']
+    overview=[];group_rows=[];low_recall=[];no_positives=[]
+    for f in ['jar','lid','stack','dusty']:
+        group_rows.append(len(overview)+1)
+        for qi,(q,c) in enumerate(cl[f]['calibrated']['by_question'].items()):
+            r=cl[f]['raw']['by_question'][q]
+            overview.append([f.title()+' ('+str(rows[f]['classification_episodes'])+')' if qi==0 else '',NAMES[q],f"{c['positive']:,} / {c['n']:,}",pct(r['accuracy']),pct(c['accuracy']),pct(r['violation_recall']),pct(c['violation_recall'])])
+            if c['positive']==0:no_positives.append(len(overview))
+            elif c['violation_recall']<0.25:low_recall.append(len(overview))
+    cells=[[Paragraph(escape(x),styles['HeaderA']) for x in headers]]+[[Paragraph(escape(str(x)),styles['CellA']) for x in row] for row in overview]
+    summary_table=Table(cells,colWidths=[65,205,100,85,85,90,90],repeatRows=1,hAlign='LEFT')
+    commands=[('BACKGROUND',(0,0),(-1,0),navy),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),('BACKGROUND',(3,1),(4,-1),light)]
+    for ri in group_rows:commands.append(('LINEABOVE',(0,ri),(-1,ri),0.6,colors.HexColor('#b8cbd5')))
+    for ri in low_recall:commands.append(('BACKGROUND',(6,ri),(6,ri),colors.HexColor('#fff0e5')))
+    for ri in no_positives:commands.append(('BACKGROUND',(5,ri),(6,ri),colors.HexColor('#eeeeee')))
+    summary_table.setStyle(TableStyle(commands));flow.append(summary_table);flow.append(Spacer(1,9))
+    p('<b>Strong tilt signal:</b> Jar tilt reaches <b>88.0% accuracy and 90.3% Yes recall</b> after calibration (AUROC 0.971). <b>Critical tradeoff:</b> Dusty contact accuracy rises to <b>97.3%</b>, yet recall falls from <b>97.8% to 2.2%</b>.','SmallA')
+    p('Blue columns emphasize accuracy; peach cells flag calibrated Yes recall below 25%. NA means no positive examples, so 100% accuracy does not validate detection. Yes denotes the named predicate, including safety-positive closed/support states. Cabinet classifier metrics are unavailable.','SmallA')
+    p('Interim base-split evidence; frames are correlated. These are current-state classifications, not future action-chunk safety predictions. Coverage, missing evidence and task outcomes follow the main results.','SmallA')
 
-    page();h('1. Coverage and evidence reconciliation')
-    table(['Family','Planned','Progress complete','Outcomes saved','Classifier episodes','Missing outcomes*'],[[f.title(),rows[f]['planned'],rows[f]['progress_confirmed'],rows[f]['outcomes_recovered'],rows[f]['classification_episodes'] if f!='clutter' else 'Not run',rows[f]['progress_confirmed']-rows[f]['outcomes_recovered']] for f in FAMILIES]+[['Total',200,176,136,110,40]],[95,65,115,115,145,185])
-    p('*Missing outcomes means completion was seen in a remote progress check, but the corresponding result is not in the local evidence used here. It does not mean the evaluation failed. The 24 other cases have unconfirmed completion.')
-    p('<b>Three denominators must remain separate.</b> 176 is the last observed completion count. 136 is the denominator for task outcomes. 110 is the number of episodes underlying recovered classification metrics. No metric is filled with zeros for missing cases; no local smoke test is substituted for a missing full-sweep result.')
-    p('<b>Recovery quality.</b> Jar has a full saved classification report, 26 episode records and a saved successful trace-audit receipt. Lid, Stack and Dusty classification statistics are preserved in the recovered family summary; that summary records successful trace audits. This draft checks their arithmetic and outcome totals, but does not independently re-audit every original frame. Cabinet has outcomes for its first 26 scenes and no recovered full-sweep classification summary.')
-    p('<b>Sampling limitation.</b> The recovered subset is determined by run order and backup availability. It is not a random 136-case sample. In particular, it has no recovered Clutter outcomes and omits eight confirmed Cabinet completions. Do not extrapolate its overall success rate to all 176 or 200 cases.')
-    p('Sources: recovered base sweep.json and summary.json; full Jar sweep.json/report.json/audit-status.json; pinned domain resource manifest; prior live progress responses. Exact hashes and the recovered case ledger accompany this PDF.','SmallA')
-
-    page();h('2. Evaluation protocol and interpretation')
-    table(['Family','Policy step','Base scenes','Action cap','Questions / frame'],[[f.title(),d['resources']['families'][f]['step'],rows[f]['planned'],d['resources']['families'][f]['max_steps'],{'jar':5,'lid':4,'stack':4,'dusty':2,'cabinet':3,'clutter':'None'}[f]] for f in FAMILIES],[140,140,130,140,170])
-    p('<b>Policy and model.</b> Family-specific, released pi0.5 LoRA checkpoints; the largest released policy step was pinned before these rollouts. Classifier: trained 27B SafetyJev, round2-amd-20k/models/step-20000. Its saved configuration identifies the backbone as Qwen/Qwen3.8-27B. This is recorded provenance, not an independent claim about public model availability.')
-    p('<b>Measurement.</b> Original task instruction; benchmark seed 0 with recorded episode seeds; native action cap and family controller settings. At step 0 and every eight executed actions, the simulator pauses while SafetyJev answers trained questions from current overview and wrist images. Ground-truth labels are same-step simulator atomic propositions (APs). State/AP values and future outcomes are not sent to the classifier.')
-    p('<b>Raw versus calibrated.</b> Raw p(Yes) = sigmoid(z), where z is the Yes-minus-No logit. Release calibration uses sigmoid(z / 3.95 + question prior log-odds). Both use a 0.5 decision threshold. No parameters were fitted on these rollouts. Per-question monotonic calibration changes operating points, not ranking, except numerical ties.')
-    p('<b>Polarity.</b> Yes means the predicate holds. Tilt, floor-level and unsafe conjunctions are hazard-positive; closed, supported and lid-on-container predicates are safety-positive. Therefore the stored field named violation_recall is reported here as <b>Yes recall</b>. A high Yes recall is not universally high hazard recall.')
-    p('<b>Scope.</b> No OpenRouter planner, action regeneration or guard intervention was enabled. No action chunk enters the classifier. Clutter is policy + simulator only by request. Earlier short Jar and smoke runs are excluded. The Isaac 5.1 / OmniGibson compatibility runtime is experimental; parity with the original benchmark physics and labels is unverified.','SmallA')
-
-    page();h('3. Task outcomes in the 136 recovered episodes')
-    table(['Family','N','Success','Raw-safe success','Raw LTL violation','Gated violation','Contact / grasp'],[[f.title(),rows[f]['outcomes_recovered'],f"{rows[f]['success']} ({100*rows[f]['success']/rows[f]['outcomes_recovered']:.1f}%)",rows[f]['raw_safe_success'],rows[f]['raw_violations'],rows[f]['counted_violations'],f"{rows[f]['contact']} / {rows[f]['grasp']}"] for f in FAMILIES[:-1]]+[['Total',136,'21 (15.4%)',7,86,40,'135 / 24']],[80,45,100,115,125,105,150])
-    bars(['Jar','Lid','Stack','Dusty','Cabinet'],[rows[f]['raw_violations']/rows[f]['outcomes_recovered'] for f in FAMILIES[:-1]],[rows[f]['counted_violations']/rows[f]['outcomes_recovered'] for f in FAMILIES[:-1]],'Raw violation rate','Engagement-gated rate',height=185)
-    p('<b>Metric definition matters.</b> Raw LTL rejection occurs in 86/136 episodes (63.2%); engagement-gated rejection occurs in 40/136 (29.4%). The latter requires first rejection at or after first robot contact. The 46-episode gap is concentrated in Jar (20) and Lid (26). Initial-step rejection occurs in 15 Jar and 26 Lid episodes; this deserves reset, support-label and constraint-semantics inspection.')
-    p('<b>Policy limitations are visible.</b> Dusty and the recovered Cabinet subset have no task successes or recorded grasps despite contact in every episode. That pattern motivates examining grasp/controller execution and task completion before attributing failure to the classifier. All 136 saved cases completed without recorded NaN termination.','SmallA')
+    page();h('8. Calibration: better scores can mask worse recall')
+    qs=[('dusty','food_touched_by_robot'),('stack','stack_at_floor_level'),('stack','target_scope_at_floor_level'),('jar','open_while_off_support')]
+    bars(['Dusty: food contact','Stack: stack floor','Stack: target floor','Jar: open / off support'],[cl[f]['raw']['by_question'][q]['violation_recall'] for f,q in qs],[cl[f]['calibrated']['by_question'][q]['violation_recall'] for f,q in qs],'Raw Yes recall','Calibrated Yes recall',height=160)
+    table(['Predicate','Extra missed Yes frames','Change in false positives','Accuracy change','Brier change'],[[f.title()+': '+NAMES[q],cl[f]['calibrated']['by_question'][q]['fn']-cl[f]['raw']['by_question'][q]['fn'],cl[f]['calibrated']['by_question'][q]['fp']-cl[f]['raw']['by_question'][q]['fp'],f"{100*(cl[f]['calibrated']['by_question'][q]['accuracy']-cl[f]['raw']['by_question'][q]['accuracy']):+.1f} pp",f"{cl[f]['calibrated']['by_question'][q]['brier']-cl[f]['raw']['by_question'][q]['brier']:+.3f}"] for f,q in qs],[230,115,135,120,120])
+    p('<b>Interpretation:</b> rare-positive questions are especially vulnerable to a low prior and fixed 0.5 cutoff. Reducing false positives on the much larger negative class can improve accuracy and Brier while missing most positive frames. The current data support revisiting deployment thresholds; they do not identify a validated replacement threshold.')
+    p('<b>Recommended selection procedure:</b> split by scene/task group, confirm no training overlap, then select a per-predicate operating point on a separate calibration set using a prespecified recall target and false-alarm budget. Freeze it before evaluating held-out episodes. Do not optimize thresholds on the same 110 episodes and report the result as a fresh test.')
+    p('Counts here are correlated frame decisions, not unique failures prevented. There is no pooled headline safety accuracy: different predicates have different polarity, prevalence, semantic difficulty and frame counts. Two of the 15 available predicates have no positive labels.','SmallA')
 
     narratives={
     'jar':[
@@ -179,13 +176,27 @@ def render(d,out):
         table(['Predicate','Score','TP','FN','FP','TN','Precision','F1','Brier'],vals,[170,45,60,60,60,65,90,80,90])
         for t in narratives[f]:p(t,'SmallA')
 
-    page();h('8. Calibration: better scores can mask worse recall')
-    qs=[('dusty','food_touched_by_robot'),('stack','stack_at_floor_level'),('stack','target_scope_at_floor_level'),('jar','open_while_off_support')]
-    bars(['Dusty: food contact','Stack: stack floor','Stack: target floor','Jar: open / off support'],[cl[f]['raw']['by_question'][q]['violation_recall'] for f,q in qs],[cl[f]['calibrated']['by_question'][q]['violation_recall'] for f,q in qs],'Raw Yes recall','Calibrated Yes recall',height=160)
-    table(['Predicate','Extra missed Yes frames','Change in false positives','Accuracy change','Brier change'],[[f.title()+': '+NAMES[q],cl[f]['calibrated']['by_question'][q]['fn']-cl[f]['raw']['by_question'][q]['fn'],cl[f]['calibrated']['by_question'][q]['fp']-cl[f]['raw']['by_question'][q]['fp'],f"{100*(cl[f]['calibrated']['by_question'][q]['accuracy']-cl[f]['raw']['by_question'][q]['accuracy']):+.1f} pp",f"{cl[f]['calibrated']['by_question'][q]['brier']-cl[f]['raw']['by_question'][q]['brier']:+.3f}"] for f,q in qs],[230,115,135,120,120])
-    p('<b>Interpretation:</b> rare-positive questions are especially vulnerable to a low prior and fixed 0.5 cutoff. Reducing false positives on the much larger negative class can improve accuracy and Brier while missing most positive frames. The current data support revisiting deployment thresholds; they do not identify a validated replacement threshold.')
-    p('<b>Recommended selection procedure:</b> split by scene/task group, confirm no training overlap, then select a per-predicate operating point on a separate calibration set using a prespecified recall target and false-alarm budget. Freeze it before evaluating held-out episodes. Do not optimize thresholds on the same 110 episodes and report the result as a fresh test.')
-    p('Counts here are correlated frame decisions, not unique failures prevented. There is no pooled headline safety accuracy: different predicates have different polarity, prevalence, semantic difficulty and frame counts. Two of the 15 available predicates have no positive labels.','SmallA')
+    page();h('1. Coverage and evidence reconciliation')
+    table(['Family','Planned','Progress complete','Outcomes saved','Classifier episodes','Missing outcomes*'],[[f.title(),rows[f]['planned'],rows[f]['progress_confirmed'],rows[f]['outcomes_recovered'],rows[f]['classification_episodes'] if f!='clutter' else 'Not run',rows[f]['progress_confirmed']-rows[f]['outcomes_recovered']] for f in FAMILIES]+[['Total',200,176,136,110,40]],[95,65,115,115,145,185])
+    p('*Missing outcomes means completion was seen in a remote progress check, but the corresponding result is not in the local evidence used here. It does not mean the evaluation failed. The 24 other cases have unconfirmed completion.')
+    p('<b>Three denominators must remain separate.</b> 176 is the last observed completion count. 136 is the denominator for task outcomes. 110 is the number of episodes underlying recovered classification metrics. No metric is filled with zeros for missing cases; no local smoke test is substituted for a missing full-sweep result.')
+    p('<b>Recovery quality.</b> Jar has a full saved classification report, 26 episode records and a saved successful trace-audit receipt. Lid, Stack and Dusty classification statistics are preserved in the recovered family summary; that summary records successful trace audits. This draft checks their arithmetic and outcome totals, but does not independently re-audit every original frame. Cabinet has outcomes for its first 26 scenes and no recovered full-sweep classification summary.')
+    p('<b>Sampling limitation.</b> The recovered subset is determined by run order and backup availability. It is not a random 136-case sample. In particular, it has no recovered Clutter outcomes and omits eight confirmed Cabinet completions. Do not extrapolate its overall success rate to all 176 or 200 cases.')
+    p('Sources: recovered base sweep.json and summary.json; full Jar sweep.json/report.json/audit-status.json; pinned domain resource manifest; prior live progress responses. Exact hashes and the recovered case ledger accompany this PDF.','SmallA')
+
+    page();h('2. Evaluation protocol and interpretation')
+    table(['Family','Policy step','Base scenes','Action cap','Questions / frame'],[[f.title(),d['resources']['families'][f]['step'],rows[f]['planned'],d['resources']['families'][f]['max_steps'],{'jar':5,'lid':4,'stack':4,'dusty':2,'cabinet':3,'clutter':'None'}[f]] for f in FAMILIES],[140,140,130,140,170])
+    p('<b>Policy and model.</b> Family-specific, released pi0.5 LoRA checkpoints; the largest released policy step was pinned before these rollouts. Classifier: trained 27B SafetyJev, round2-amd-20k/models/step-20000. Its saved configuration identifies the backbone as Qwen/Qwen3.8-27B. This is recorded provenance, not an independent claim about public model availability.')
+    p('<b>Measurement.</b> Original task instruction; benchmark seed 0 with recorded episode seeds; native action cap and family controller settings. At step 0 and every eight executed actions, the simulator pauses while SafetyJev answers trained questions from current overview and wrist images. Ground-truth labels are same-step simulator atomic propositions (APs). State/AP values and future outcomes are not sent to the classifier.')
+    p('<b>Raw versus calibrated.</b> Raw p(Yes) = sigmoid(z), where z is the Yes-minus-No logit. Release calibration uses sigmoid(z / 3.95 + question prior log-odds). Both use a 0.5 decision threshold. No parameters were fitted on these rollouts. Per-question monotonic calibration changes operating points, not ranking, except numerical ties.')
+    p('<b>Polarity.</b> Yes means the predicate holds. Tilt, floor-level and unsafe conjunctions are hazard-positive; closed, supported and lid-on-container predicates are safety-positive. Therefore the stored field named violation_recall is reported here as <b>Yes recall</b>. A high Yes recall is not universally high hazard recall.')
+    p('<b>Scope.</b> No OpenRouter planner, action regeneration or guard intervention was enabled. No action chunk enters the classifier. Clutter is policy + simulator only by request. Earlier short Jar and smoke runs are excluded. The Isaac 5.1 / OmniGibson compatibility runtime is experimental; parity with the original benchmark physics and labels is unverified.','SmallA')
+
+    page();h('3. Task outcomes in the 136 recovered episodes')
+    table(['Family','N','Success','Raw-safe success','Raw LTL violation','Gated violation','Contact / grasp'],[[f.title(),rows[f]['outcomes_recovered'],f"{rows[f]['success']} ({100*rows[f]['success']/rows[f]['outcomes_recovered']:.1f}%)",rows[f]['raw_safe_success'],rows[f]['raw_violations'],rows[f]['counted_violations'],f"{rows[f]['contact']} / {rows[f]['grasp']}"] for f in FAMILIES[:-1]]+[['Total',136,'21 (15.4%)',7,86,40,'135 / 24']],[80,45,100,115,125,105,150])
+    bars(['Jar','Lid','Stack','Dusty','Cabinet'],[rows[f]['raw_violations']/rows[f]['outcomes_recovered'] for f in FAMILIES[:-1]],[rows[f]['counted_violations']/rows[f]['outcomes_recovered'] for f in FAMILIES[:-1]],'Raw violation rate','Engagement-gated rate',height=185)
+    p('<b>Metric definition matters.</b> Raw LTL rejection occurs in 86/136 episodes (63.2%); engagement-gated rejection occurs in 40/136 (29.4%). The latter requires first rejection at or after first robot contact. The 46-episode gap is concentrated in Jar (20) and Lid (26). Initial-step rejection occurs in 15 Jar and 26 Lid episodes; this deserves reset, support-label and constraint-semantics inspection.')
+    p('<b>Policy limitations are visible.</b> Dusty and the recovered Cabinet subset have no task successes or recorded grasps despite contact in every episode. That pattern motivates examining grasp/controller execution and task completion before attributing failure to the classifier. All 136 saved cases completed without recorded NaN termination.','SmallA')
 
     page();h('9. Runtime cost and classification coverage')
     table(['Family','Episodes','Frames / requests','Question answers','Missing / failed','p50 ms','p95 ms'],[[f.title(),rows[f]['classification_episodes'],f"{cl[f]['frame_latency_s']['n']:,}",f"{cl[f]['expected_classifications']:,}",cl[f]['failed_or_missing_classifications'],f"{cl[f]['frame_latency_s']['p50']*1000:.1f}",f"{cl[f]['frame_latency_s']['p95']*1000:.1f}"] for f in cl]+[['Total',110,'41,099','136,363',0,'Not pooled','Not pooled']],[80,65,130,125,120,100,100])
