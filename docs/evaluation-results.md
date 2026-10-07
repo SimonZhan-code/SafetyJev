@@ -4,6 +4,42 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Third instance added for Clutter: October 6 evening
+
+The user supplied `47.186.21.5:58371` (instance 54566989): RTX PRO 6000
+Blackwell Workstation Edition, 96 GB, driver 580.126.09. Vulkan detects the
+physical GPU. The split is now the remaining Cabinet cases on 54533396 and
+all 55 Clutter cases on 54566989. OOD remains deferred; Clutter remains oracle-only.
+
+A managed handoff paused only the evaluator parent while its active Cabinet
+capture finished. After that child exited, the policy service was reconfigured
+to enforce a separate instance/family reservation, and the parent resumed.
+Cabinet `task_0026/base` completed, raising total base completion to 137/200;
+`task_0027/base` then started. The launch guard rejects Clutter on the Cabinet
+node before a Clutter case begins. No completed scene was repeated and no hashed
+runtime file changed.
+
+The new node initially had no runtime. A temporary read-only SSH key proposal
+was rejected by automatic approval review; no key was added to authorized_keys.
+The local relay proved too slow and was stopped with partial files preserved.
+Vast's legacy numeric copy syntax reported completion without delivering files;
+its explicit `C.<instance_id>` syntax delivered the test configuration directory.
+The provider-native full copy now uses a sanitized hard-link staging tree:
+277,495 files and 76,815,341,843 logical bytes, excluding Git metadata, credentials,
+logs and existing result directories. No SSH access permission change is needed.
+
+The new node's managed bootstrap waits for all manifest files and sizes, verifies
+the original runtime hashes, checks both CUDA environments and Vulkan, and runs
+CPU tests before starting the 55-case Clutter sweep. Provisioning is not itself
+confirmation of successful Clutter evaluation. The one-shot local merge job waits
+for exactly 55 terminal Clutter scenes, backs up and checksum-verifies the archive,
+waits for Cabinet completion and an inactive coordinator evaluator, refuses any
+existing destination Clutter cases, and imports them. Resuming the original runner
+then skips all recorded cases and reconciles 174 non-Jar plus 26 Jar cases.
+It requests stopping 54566989 after that reconciliation; the existing archive,
+backup and self-stop hook handles 54533396. No hourly monitor was created.
+Local checks: **75 tests run, 2 integration checks skipped**.
+
 ## Remaining base cases resumed on B: October 6 evening
 
 The user restarted B (`154.59.156.14:39237`, instance 54533396). Its CUDA check,

@@ -860,3 +860,36 @@ Stop obsolete backup processes before starting the replacement. A successful
 archive checksum verifies the available archive, not completeness of historical
 raw data. Missing traces require explicit final-report disclosure and cannot be
 silently replaced with the short pilots or new repeated episodes.
+
+
+### Separate Clutter worker on 54566989
+
+The new endpoint is `root@47.186.21.5`, port 58371. Keep the original immutable
+assignment and active runtime files unchanged. The additional
+`base-worker-reservation.json` maps Cabinet to 54533396 and Clutter to 54566989.
+`serve-reserved-base-policy.py` checks the instance ID before starting a policy.
+`reserve-clutter-worker.py` installs this guard at a completed capture boundary:
+it pauses the evaluator parent only, waits for its capture child to exit, updates
+the policy service, and always resumes the parent on ordinary exceptions.
+The coordinator deliberately exits when it reaches the reserved Clutter family;
+this is a handoff, not a failed Clutter evaluation.
+
+`prepare-clutter-transfer.py` stages only the necessary runtime via hard links,
+without copying credentials, active results or Git metadata. Use provider copy
+with explicit `C.<instance_id>` endpoints; verify delivered files because API
+acceptance or status text alone does not establish success. No container SSH
+access-list changes are required. `start-clutter-worker.py` waits for complete
+files, immutable hashes, CUDA/Vulkan checks and tests before starting:
+
+```bash
+/workspace/conda/behavior51/bin/python -u   /workspace/SafetyJev/scripts/remote/base-task-sweep.py   --families clutter --output /workspace/SafetyJev/artifacts/clutter-base-20261006
+```
+
+Run `scripts/reporting/merge-clutter-on-completion.py` locally as a one-shot
+completion dependency. It saves to `artifacts/clutter-worker-20261006/`, verifies
+SHA-256 before import, rejects overlapping destination cases, and resumes the
+coordinator only after Cabinet is terminal and the previous evaluator has exited.
+It stops 54566989 only after 174 non-Jar and 26 Jar cases are terminal. The separate
+base backup/stop pipeline handles 54533396. Failures are recorded in the merge
+status; inspect them rather than blindly retrying an already-imported archive.
+Missing historical traces on the original instance remain a separate limitation.
