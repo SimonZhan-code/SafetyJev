@@ -815,3 +815,23 @@ Stopping retains instance storage and ends GPU charges once stopped; storage
 charges remain. Do not destroy the disks. Inspect the locally backed-up final PDF
 pages, reconcile any audit issue, and update/commit the report after shutdown.
 The hourly Codex heartbeat stays paused.
+
+
+### Resuming after the October 6 interruption
+
+Keep completed Jar node B stopped. Before resuming A, verify the original source
+hashes and preserve the incomplete Cabinet `task_0026/base` episode under a
+separate interrupted-attempts directory. The unchanged base runner skips completed
+cases and retries the interrupted case; retain all earlier case records.
+
+If B is already stopped, save selected fields from `vastai show instance 54533396`
+in a JSON receipt: `source` = `vastai show instance`, `id`, `actual_status`,
+`intended_status`, `cur_state`, and numeric `checked_unix_s`. Do not copy credentials.
+After verifying all 26 Jar results and their transfer receipt on A, deploy the
+updated stop helper only to the isolated orchestration checkout and pass
+`--peer-stopped-receipt /path/to/receipt.json` to A's completion hook. This bypasses
+only the offline peer acknowledgment; all 200 cases, report handling, archival,
+and local-backup grace requirements still apply. Keep B stopped throughout.
+Verify SSH endpoints, restart the one-shot backup/report/stop services as needed,
+and leave both OOD queues stopped. A provider message that a start is queued is
+not confirmation of a running GPU or resumed evaluation.

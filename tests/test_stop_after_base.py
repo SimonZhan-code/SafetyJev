@@ -21,6 +21,19 @@ class StopAfterBaseTests(unittest.TestCase):
         self.assertFalse(stop.all_base_terminal(a,b,{**totals,'planned':1000,'pending':800}))
         self.assertFalse(stop.all_base_terminal({**a,'planned':173},b,totals))
 
+    def test_peer_receipt_requires_correct_stopped_instance_and_provenance(self):
+        data={'source':'vastai show instance','id':54533396,'actual_status':'exited',
+              'intended_status':'stopped','cur_state':'stopped','checked_unix_s':1}
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'peer.json';path.write_text(json.dumps(data))
+            self.assertEqual(stop.peer_stopped_receipt(path),data)
+            for bad in [{'id':54498592},{'actual_status':'running'},
+                        {'intended_status':'running'},{'cur_state':'running'},
+                        {'source':'unverified'},{'checked_unix_s':None}]:
+                with self.subTest(bad=bad):
+                    path.write_text(json.dumps({**data,**bad}))
+                    with self.assertRaises(RuntimeError):stop.peer_stopped_receipt(path)
+
     def test_refuses_wrong_instance_without_issuing_api_call(self):
         with patch.dict('os.environ',{'CONTAINER_ID':'other','CONTAINER_API_KEY':'test-only'},clear=True),patch.object(stop.subprocess,'run') as run:
             with self.assertRaisesRegex(RuntimeError,'identity'):stop.own_stop('node-a',Path('/unused'))

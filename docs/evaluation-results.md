@@ -4,6 +4,28 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Interrupted base sweep and restart request: October 6 evening
+
+Disk recovery and provider status checks confirm **136/200 completed base cases**:
+Jar 26/26, Lid 30/30, Stack 28/28, Dusty 26/26, Cabinet 26/35, Clutter 0/55.
+Both instances stopped before the completion hooks reached their stop stage.
+The interruption cause is unconfirmed. Cabinet `task_0026/base` was interrupted;
+preserve its partial episode outside the canonical episode directory before
+resuming, so trace audits cover only the subsequent completed attempt.
+
+The user authorized continuing after adding credit. Two start requests for
+A (54498592) returned `Required resources are currently unavailable, state change
+queued.` Subsequent provider status remained stopped and SSH was refused.
+No evaluation restart is confirmed. B (54533396) has finished all Jar cases and
+must remain stopped. A full Jar backup was recovered locally; the much larger
+non-Jar snapshot transfer is still incomplete. The final PDF awaits the remaining
+9 Cabinet and 55 Clutter cases. OOD and the hourly monitor remain deferred/paused.
+
+The shutdown helper now supports a saved, validated non-secret provider receipt
+for an already-stopped Jar node. This avoids requiring an acknowledgment from an
+offline peer while retaining the 200-case completion and archive prerequisites.
+This recovery option has not yet been deployed to the unreachable original node.
+
 ## Node B startup correction: October 6
 
 The complete runtime transfer, 71 CPU tests, all three CUDA environment checks,

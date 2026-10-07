@@ -57,7 +57,20 @@ def own_stop(worker,status):
     raise RuntimeError('Vast stop request failed after 30 attempts; no credentials logged')
 
 
-def node_a(status,backup_grace_s):
+def peer_stopped_receipt(path):
+    """Validate the operator-saved, non-secret Vast status for the completed peer."""
+    data=read(Path(path))
+    if (data.get('source')!='vastai show instance' or str(data.get('id'))!=IDS['node-b']
+            or data.get('actual_status') not in ('exited','stopped')
+            or data.get('intended_status')!='stopped' or data.get('cur_state')!='stopped'
+            or not isinstance(data.get('checked_unix_s'),(int,float))
+            or not 0<data['checked_unix_s']<=time.time()+60):
+        raise RuntimeError('Completed peer is not confirmed stopped')
+    return data
+
+
+def node_a(status,backup_grace_s,peer_stopped=None):
+    peer=peer_stopped_receipt(peer_stopped) if peer_stopped else None
     spec=importlib.util.spec_from_file_location('report',ROOT/'scripts/reporting/build-id-ood-report.py')
     report=importlib.util.module_from_spec(spec);spec.loader.exec_module(report)
     resources=read(ART/'domain-sweep-resources.json')
@@ -106,8 +119,12 @@ def node_a(status,backup_grace_s):
     # Keep the archive and disks even if the Mac is unavailable; never burn GPU time indefinitely.
     save(READY,{'status':'all_200_base_cases_saved','totals':data['totals'],'archive_sha256':digest,
                 'local_backup_confirmed':local,'unix_s':time.time()})
-    save(status,{'status':'waiting_for_node_b_ack','local_backup_confirmed':local})
-    while read(DOMAIN/'jar-base/node-b-stop-ack.json').get('archive_sha256')!=digest:time.sleep(10)
+    if peer:
+        save(ART/'completed-peer-stopped.json',peer)
+        save(status,{'status':'completed_peer_already_stopped','local_backup_confirmed':local,'peer_instance_id':peer['id']})
+    else:
+        save(status,{'status':'waiting_for_node_b_ack','local_backup_confirmed':local})
+        while read(DOMAIN/'jar-base/node-b-stop-ack.json').get('archive_sha256')!=digest:time.sleep(10)
     own_stop('node-a',status)
 
 
@@ -141,13 +158,15 @@ def node_b(status):
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--worker',choices=list(IDS),required=True)
     p.add_argument('--backup-grace-s',type=int,default=1200)
+    p.add_argument('--peer-stopped-receipt',type=Path,help='Node A only: operator-verified Vast status of the already-stopped completed Jar node')
     args=p.parse_args()
+    if args.peer_stopped_receipt and args.worker!='node-a':p.error('--peer-stopped-receipt is only valid for node-a')
     if os.environ.get('CONTAINER_ID')!=IDS[args.worker]:raise RuntimeError('Wrong instance for selected worker')
     if not os.environ.get('CONTAINER_API_KEY'):raise RuntimeError('Local instance credential unavailable')
     ART.mkdir(parents=True,exist_ok=True)
     status=ART/'automatic-stop-status.json'
     try:
-        if args.worker=='node-a':node_a(status,args.backup_grace_s)
+        if args.worker=='node-a':node_a(status,args.backup_grace_s,args.peer_stopped_receipt)
         else:node_b(status)
     except Exception as exc:
         # Do not render arbitrary exception text: subprocess arguments can contain a credential.
