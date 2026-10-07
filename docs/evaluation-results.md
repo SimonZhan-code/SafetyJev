@@ -1,5 +1,42 @@
 # Evaluation results
 
+
+## 2026-10-06: requested draft at 176-case progress snapshot
+
+The user requested an interim PDF using available results while both rented
+workers are stopped. The report is `output/pdf/maniguard-base-176-case-draft.pdf`,
+with an adjacent JSON source record and 136-row CSV outcome ledger.
+
+- Last live progress: 176/200 completed (Jar 26, Lid 30, Stack 28, Dusty 26,
+  Cabinet 34, Clutter 32). Completion after that observation is unconfirmed.
+- Locally recovered outcomes: 136 cases; eight additional Cabinet and all 32
+  corrected Clutter completions have no locally recovered outcome records.
+- Classifier metrics: **110 episodes**, 41,099 sampled frames, 136,363 question
+  answers across Jar/Lid/Stack/Dusty. The earlier conversational count of 108 was
+  an arithmetic error. Cabinet classifier metrics are unavailable in this draft;
+  Clutter classification was intentionally not run.
+- Recovered task success: 21/136; success without raw LTL rejection: 7/136.
+  Raw versus engagement-gated violations: 86/136 versus 40/136.
+- Calibration substantially reduces some hazard recalls: Dusty contact 97.8%
+  to 2.2%; Stack floor-level 95.0% to 21.6%. These are correlated current-frame
+  predicate measurements, not action-conditioned predictions or closed-loop gains.
+
+The 13-page PDF was rendered and visually inspected. Confusion-matrix arithmetic,
+source hashes, coverage totals and CSV row count were checked. Historical audit
+passes are distinguished from a fresh raw-trace audit. The draft documents the
+Clutter binding correction and excluded diagnostic run, missing evidence,
+experimental simulator parity and unverified training-group independence.
+No remote node was restarted and no recurring monitor was enabled for this draft.
+
+Regenerate from the saved evidence without access to the original artifact tree:
+
+```bash
+python scripts/reporting/build-recovered-base-draft.py \
+  --data output/pdf/maniguard-base-176-case-draft.json \
+  --output output/pdf/maniguard-base-176-case-draft.pdf
+```
+
+
 These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
