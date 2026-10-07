@@ -40,6 +40,58 @@ It requests stopping 54566989 after that reconciliation; the existing archive,
 backup and self-stop hook handles 54533396. No hourly monitor was created.
 Local checks: **75 tests run, 2 integration checks skipped**.
 
+### New-worker validation corrections
+
+The provider completed its full runtime copy, but the live destination overlay
+initially could not resolve newly copied `openpi` and `checkpoints` directories.
+A stop/start of only 54566989 preserved the files and restored their visibility.
+The exact frozen source payload was then copied from B, including AppleDouble
+sidecars already present in the original source hash manifest. Provider copying
+omitted the absolute `openpi/.venv/bin/python` symlink; it was restored to the
+original `/workspace/conda/behavior51/bin/python` target. The checked-in partition
+test fixture was restored as well. Both CUDA checks, Vulkan, and all **73 deployed
+tests passed** (no skips).
+
+The first actual Clutter startup exposed missing `libGLU.so.1`. It was stopped
+before any episode directory or completed case existed. Installing only
+`libglu1-mesa` 9.0.2-1.1build1 and its `libopengl0` dependency fixed that missing
+system prerequisite; no NVIDIA driver was changed. Bootstrap now checks libGLU
+explicitly. Isaac's mutable local shader cache is excluded from subsequent
+transfer-size checks; model, scene and frozen evaluator checks remain intact.
+The original startup log and previous attempt record remain preserved, and
+`task_0000/base` resumed as attempt 2. A successful startup is not yet evidence
+of a completed or successful robot task.
+
+### Clutter oracle binding correction
+
+The first executable Clutter rollout revealed that all four unary safety scopes
+resolved zero objects. The benchmark helper matched scene object `teacup_178`
+but stored it under `teacup_178_0`; the exact predicate pattern therefore missed
+it. Empty `any` scopes returned false and empty `all` scopes returned true,
+producing vacuous safe labels despite the monitor reporting valid. No later
+rebinding occurs. This attempt is explicitly excluded from final results.
+
+`fix-clutter-oracle-binding.py` verifies the original monitor SHA-256 before
+preserving exact object names and rejecting unresolved patterns. It runs only
+on the Clutter worker. The new source profile `clutter-exact-v1` pins corrected
+monitor hash `e03bb12b39c7e3b27155d760bd72ecb7c3f492f22199393f131a7b19a8653b1f`;
+all other workers retain the original `pinned` profile. Policies, simulator
+parameters and benchmark predicate definitions are unchanged. This is a
+benchmark-runtime correction and must be disclosed in result comparisons.
+
+The actual upstream resolver tests fail on the original source (exact-object
+resolution and missing-object rejection) and pass after correction; wildcard
+resolution remains covered. **76 tests pass on the Clutter node**, including
+integration checks and source verification. The corrected run is separate:
+`artifacts/clutter-fixed-base-20261006`. The original run, logs and source hashes
+remain under `clutter-base-20261006` with an `exclusion.json`. The merge workflow
+uses only corrected cases and retains excluded attempts separately in its archive.
+
+The first corrected Clutter case completed with a valid monitor, one bound target
+and six bound obstacles, and no state-evaluation errors. The next scene started;
+the new worker is operational. Completion archives include the simulator MP4s
+and LTL result records as well as captured traces and case manifests.
+
 ## Remaining base cases resumed on B: October 6 evening
 
 The user restarted B (`154.59.156.14:39237`, instance 54533396). Its CUDA check,

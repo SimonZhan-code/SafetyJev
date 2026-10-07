@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'artifacts/clutter-worker-20261006'
 SOURCE=['ssh','-p','58371','-o','BatchMode=yes','-o','ConnectTimeout=20','root@47.186.21.5']
 DEST=['ssh','-p','39237','-o','BatchMode=yes','-o','ConnectTimeout=20','root@154.59.156.14']
-RUN='/workspace/SafetyJev/artifacts/clutter-base-20261006'
+RUN='/workspace/SafetyJev/artifacts/clutter-fixed-base-20261006'
 BASE='/workspace/SafetyJev/artifacts/base-sweep-20261006'
 ARCHIVE='/workspace/SafetyJev/artifacts/clutter-complete-20261006.tar.gz'
 
@@ -34,17 +34,19 @@ def terminal_55(progress,cases):
 
 def main():
     save({'status':'waiting_for_55_clutter_cases'})
-    script=f'''import json
+    script=f'''import json,subprocess
 from pathlib import Path
 r=Path({RUN!r})
 p=json.loads((r/'progress.json').read_text()) if (r/'progress.json').exists() else {{}}
 c=[json.loads(x.read_text()) for x in (r/'clutter/cases').glob('task_*-base.json')]
-print(json.dumps({{'progress':p,'cases':c}}))
+state=subprocess.run(['supervisorctl','status','safetyjev-clutter-sweep'],capture_output=True,text=True).stdout
+active=any(x in state for x in ['RUNNING','STARTING','STOPPING'])
+print(json.dumps({{'progress':p,'cases':c,'runner_active':active}}))
 '''
     while True:
         try:data=query(SOURCE,script)
         except (RuntimeError,subprocess.TimeoutExpired):time.sleep(30);continue
-        if terminal_55(data['progress'],data['cases']):break
+        if terminal_55(data['progress'],data['cases']) and not data['runner_active']:break
         time.sleep(20)
     save({'status':'archiving_clutter'})
     script=f'''import json,tarfile,hashlib
@@ -52,6 +54,10 @@ from pathlib import Path
 r=Path({RUN!r});a=Path({ARCHIVE!r});tmp=a.with_suffix('.partial')
 with tarfile.open(tmp,'w:gz',compresslevel=1) as t:
  t.add(r/'clutter',arcname='clutter')
+ excluded=Path('/workspace/SafetyJev/artifacts/clutter-base-20261006')
+ if excluded.exists():t.add(excluded,arcname='excluded-clutter-oracle-attempts')
+ videos=Path('/workspace/ManiGuard/outputs/eval_logs/clutter_pickup_joint')
+ if videos.exists():t.add(videos,arcname='clutter-maniguard-eval-logs')
  for name in ['plan.json','source-sha256.json','progress.json','gpu.csv']:
   t.add(r/name,arcname='clutter-worker-'+name)
 with tmp.open('rb') as f:h=hashlib.file_digest(f,'sha256').hexdigest()

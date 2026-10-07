@@ -1,5 +1,6 @@
 """Version-checked in-memory instrumentation. No edits to the upstream checkout."""
 import hashlib
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +11,14 @@ SOURCE_HASHES = {
     "maniguard/utils/ltl_utils.py": "1f3cc04a0a6d9ff8db639f76128b5eae79468c7e74f569895fc51cebc40ad774",
     "maniguard/utils/safety_monitor.py": "690e12205c2dc068c37e2acf25ec9e05821d7581a016929720062f9379e6e37e",
 }
+
+
+SOURCE_PROFILE = os.environ.get("SAFETYJEV_MANIGUARD_PROFILE", "pinned")
+if SOURCE_PROFILE not in ("pinned", "clutter-exact-v1"):
+    raise ValueError("Unsupported ManiGuard source profile: " + SOURCE_PROFILE)
+if SOURCE_PROFILE == "clutter-exact-v1":
+    # Explicit, version-checked correction for vacuous exact-name Clutter scopes.
+    SOURCE_HASHES["maniguard/utils/safety_monitor.py"] = "e03bb12b39c7e3b27155d760bd72ecb7c3f492f22199393f131a7b19a8653b1f"
 
 
 def verify_sources(repo):

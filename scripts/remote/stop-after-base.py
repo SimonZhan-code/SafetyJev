@@ -97,6 +97,7 @@ def node_a(status,backup_grace_s,peer_stopped=None,coordinator_worker="node-a"):
         time.sleep(10)
     save(status,{'status':'archiving','totals':data['totals'],'report_status':read(ART/'base-report-status.json')})
     inputs=[(BASE,'base-sweep-20261006'),(DOMAIN/'jar-base','domain-evaluation-20261006/jar-base'),
+            (Path('/workspace/ManiGuard/outputs/eval_logs'),'maniguard-eval-logs'),
             (ART/'domain-sweep-resources.json','domain-sweep-resources.json'),
             (ROOT/'configs/two-node-assignments.json','two-node-assignments.json'),
             (ART/'base-report-status.json','base-report-status.json'),(ROOT/'output/pdf','output/pdf'),

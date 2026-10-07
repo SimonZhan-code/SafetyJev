@@ -1,5 +1,5 @@
 """Validate the transferred runtime, then launch only the 55 reserved Clutter cases."""
-import hashlib,json,os,subprocess,time
+import ctypes,hashlib,json,os,subprocess,time
 from pathlib import Path
 
 ROOT=Path('/workspace');ART=ROOT/'clutter-bootstrap';STATUS=ART/'startup-status.json'
@@ -18,12 +18,15 @@ def main():
         try:
             manifest=json.loads((ROOT/'runtime-transfer-manifest.json').read_text())
             assert manifest['source_instance_id']==54533396 and manifest['destination_instance_id']==54566989
-            missing=[r['path'] for r in manifest['files'] if not (ROOT/r['path']).is_file() or (ROOT/r['path']).stat().st_size!=r['bytes']]
+            # Isaac rewrites this disposable cache during startup; it is not model or scene data.
+            required=[r for r in manifest['files'] if not r['path'].startswith('BEHAVIOR-5.1/OmniGibson/appdata/local/cache/')]
+            missing=[r['path'] for r in required if not (ROOT/r['path']).is_file() or (ROOT/r['path']).stat().st_size!=r['bytes']]
             if not missing:break
             save({'status':'waiting_for_runtime_transfer','remaining_files':len(missing),'planned_files':len(manifest['files'])})
         except (FileNotFoundError,json.JSONDecodeError):pass
         time.sleep(15)
     save({'status':'validating_runtime'})
+    ctypes.CDLL('libGLU.so.1')
     repo=ROOT/'SafetyJev';hashes=json.loads((ART/'expected-source-sha256.json').read_text())
     for name,digest in hashes.items():
         if hashlib.sha256((repo/name).read_bytes()).hexdigest()!=digest:raise RuntimeError('Runtime hash mismatch: '+name)

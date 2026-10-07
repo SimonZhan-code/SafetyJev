@@ -893,3 +893,29 @@ It stops 54566989 only after 174 non-Jar and 26 Jar cases are terminal. The sepa
 base backup/stop pipeline handles 54533396. Failures are recorded in the merge
 status; inspect them rather than blindly retrying an already-imported archive.
 Missing historical traces on the original instance remain a separate limitation.
+
+
+Provider-copy validation details: if a live container lists newly copied paths
+but cannot resolve them, stop/start only the idle destination after the provider
+has finished copying. Never recycle or destroy it. Copy the exact hashed source
+set, including any existing `._*` sidecars; do not silently drop entries from a
+running evaluation's hash manifest. Restore the original absolute interpreter
+symlink `openpi/.venv/bin/python -> /workspace/conda/behavior51/bin/python` if the
+provider omitted it, and include the checked-in partition resource test fixture.
+Install the nongraphics-driver system dependency `libglu1-mesa` before launching
+Isaac; bootstrap checks it explicitly. Mutable Isaac local cache entries may
+change after startup and are excluded from repeated transfer-size checks.
+
+
+Clutter correctness gate: the original helper appended `_0` even to exact scene
+names, making the monitor report zero subjects and vacuous safe labels. Never
+accept such a rollout. The pinned `fix-clutter-oracle-binding.py` correction
+preserves exact registry names and rejects unresolved patterns. On the stopped
+Clutter worker only, apply it with an explicit receipt, set
+`SAFETYJEV_MANIGUARD_PROFILE=clutter-exact-v1` on the evaluator service, and use the
+new output `artifacts/clutter-fixed-base-20261006`. Keep the original hash manifest
+and invalid attempt intact under the old run; do not resume that old manifest
+with modified code. The launcher still checks exact source hashes under the
+selected profile. The one-shot merge now uses the corrected root and includes
+the old excluded run separately. Record the correction in the final PDF; other
+families and their active source profiles must remain unchanged.
