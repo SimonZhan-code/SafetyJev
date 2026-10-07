@@ -34,6 +34,18 @@ class StopAfterBaseTests(unittest.TestCase):
                     path.write_text(json.dumps({**data,**bad}))
                     with self.assertRaises(RuntimeError):stop.peer_stopped_receipt(path)
 
+    def test_migrated_coordinator_requires_inactive_original_peer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'peer.json'
+            data={'source':'vastai show instance','id':54498592,'instance_found':False,'checked_unix_s':1}
+            path.write_text(json.dumps(data))
+            self.assertEqual(stop.peer_stopped_receipt(path,'node-a'),data)
+            with self.assertRaises(RuntimeError):stop.peer_stopped_receipt(path,'node-b')
+            path.write_text(json.dumps({**data,'instance_found':True}))
+            with self.assertRaises(RuntimeError):stop.peer_stopped_receipt(path,'node-a')
+        with self.assertRaisesRegex(RuntimeError,'inactive-peer'):
+            stop.node_a(Path('/unused'),0,coordinator_worker='node-b')
+
     def test_refuses_wrong_instance_without_issuing_api_call(self):
         with patch.dict('os.environ',{'CONTAINER_ID':'other','CONTAINER_API_KEY':'test-only'},clear=True),patch.object(stop.subprocess,'run') as run:
             with self.assertRaisesRegex(RuntimeError,'identity'):stop.own_stop('node-a',Path('/unused'))

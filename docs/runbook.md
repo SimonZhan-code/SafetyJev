@@ -835,3 +835,28 @@ and local-backup grace requirements still apply. Keep B stopped throughout.
 Verify SSH endpoints, restart the one-shot backup/report/stop services as needed,
 and leave both OOD queues stopped. A provider message that a start is queued is
 not confirmation of a running GPU or resumed evaluation.
+
+
+### Recovery coordinator on B
+
+When the original instance is unavailable, use its saved `sweep.json` to restore
+completed case records exactly and retain the source hash. Record the remaining
+case ownership separately in `base-migration-20261006.json`; do not rewrite the
+original assignment or active runtime hashes. Preserve original summaries under
+`recovered-original-*.json` before the running summarizer replaces `summary.json`.
+Unavailable original raw traces are a report limitation, not a reason to rerun
+completed scenes without authorization.
+
+B can coordinate the now-colocated base results with
+`stop-after-base.py --worker node-b --coordinator --peer-stopped-receipt PATH`.
+The receipt must identify A and show it stopped, or `instance_found: false` from
+a successful provider lookup. It bypasses only the offline-peer handshake; full
+200-case terminal coverage, archival and the backup grace still apply. Never pass
+another instance's credential. Keep domain queues stopped and use the unchanged
+`safetyjev-base-sweep` service to skip restored completed records.
+
+The one-shot local backup accepts `--host root@154.59.156.14 --port 39237`.
+Stop obsolete backup processes before starting the replacement. A successful
+archive checksum verifies the available archive, not completeness of historical
+raw data. Missing traces require explicit final-report disclosure and cannot be
+silently replaced with the short pilots or new repeated episodes.

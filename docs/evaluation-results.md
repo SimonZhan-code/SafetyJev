@@ -4,6 +4,37 @@ These records distinguish trained current-frame classification, future-window
 forecasting, serving checks, and controller integration. Their targets and metrics
 are different; none yet establishes improved closed-loop safety.
 
+## Remaining base cases resumed on B: October 6 evening
+
+The user restarted B (`154.59.156.14:39237`, instance 54533396). Its CUDA check,
+remaining-family checkpoint/scene paths, and every saved base-runtime SHA-256
+matched. The original node was initially stopped, then its provider lookup became
+null, a stop request returned instance-not-found, and the data service reported a
+missing filesystem snapshot. These observations do not establish who removed it.
+
+The locally recovered `sweep.json` contains all 110 completed non-Jar case records.
+Those exact records, the original plan/source hashes and interrupted Cabinet
+record were restored on B. The unchanged evaluator skipped the 110 completed
+cases and resumed Cabinet `task_0026/base` at attempt 2. Remaining ownership is
+9 Cabinet plus 55 Clutter cases on B; its 26 completed Jar cases are untouched.
+`base-migration-20261006.json` records the move and source manifest hash separately
+from the original immutable partition assignment. No OOD queue is running.
+
+Recovery is incomplete: a full Jar backup is local, and saved Lid/Stack reports,
+audits, the original all-family summary and all 110 task outcomes survive, but
+many original images and per-frame traces were not copied before A became
+unavailable. Do not present these traces as backed up or freshly audited. Cabinet
+classification computed from only the resumed episodes must not be labeled as a
+35-case classification result. The report collector suppresses mismatched episode
+sets; its completion job will request audit review if evidence is incomplete.
+
+The isolated shutdown coordinator now runs on B with a non-secret provider receipt
+showing A absent. It waits for 200 terminal case records, archives available data,
+permits a 20-minute verified local-backup grace period and stops B using only B's
+local credential. The local one-shot backup now targets B. Report/backup handling
+does not imply that missing historical traces have been recovered. No hourly
+monitor was created. Local tests: **73 run, 2 integration checks skipped**.
+
 ## Interrupted base sweep and restart request: October 6 evening
 
 Disk recovery and provider status checks confirm **136/200 completed base cases**:

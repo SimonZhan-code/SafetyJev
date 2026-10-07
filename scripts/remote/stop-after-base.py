@@ -57,24 +57,29 @@ def own_stop(worker,status):
     raise RuntimeError('Vast stop request failed after 30 attempts; no credentials logged')
 
 
-def peer_stopped_receipt(path):
+def peer_stopped_receipt(path,expected_worker="node-b"):
     """Validate the operator-saved, non-secret Vast status for the completed peer."""
     data=read(Path(path))
-    if (data.get('source')!='vastai show instance' or str(data.get('id'))!=IDS['node-b']
-            or data.get('actual_status') not in ('exited','stopped')
-            or data.get('intended_status')!='stopped' or data.get('cur_state')!='stopped'
+    absent=data.get('instance_found') is False
+    stopped=(data.get('actual_status') in ('exited','stopped')
+             and data.get('intended_status')=='stopped' and data.get('cur_state')=='stopped')
+    if (data.get('source')!='vastai show instance' or str(data.get('id'))!=IDS[expected_worker]
+            or not (absent or stopped)
             or not isinstance(data.get('checked_unix_s'),(int,float))
             or not 0<data['checked_unix_s']<=time.time()+60):
         raise RuntimeError('Completed peer is not confirmed stopped')
     return data
 
 
-def node_a(status,backup_grace_s,peer_stopped=None):
-    peer=peer_stopped_receipt(peer_stopped) if peer_stopped else None
+def node_a(status,backup_grace_s,peer_stopped=None,coordinator_worker="node-a"):
+    peer_worker="node-b" if coordinator_worker=="node-a" else "node-a"
+    peer=peer_stopped_receipt(peer_stopped,peer_worker) if peer_stopped else None
+    if coordinator_worker!="node-a" and not peer:raise RuntimeError("Migrated coordinator needs inactive-peer evidence")
     spec=importlib.util.spec_from_file_location('report',ROOT/'scripts/reporting/build-id-ood-report.py')
     report=importlib.util.module_from_spec(spec);spec.loader.exec_module(report)
+    if peer:save(ART/'completed-peer-stopped.json',peer)
     resources=read(ART/'domain-sweep-resources.json')
-    save(status,{'status':'waiting_for_200_base_cases','worker':'node-a'})
+    save(status,{'status':'waiting_for_200_base_cases','worker':coordinator_worker})
     while True:
         a=read(BASE/'progress.json');b=read(DOMAIN/'jar-base/progress.json')
         if a.get('status')=='finished' and b.get('status')=='finished' and read(DOMAIN/'jar-base/transfer-complete.json').get('status')=='complete':
@@ -94,7 +99,9 @@ def node_a(status,backup_grace_s,peer_stopped=None):
     inputs=[(BASE,'base-sweep-20261006'),(DOMAIN/'jar-base','domain-evaluation-20261006/jar-base'),
             (ART/'domain-sweep-resources.json','domain-sweep-resources.json'),
             (ROOT/'configs/two-node-assignments.json','two-node-assignments.json'),
-            (ART/'base-report-status.json','base-report-status.json'),(ROOT/'output/pdf','output/pdf')]
+            (ART/'base-report-status.json','base-report-status.json'),(ROOT/'output/pdf','output/pdf'),
+            (BASE.parent/'base-migration-20261006.json','base-migration-20261006.json'),
+            (ART/'completed-peer-stopped.json','completed-peer-stopped.json')]
     meta=read(ART/'base-archive-ready.json')
     reusable=False
     if ARCHIVE.exists() and meta.get('totals')==data['totals'] and meta.get('bytes')==ARCHIVE.stat().st_size:
@@ -125,7 +132,7 @@ def node_a(status,backup_grace_s,peer_stopped=None):
     else:
         save(status,{'status':'waiting_for_node_b_ack','local_backup_confirmed':local})
         while read(DOMAIN/'jar-base/node-b-stop-ack.json').get('archive_sha256')!=digest:time.sleep(10)
-    own_stop('node-a',status)
+    own_stop(coordinator_worker,status)
 
 
 def node_b(status):
@@ -158,15 +165,16 @@ def node_b(status):
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--worker',choices=list(IDS),required=True)
     p.add_argument('--backup-grace-s',type=int,default=1200)
-    p.add_argument('--peer-stopped-receipt',type=Path,help='Node A only: operator-verified Vast status of the already-stopped completed Jar node')
+    p.add_argument('--peer-stopped-receipt',type=Path,help='Operator-verified provider status of the inactive peer')
+    p.add_argument('--coordinator',action='store_true',help='Own both saved base roots and finish archive/stop locally after migration')
     args=p.parse_args()
-    if args.peer_stopped_receipt and args.worker!='node-a':p.error('--peer-stopped-receipt is only valid for node-a')
+    if args.peer_stopped_receipt and args.worker!='node-a' and not args.coordinator:p.error('Migrated peer receipt requires --coordinator')
     if os.environ.get('CONTAINER_ID')!=IDS[args.worker]:raise RuntimeError('Wrong instance for selected worker')
     if not os.environ.get('CONTAINER_API_KEY'):raise RuntimeError('Local instance credential unavailable')
     ART.mkdir(parents=True,exist_ok=True)
     status=ART/'automatic-stop-status.json'
     try:
-        if args.worker=='node-a':node_a(status,args.backup_grace_s,args.peer_stopped_receipt)
+        if args.worker=='node-a' or args.coordinator:node_a(status,args.backup_grace_s,args.peer_stopped_receipt,args.worker)
         else:node_b(status)
     except Exception as exc:
         # Do not render arbitrary exception text: subprocess arguments can contain a credential.
