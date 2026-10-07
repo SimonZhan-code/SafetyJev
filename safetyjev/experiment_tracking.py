@@ -13,7 +13,7 @@ CONFIG_KEYS = {
     'model': ('model_id', 'revision', 'dtype', 'lora_rank', 'max_length', 'min_pixels', 'max_pixels', 'gradient_checkpointing'),
     'data': ('batch_size', 'num_workers', 'balance', 'prepare_in_workers', 'prefetch_factor'),
     'training': ('max_steps', 'lr', 'head_lr', 'weight_decay', 'warmup_steps', 'clip_grad_norm', 'brier_weight', 'eval_every', 'save_every', 'global_batch_size', 'accumulation'),
-    'evaluation': ('max_batches', 'validation_samples', 'run_test'),
+    'evaluation': ('max_batches', 'validation_samples', 'validation_negative_samples', 'run_test'),
 }
 
 
@@ -27,6 +27,11 @@ def public_config(config):
     result = {key: config[key] for key in ('seed', 'deterministic') if key in config}
     for section, keys in CONFIG_KEYS.items():
         result[section] = {key: config[section][key] for key in keys if key in config.get(section, {})}
+    if config.get('task') in ('classifier', 'predictor_judge'):
+        result['task'] = config['task']
+    sampling = config.get('data', {}).get('sampling')
+    if isinstance(sampling, dict):
+        result['data']['sampling'] = {k: sampling[k] for k in ('positive_fraction', 'samples_per_epoch') if k in sampling}
     if "model_id" in result["model"] and not is_remote_model_id(result["model"]["model_id"]):
         result["model"]["model_id"] = "local-model"
     return result
@@ -84,6 +89,8 @@ class ExperimentTracker:
         self.run.define_metric('optimizer_step')
         self.run.define_metric('train/*', step_metric='optimizer_step')
         self.run.define_metric('validation/*', step_metric='optimizer_step')
+        self.run.define_metric('final_validation/*', step_metric='optimizer_step')
+        self.run.define_metric('test/*', step_metric='optimizer_step')
         state = {'id': run_id, 'project': project, 'entity': entity, 'attempt': self.attempt,
                  'name': os.environ.get('WANDB_NAME') or (old or {}).get('name') or self.output.name}
         temporary = state_path.with_suffix('.tmp')

@@ -1,4 +1,4 @@
-"""Build a classifier inference bundle, then optionally publish to a new private model repo."""
+"""Build a SafetyJev inference bundle, then optionally publish to a new private model repo."""
 import argparse
 import hashlib
 import json
@@ -11,7 +11,7 @@ from .experiment_tracking import public_config,is_remote_model_id
 
 
 MODEL_FILES = {
-    'model.json', 'head.pt', 'adapter/adapter_config.json', 'adapter/adapter_model.safetensors',
+    'model.json', 'head.pt', 'predictor_judge.pt', 'adapter/adapter_config.json', 'adapter/adapter_model.safetensors',
     'processor/processor_config.json', 'processor/preprocessor_config.json',
     'processor/tokenizer.json', 'processor/tokenizer_config.json',
     'processor/special_tokens_map.json', 'processor/added_tokens.json',
@@ -19,7 +19,9 @@ MODEL_FILES = {
     'processor/video_preprocessor_config.json',
 }
 METRIC_KEYS = ('evaluated', 'nll', 'brier', 'accuracy', 'confusion', 'answers', 'by_query',
-               'temperature', 'ece', 'model_time_seconds', 'time_scope')
+               'temperature', 'ece', 'model_time_seconds', 'time_scope',
+               'samples', 'micro', 'by_constraint', 'by_family_constraint', 'by_valid_steps',
+               'events', 'safe_source_episodes', 'threshold', 'model_batch_seconds', 'interpretation')
 
 
 def sha256(path):
@@ -45,10 +47,20 @@ def checkpoint_hashes(model):
     return result
 
 
+def model_task(config):
+    if config.get('method') == 'native_qwen_visual_noul' and config.get('history_frames') == 1:
+        return 'classifier'
+    if config.get('method') == 'native_qwen_action_conditioned_noul':
+        return 'predictor_judge'
+    raise ValueError('Expected a current-camera classifier or Predictor Judge checkpoint')
+
+
 def validate_test_report(test, model, identity):
-    if test.get('task') != 'classifier' or test.get('split') != 'test':
-        raise ValueError('Expected a standalone classifier test report')
-    if not test.get('expected_samples') or test.get('evaluated') != test['expected_samples']:
+    task = model_task(json.loads((Path(model)/'model.json').read_text()))
+    if test.get('task') != task or test.get('split') != 'test':
+        raise ValueError('Expected a standalone '+task+' test report')
+    count = test.get('samples') if task == 'predictor_judge' else test.get('evaluated')
+    if not test.get('expected_samples') or count != test['expected_samples']:
         raise ValueError('Test report does not cover the complete split')
     if test.get('checkpoint_sha256') != checkpoint_hashes(model):
         raise ValueError('Test report was produced by another checkpoint')
@@ -67,18 +79,19 @@ def build_export(run, test_report, output):
         raise ValueError('Cannot export a capped development evaluation as a completed experiment')
     model = run/'final/model'
     config = json.loads((model/'model.json').read_text())
-    if config.get('method') != 'native_qwen_visual_noul' or config.get('history_frames') != 1:
-        raise ValueError('This export entrypoint expects a current-camera classifier')
+    task = model_task(config)
     if not is_remote_model_id(config.get('model_id')) or not re.fullmatch(r'[a-fA-F0-9]{40}', str(config.get('revision'))):
         raise ValueError('Export requires a remote backbone pinned to a full commit revision')
     test = json.loads(Path(test_report).read_text())
     validate_test_report(test, model, final['identity'])
     hashes = checkpoint_hashes(model)
     required = {'processor/processor_config.json', 'processor/tokenizer.json'}
+    if task == 'predictor_judge':
+        required.add('predictor_judge.pt')
     if config.get('lora_rank'):
         required |= {'adapter/adapter_config.json', 'adapter/adapter_model.safetensors'}
     if not required.issubset(hashes):
-        raise ValueError('Missing processor or adapter files')
+        raise ValueError('Missing processor, adapter or Predictor Judge numeric weights')
     # Unknown inference files must be reviewed, not silently dropped.
     extra = {str(p.relative_to(model)) for p in model.rglob('*') if p.is_file()} - MODEL_FILES - {'adapter/README.md'}
     if extra:
@@ -104,13 +117,13 @@ def build_export(run, test_report, output):
         (stage/'metrics.json').write_text(json.dumps(metrics, indent=2, allow_nan=False)+'\n')
         run_config = json.loads((run/'run.json').read_text())['config']
         identity = final['identity']
-        provenance = {'task': 'current-camera classifier', 'answer_order': ['No', 'Yes'],
+        provenance = {'task': task, 'answer_order': ['No', 'Yes'],
                       'config': public_config(run_config), 'source_checkpoint_sha256': hashes,
                       'training': {k: final['training'][k] for k in ('completed_step', 'best_step', 'best_nll') if k in final['training']},
                       'data': {k: identity[k] for k in ('package_sha256', 'split_hashes')},
                       'sources': identity.get('sources', {}), 'runtime': identity.get('runtime', {})}
         (stage/'provenance.json').write_text(json.dumps(provenance, indent=2, allow_nan=False)+'\n')
-        (stage/'README.md').write_text('''---
+        classifier_card = '''---
 library_name: peft
 tags:
 - safetyjev
@@ -134,7 +147,37 @@ measure false alarms in a natural population of wholly safe episodes. Some
 questions have missing positive/negative support; inspect per-question metrics.
 
 Preserve all applicable base-model and dataset terms when using this artifact.
-''')
+'''
+        judge_card = '''---
+library_name: peft
+tags:
+- safetyjev
+- predictor-judge
+---
+# SafetyJev Predictor Judge
+
+Adjacent overview/wrist RGB observations, current robot state, masked remaining
+commands and a natural-language constraint yield shared No/Yes scores. Yes means
+a new constraint violation during the valid remaining command suffix. No does
+not certify the whole task. Monitor states and AP truth are supervision only.
+
+`model/` contains the language adapter, shared head, processor and
+`predictor_judge.pt` (state/action projections and training normalization).
+The pinned backbone in `model/model.json` is downloaded separately. Load with
+`jev.predictor_judge_model.PredictorJudgeModel.load` from the corresponding
+SafetyJev Open-Jev fork. This is not a standalone AutoModel checkpoint.
+
+`metrics.json` contains full validation/test window, constraint and event metrics;
+`provenance.json` records training parameters and data/source hashes. Training
+samples are event-balanced; validation/test retain the supplied distribution.
+Adjacent windows are correlated, and constraints without positive examples have
+no recall evidence. Event metrics cover only events with eligible windows.
+Scores are not established deployment probabilities or evidence of intervention
+benefits. Read the recorded threshold when interpreting classification metrics.
+
+Preserve all applicable base-model and dataset terms when using this artifact.
+'''
+        (stage/'README.md').write_text(judge_card if task == 'predictor_judge' else classifier_card)
         files = {str(p.relative_to(stage)): sha256(p) for p in sorted(stage.rglob('*')) if p.is_file()}
         (stage/'manifest.json').write_text(json.dumps({'files_sha256': files}, indent=2)+'\n')
         stage.rename(output)
@@ -161,7 +204,7 @@ def upload_export(folder, repo_id, *, api=None):
     # accidentally publish into an existing public repository.
     api.create_repo(repo_id=repo_id, repo_type='model', private=True, exist_ok=False)
     return api.upload_folder(repo_id=repo_id, repo_type='model', folder_path=str(folder),
-                             commit_message='Add classifier model and evaluation')
+                             commit_message='Add model and evaluation')
 
 
 def main(argv=None):

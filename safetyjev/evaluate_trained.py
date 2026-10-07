@@ -42,13 +42,12 @@ def run(args):
         if args.threshold!=.5:raise ValueError('Classifier reports use the fixed 0.5 No/Yes threshold')
         report,_,_=evaluate_visual(model,loader,output=output.with_suffix('.jsonl'))
     report.update(task=args.task,split=args.split,expected_samples=len(data),checkpoint=str(args.checkpoint))
-    if args.task=='classifier':
-        from .model_export import checkpoint_hashes,sha256
-        def provenance():
-            return {'checkpoint_sha256':checkpoint_hashes(args.checkpoint),
-                    'package_sha256':sha256(package/'dataset_metadata.json'),
-                    'split_sha256':sha256(package/(args.split+'.jsonl'))}
-        report.update(_rank_zero_call(provenance))
+    from .model_export import checkpoint_hashes,sha256
+    def provenance():
+        return {'checkpoint_sha256':checkpoint_hashes(args.checkpoint),
+                'package_sha256':sha256(package/'dataset_metadata.json'),
+                'split_sha256':sha256(package/(args.split+'.jsonl'))}
+    report.update(_rank_zero_call(provenance))
     count=report['samples'] if args.task=='predictor_judge' else report['evaluated']
     if count!=len(data):raise ValueError('Evaluation coverage differs from the complete split')
     def publish():

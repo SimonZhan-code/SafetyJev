@@ -1,4 +1,4 @@
-# Install the matching CUDA torch/torchvision wheels first; see docs/visual-training.md.
+# Install the matching CUDA torch/torchvision wheels first; see README.md#training-environment.
 torch==2.8.0
 torchvision==0.23.0
 transformers==5.10.2

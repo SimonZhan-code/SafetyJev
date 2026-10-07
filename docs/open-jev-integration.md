@@ -30,7 +30,7 @@ entrypoint.
 The fork's `main` branch carries the visual model and training extensions for
 SafetyJev. The model uses one current overview image and one current wrist image
 per question, retaining the scalar Noul head and `[No, Yes]` target convention.
-See [visual training](visual-training.md).
+See [classifier training](classifier-training.md).
 
 Maintain dependency changes on the fork's `main` branch and commit them there
 first. Then record that exact child commit in SafetyJev. Publish the child commit
@@ -41,4 +41,4 @@ part of this workflow.
 ## Dependencies
 
 The tested training dependencies are pinned in `requirements-visual.txt`.
-See [environment setup](visual-training.md#environment) for installation.
+See [environment setup](../README.md#training-environment) for installation.

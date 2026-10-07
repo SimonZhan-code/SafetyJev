@@ -7,6 +7,82 @@ that suffix**. Formal monitor states and AP truth are supervision, not model inp
 It judges action-conditioned safety; it does not generate future actions, states or images.
 The existing current-image classifier and agentic planner remain separate entrypoints.
 
+## Use a prepared dataset
+
+Use a recorded SafetyJev commit and its exact Open-Jev submodule:
+`git submodule update --init --recursive`. The reference below uses the existing
+released RGB observations and labels; no image regeneration or relabeling is needed.
+Keep this dataset revision fixed throughout an experiment. Install the
+[shared training environment](../README.md#training-environment) before the download
+commands below.
+
+The dataset is distributed through
+[SafetyJev-Predictor-Judge](https://huggingface.co/datasets/IDEAS-Lab-Northwestern/SafetyJev-Predictor-Judge).
+Sign in with your own Hugging Face account. External access requires approval;
+organization-member access follows the repository's gating settings.
+Use a completed release: `DATASET_SUMMARY.json` must report `status: complete`.
+
+From the **SafetyJev repository root**, download, verify and extract its independent ZIP parts:
+
+```bash
+.venv-visual/bin/hf auth login
+.venv-visual/bin/hf download IDEAS-Lab-Northwestern/SafetyJev-Predictor-Judge \
+  --repo-type dataset --revision c8d64200d3744a111eed9941f8b65e0a486403ea \
+  --local-dir downloads/predictor_judge
+.venv-visual/bin/python -c 'import json; assert json.load(open("downloads/predictor_judge/DATASET_SUMMARY.json"))["status"] == "complete"'
+(cd downloads/predictor_judge && sha256sum -c SHA256SUMS)
+(set -e
+ for archive in downloads/predictor_judge/predictor-judge-*.zip; do
+   unzip -oq "$archive"
+ done)
+```
+
+The pinned release contains 532 episodes across six task families:
+
+| Split | Episodes | Unsafe / safe | Positive / negative windows |
+|---|---:|---:|---:|
+| Train | 332 | 332 / 0 | 2,201 / 2,269,700 |
+| Validation | 100 | 20 / 80 | 155 / 792,912 |
+| Test | 100 | 31 / 69 | 168 / 874,240 |
+
+Download size is approximately 213.6 GB in 31 ZIP parts; extracted raw data and
+indices total 245.5 GB, excluding the cache, model and training outputs. Window
+counts are not independent events. Training resamples the supplied pool; validation
+and test retain their supplied distributions.
+
+Every part contains paths beneath `datasets/predictor_judge/`; extract all parts
+from the repository root, not from inside `datasets/`. Keep the dataset revision
+returned by Hugging Face with the experiment record. Downloads can resume.
+For limited disk space, download, verify and extract one part at a time, then
+remove that downloaded ZIP; keep all extracted files.
+
+Place the delivered directory at `datasets/predictor_judge/`:
+
+```text
+datasets/predictor_judge/
+  README.md
+  raw/<episode_id>/
+  package/
+    dataset_metadata.json
+    train.jsonl
+    validation.jsonl
+    test.jsonl
+    checksums/
+```
+
+Set `data.package` to `datasets/predictor_judge/package`. The package uses relative
+paths into `raw/`; keep these two directories together. A delivered package already
+contains window labels, frozen splits and training normalization. No resplitting
+or relabeling is needed: continue with **Experiment tracking** and **Cache, train
+and evaluate** below. Its dataset
+README and composition report describe the exact included episodes. Inventory rows
+for nonselected source episodes are provenance only and need not be downloaded.
+
+Keep original dataset files under `datasets/`, disposable caches under
+`datasets/cache/`, and training runs under `outputs/predictor_judge/training/`.
+Preparation and transfer reports belong under `outputs/predictor_judge/preparation/`.
+The existing classifier directories are independent and do not need to move.
+
 ## Capture raw rollouts
 
 Capture uses a ManiGuard checkout with passive recording API 1. The collector does
@@ -160,9 +236,39 @@ a constraint already rejected at t is not a new-violation target. Temporal const
 remain present with their original GT semantics. Short observations may omit relevant
 past events; no privileged monitor memory is silently added to compensate.
 
+## Experiment tracking
+
+Install the pinned visual environment in [training environment](../README.md#training-environment),
+including the tracking extra when using W&B:
+
+```bash
+.venv-visual/bin/python -m pip install -e '.[tracking]'
+export SAFETYJEV_TRACKING=wandb
+export WANDB_ENTITY='<team>'
+export WANDB_PROJECT='<experiment-project>'
+export WANDB_NAME='<unique-run-name>'
+export WANDB_TAGS='predictor-judge'
+export WANDB_MODE=online
+```
+
+Authenticate W&B and Hugging Face on the training host using environment credentials
+or their login tools. Repository configuration contains no account credentials.
+`WANDB_MODE=offline` records SDK files for later synchronization;
+`SAFETYJEV_TRACKING=none` uses local logs only.
+
+Only rank zero opens a W&B run. `tracking.json` preserves its ID across resume;
+do not set `WANDB_RUN_ID` or reuse an output directory for a different experiment.
+Logs include loss, throughput, memory and validation metrics, including event recall
+and false alarms. Full validation is logged separately from the diagnostic subset.
+Numeric experiment parameters are logged; source data and filesystem paths are not
+uploaded by this integration. W&B may collect its normal runtime metadata.
+Startup authentication/SDK errors stop the run. Later telemetry failures warn while
+training continues with local logs. The local `training.jsonl`, evaluation reports
+and checkpoints remain the authoritative artifacts.
+
 ## Cache, train and evaluate
 
-Use the environment in [visual training](visual-training.md), from the repository root.
+Use the environment in [training environment](../README.md#training-environment), from the repository root.
 The classifier and Predictor Judge share the optimizer/DDP/checkpoint engine. The
 Predictor Judge adds trainable state/action projections to the language LoRA and
 scalar head; the base weights and vision encoder stay frozen.
@@ -185,11 +291,18 @@ budget checks with transaction headroom. Keep the package and referenced raw rec
 available. Build indices recursively from a campaign root with `build --episodes`;
 duplicate episode IDs are rejected rather than silently counted twice.
 
+The delivered archives do not contain this cache. Reserve space for both the
+extracted dataset and a cache holding its referenced images plus database overhead,
+as well as the model and training checkpoints. `DATASET_SUMMARY.json` reports the
+download and extracted sizes; `--max-gib` can bound the cache's disk usage. If a
+build stops, rerun the same preparation command to resume. Run `--verify-only`
+successfully before starting training; a budget-stopped cache is not ready to use.
+
 `configs/training/predictor_judge_27b_reference.json` specifies the pinned backbone,
 three adjacent frames per camera, worker preprocessing, event-balanced training,
-global batch 128 and 1,000 optimizer updates. This is a starting experimental budget,
-not evidence of convergence. The configured 128,000 draws per sampler epoch use
-replacement; inspect distinct event counts as well as draw counts.
+global batch 128 and an initial 100 optimizer updates. Its 12,800 training draws
+use replacement; inspect distinct event counts as well as draw counts. This is
+a starting experimental budget, not evidence of convergence.
 
 Download the model once, before launching ranks/workers:
 
@@ -210,7 +323,7 @@ OMP_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false .venv-visual/bin/python tools/pro
 
 NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
   --config configs/training/predictor_judge_27b_reference.json \
-  --output outputs/predictor-judge-training/27b
+  --output outputs/predictor_judge/training/27b
 ```
 
 The reference uses per-device batch 8, global batch 128 and two loader workers
@@ -226,7 +339,7 @@ sufficiently large GPU (16 accumulation steps). Override `--batch-size`,
 `--global-batch-size` and `--workers` as needed; accumulation is derived from
 global batch / (GPUs × microbatch), which must be an integer.
 Per-device batch 8 passed four-rank tests on pilot captures; eight-rank execution
-and the completed collection package remain to be validated.
+and full-model training on the completed collection package remain to be validated.
 DDP replicates the full backbone per GPU. This model processes up to six images,
 versus the classifier's two, so memory and throughput must be measured separately.
 GPU count does not change the data or model interface. See the shared guide for
@@ -244,8 +357,8 @@ set appropriately. It runs two updates with capped evaluation, not a quality tes
 ```bash
 NPROC_PER_NODE=8 bash scripts/train_predictor_judge.sh \
   --config configs/training/predictor_judge_27b_reference.json \
-  --output outputs/predictor-judge-training/27b \
-  --resume outputs/predictor-judge-training/27b/checkpoints/step-00000025
+  --output outputs/predictor_judge/training/27b \
+  --resume outputs/predictor_judge/training/27b/checkpoints/step-00000025
 ```
 
 Resume requires matching model, data, source, training configuration and world size;
@@ -261,21 +374,74 @@ indices, split hash and per-constraint population/selected counts are saved in
 `validation-subset.json` and reproduced on resume. Each diagnostic report identifies
 its sampled distribution: its precision and NLL are not population estimates.
 Constraints with no positive events remain without recall evidence.
-Finalization evaluates the selected model on **full validation and test**, without
-label balancing. A smoke-only `max_batches` cap can truncate either evaluation and
-is recorded explicitly; leave it null for training-quality evaluation.
-For independent full evaluation, including multi-GPU evaluation:
+The reference configuration sets `evaluation.run_test=false`: development training
+does not construct or iterate a test loader. Finalization evaluates the selected
+model on **full validation**, without label balancing, and saves it in `final/model`.
+The final report records `test_status: not_evaluated`. Setting `run_test=true`
+explicitly also evaluates test on completion. A smoke-only `max_batches` cap can
+truncate evaluation; keep it null for the reference experiment.
+
+After choosing the experiment and checkpoint using validation, run the independent
+full test once. Multi-GPU evaluation is supported:
 
 ```bash
 NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task predictor_judge \
-  --checkpoint outputs/predictor-judge-training/27b/final/model \
+  --checkpoint outputs/predictor_judge/training/27b/final/model \
   --package datasets/predictor_judge/package --frame-cache datasets/cache/predictor_judge \
-  --split test --workers 2 --output outputs/predictor-judge-test.json
+  --split test --batch-size 8 --workers 2 \
+  --output outputs/predictor_judge/training/27b/final-test.json
 ```
 
 The evaluator checks complete split coverage and writes both a report and per-window
-JSONL scores. Threshold defaults to 0.5; any alternative must be chosen on validation
+JSONL scores, including hashes of the model (numeric projections included), dataset
+and split. Threshold defaults to 0.5; any alternative must be chosen on validation
 and frozen before test evaluation. There is no separate calibration split.
+
+## Export and publish the selected checkpoint
+
+After full validation and the independent test, build the inference bundle:
+
+```bash
+.venv-visual/bin/python -m safetyjev.model_export build \
+  --run outputs/predictor_judge/training/27b \
+  --test-report outputs/predictor_judge/training/27b/final-test.json \
+  --output outputs/predictor_judge/exports/reference
+
+.venv-visual/bin/python -m safetyjev.model_export upload \
+  --folder outputs/predictor_judge/exports/reference \
+  --repo-id '<owner>/<model-repo>'
+```
+
+The shared exporter identifies the model type from its configuration. It requires
+a completed run, uncapped validation and a full standalone test whose checkpoint,
+dataset and split hashes match. The bundle contains:
+
+```text
+reference/
+  model/          # language adapter, shared head, processor, model configuration
+    predictor_judge.pt  # state/action projections and training normalization
+  metrics.json    # validation/test window, constraint and event metrics
+  provenance.json # experiment parameters and source/data hashes
+  manifest.json   # exported file checksums
+  README.md
+```
+
+The upload command verifies the bundle and creates a new private HF model repository.
+Use a distinct repository for each experiment; existing repositories are not overwritten.
+If upload fails after creation, inspect the destination and resume with the HF CLI.
+Keep the returned revision with the experiment record. Optimizer/RNG state and
+per-window prediction files remain in the local run; this bundle is for inference,
+not exact training resume. Retain the local run until delivery is confirmed.
+
+Download the published repository with `hf download '<owner>/<model-repo>'
+--revision '<commit>' --local-dir '<destination>'`, then load `<destination>/model`
+with `jev.predictor_judge_model.PredictorJudgeModel.load`. The loader obtains the
+pinned frozen backbone separately; the artifact is not an AutoModel checkpoint.
+
+Deliver the code/submodule/data revisions, actual training configuration, W&B run
+link, HF model revision, validation/test reports and sampling-consumed report.
+Keep full test predictions available for error analysis. None of these steps
+requires integration with the agentic intervention loop.
 
 ## Interpret the evaluation
 

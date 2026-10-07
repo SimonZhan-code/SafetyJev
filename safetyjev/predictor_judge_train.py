@@ -24,9 +24,25 @@ def training_source_hashes():
 
 
 def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
+    from .experiment_tracking import ExperimentTracker
+    tracker=ExperimentTracker(output,resume=resume)
+    status='failed'
+    try:
+        result=_run(config,output,tracker=tracker,device=device,resume=resume,stop_after=stop_after)
+        status=result.get('status',result.get('training',{}).get('status','completed'))
+        return result
+    finally:
+        tracker.finish(status)
+
+
+def _run(config,output,*,tracker,device='cuda:0',resume=None,stop_after=None):
     from jev.predictor_judge_model import PredictorJudgeModel
     from jev.visual_training import fit_updates
-    config=copy.deepcopy(config);world=int(os.environ.get('WORLD_SIZE','1'));rank=int(os.environ.get('RANK','0'))
+    config=copy.deepcopy(config)
+    run_test=config['evaluation'].get('run_test',True)
+    if type(run_test) is not bool:raise ValueError('evaluation.run_test must be Boolean')
+    splits=('train','validation','test') if run_test else ('train','validation')
+    world=int(os.environ.get('WORLD_SIZE','1'));rank=int(os.environ.get('RANK','0'))
     if 'validation_samples' in config['evaluation']:
         raise ValueError('Use evaluation.validation_negative_samples: all validation positives are retained, this budget counts negatives only')
     if world>1 and not dist.is_initialized():
@@ -44,6 +60,7 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         if (output/'final').exists():raise ValueError('Training has already finalized')
         (output/'sampling').mkdir(exist_ok=True)
     _rank_zero_call(create_output)
+    _rank_zero_call(lambda:tracker.start(config))
     seed=config['seed'];random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
     if device.startswith('cuda'):torch.cuda.manual_seed_all(seed)
     deterministic=config.get('deterministic',True)
@@ -53,7 +70,7 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         if os.environ['CUBLAS_WORKSPACE_CONFIG'] not in (':4096:8',':16:8'):raise ValueError('Invalid deterministic CUBLAS_WORKSPACE_CONFIG')
     torch.use_deterministic_algorithms(deterministic)
     package=Path(config['data']['package']).resolve();frame_cache=config['data'].get('frame_cache')
-    datasets={s:PredictorJudgeWindowDataset(package,s,**({'frame_cache':frame_cache} if frame_cache else {})) for s in ('train','validation','test')}
+    datasets={s:PredictorJudgeWindowDataset(package,s,**({'frame_cache':frame_cache} if frame_cache else {})) for s in splits}
     meta=datasets['train'].summary
     def verify_sources():
         for res in meta['resources'].values():
@@ -88,13 +105,13 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         indices=indices[rank::world]
         if limit is not None:indices=indices[:limit*size]
         return DataLoader(Subset(data,indices),batch_size=size,shuffle=False,**options,generator=torch.Generator().manual_seed(seed+200000+rank))
-    loaders={s:eval_loader(s,diagnostic=s=='validation') for s in ('validation','test')}
+    loaders={s:eval_loader(s,diagnostic=s=='validation') for s in splits if s!='train'}
     model=PredictorJudgeModel.from_pretrained(**model_cfg,device=device);model.set_normalization(**meta['normalization'])
     model.model_config['state_features']=meta['state_features'];model.model_config['normalization_source']='training groups only'
     params={'total':sum(p.numel() for p in model.parameters()),'trainable':sum(p.numel() for p in model.parameters() if p.requires_grad),
             'vision_trainable':sum(p.numel() for p in model.backbone.visual.parameters() if p.requires_grad)}
     if params['vision_trainable']:raise ValueError('Vision encoder must remain frozen')
-    identity={'package_sha256':file_hash(package/'dataset_metadata.json'),'data':config['data'],'evaluation':config['evaluation'],
+    identity={'package_sha256':file_hash(package/'dataset_metadata.json'),'split_hashes':meta['file_sha256'],'data':config['data'],'evaluation':config['evaluation'],
               'seed':seed,'world_size':world,'deterministic':deterministic,'sources':training_source_hashes(),
               'cublas_workspace_config':os.environ.get('CUBLAS_WORKSPACE_CONFIG'),
               'runtime':{name:importlib.metadata.version(name) for name in ('torch','torchvision','transformers','peft','numpy','av')}}
@@ -104,9 +121,10 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
         report=evaluate_predictor_judge(current,loaders['validation'],output=output/'evaluations'/f'validation-{step:08d}.jsonl')
         report['sampling']={**validation_sampling,'max_batches_per_rank':limit}
         if rank==0:(output/'evaluations'/f'validation-{step:08d}.json').write_text(json.dumps(report,indent=2)+'\n')
+        tracker.evaluation(report,step)
         return report['nll']
     if world>1:model=torch.nn.parallel.DistributedDataParallel(model,device_ids=[int(os.environ['LOCAL_RANK'])] if device.startswith('cuda') else None,broadcast_buffers=False)
-    trained=fit_updates(model,training_loader,config['training'],output,identity=identity,validation_fn=validation,resume=resume,stop_after=stop_after)
+    trained=fit_updates(model,training_loader,config['training'],output,identity=identity,validation_fn=validation,resume=resume,stop_after=stop_after,step_fn=tracker.step)
     def consumed():
         report=consumed_draw_report(train_rows,batch_size=size,seed=seed,epoch=trained['epoch'],batch_offset=trained['batch_offset'],world_size=world,**sampling)
         (output/'sampling-consumed.json').write_text(json.dumps(report,indent=2)+'\n');return report
@@ -116,11 +134,17 @@ def run(config,output,*,device='cuda:0',resume=None,stop_after=None):
     if device.startswith('cuda'):torch.cuda.empty_cache()
     model=PredictorJudgeModel.load(Path(trained['best_checkpoint'])/'model',device=device)
     validation_report=evaluate_predictor_judge(model,eval_loader('validation'),output=output/'evaluations/final-validation.jsonl')
-    test=evaluate_predictor_judge(model,loaders['test'],output=output/'evaluations/final-test.jsonl')
+    tracker.evaluation(validation_report,trained['completed_step'],'final_validation')
+    test=None
+    if run_test:
+        test=evaluate_predictor_judge(model,loaders['test'],output=output/'evaluations/final-test.jsonl')
+        tracker.evaluation(test,trained['completed_step'],'test')
     def finalize(stage):
         import shutil
-        shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl');model.save(stage/'model')
+        if run_test:shutil.copy2(output/'evaluations/final-test.jsonl',stage/'test.jsonl')
+        model.save(stage/'model')
         report={'training':trained,'parameters':params,'sampling':sampling_report,'validation':validation_report,'test':test,
+                'test_status':'evaluated' if run_test else 'not_evaluated',
                 'checkpoint_selection':{'metric':'diagnostic_validation_nll','sampling':validation_sampling},
                 'data_counts':meta['counts'],'label_reasons':meta['label_reasons'],'identity':identity,
                 'target':'new constraint violation during the actual remaining command suffix','checkpoint':str(output/'final/model'),

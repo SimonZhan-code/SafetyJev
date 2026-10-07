@@ -37,6 +37,7 @@
   },
   "evaluation": {
     "max_batches": null,
+    "run_test": false,
     "validation_negative_samples": 4096
   },
   "task": "predictor_judge"
