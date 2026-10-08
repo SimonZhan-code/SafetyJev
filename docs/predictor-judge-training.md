@@ -85,7 +85,8 @@ The existing classifier directories are independent and do not need to move.
 
 ## Capture raw rollouts
 
-Capture uses a ManiGuard checkout with passive recording API 1. The collector does
+New capture uses a ManiGuard checkout with passive recording API 1 and the generic
+source recorder (`maniguard/data/recording`). The collector does
 not query Jev, replace actions or change the policy's execution horizon. Run it with
 the simulator's Python environment after starting the desired policy server.
 
@@ -108,39 +109,40 @@ provenance paths are resolved from the command's original working directory.
 Supported action convention: seven absolute arm joint targets in radians plus the
 binarized gripper command, without IK conversion, with execute horizon at most eight.
 
-Each episode directory contains:
+The capture command selects ManiGuard's `high_fidelity.yaml` source profile and
+640-square observations. The policy server applies its own image processor.
+Override both `--source-profile` and `--camera-resolution` explicitly when using a
+different source profile.
 
-- `episode.json`, `initialization.json`: task, source, policy and control metadata.
-- `observations/`: lossless RGB PNGs; `observations.jsonl` indexes them by control step.
-- `states/`: chunked NPZ state arrays and per-step physical measurements, object states,
-  contact pairs, camera poses/calibration and assisted-grasp information. Calibration
-  includes USD projection parameters and image resolution; an unready intrinsic
-  matrix is marked unavailable rather than saved as valid zero focal lengths.
-- `proposals.jsonl`: full policy replies and the canonical prefix planned for execution.
-- `attempts.jsonl`, `execution.jsonl`, `events.jsonl`: submitted commands, commands whose
-  environment step returned, and observations/termination status. A failed observation
-  does not erase an action that was already applied.
-- `oracle.jsonl`: per-step AP values, per-constraint rejection states and available
-  predicate measurements, including liquid baselines and contained-particle counts.
-- `snapshots/`: query-boundary scene/robot/controller/particle snapshots and monitor/RNG
-  state for recorded-command replay. The remote policy server's RNG is not included.
-- `record.json`: compact episode index consumed by the package builder.
-- `episode_status.json`: completion or failure state, with pending attempts retained.
-- `recording_timings.json`: observer callback costs, separate from policy and simulation time.
+New episodes contain `episode.json`, `trajectory.hdf5`, `events.jsonl`,
+`snapshots.hdf5`, `task_scene.json` and `diagnostics.jsonl`. Five source views are
+stored once as JPEG blobs in HDF5. Robot state, command stages, proposal bounds,
+AP values and per-constraint monitor verdicts share the observation timeline.
+Snapshots require the corresponding simulator and assets for replay; they are not
+training inputs or a promise of bitwise replay.
 
-Snapshots require the matching scene/assets and simulator to restore. They are not a
-promise of bitwise replay. Base scene copies are saved as `task_scene.json` and
-`task_diagnostics.jsonl` when available. Camera PNG bytes remain the training observation
-source; preview MP4 playback FPS is not the control clock.
+The existing released PNG/`record.json` dataset remains supported. It is not
+rewritten by the new capture entrypoint. New source preparation uses ManiGuard's
+public offline reader, without launching Isaac Sim or evaluating predicates again.
+Training itself needs only SafetyJev and its data dependencies.
 
 ## Construct the training package
 
 ```bash
 python -m safetyjev.predictor_judge_commands build \
+  --maniguard-root /path/to/ManiGuard \
   --episodes datasets/predictor_judge/raw \
   --output datasets/predictor_judge/package --history-frames 3 --seed 42 \
   --split-manifest /path/to/group-splits.json --train-episodes unsafe_only
 ```
+
+For new HDF5 recordings, the builder writes small derived episode indices beneath
+`package/records/`. These reference the original source JPEGs; it does not extract
+or recompress a second image corpus. The same DataLoader and training cache read
+both source formats. Cached and direct inputs have the same masks and labels.
+Source preparation requires `h5py`, `msgpack` and the ManiGuard checkout; the
+training cache keeps only the views and windows used by this model. The other
+source views and snapshots remain available for future consumers.
 
 Freeze `group-splits.json` before reviewing collection outcomes. It maps base-task
 IDs such as `jar_transport/task_0000` to `train`, `validation` or `test`. All conditions,
@@ -282,7 +284,7 @@ Prepare the package above, then build its disposable training cache **on the ser
   --package datasets/predictor_judge/package --output datasets/cache/predictor_judge --verify-only
 ```
 
-The SQLite cache deduplicates original PNG images and numeric/history windows
+The SQLite cache deduplicates original encoded images (PNG or JPEG) and numeric/history windows
 shared by constraint questions, and indexes JSONL offsets. It does not change labels,
 resize the source images or duplicate the raw archive. Preparation checks raw record
 and media identities and image hashes; reads check cached payload hashes. Incomplete

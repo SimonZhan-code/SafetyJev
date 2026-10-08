@@ -32,8 +32,10 @@ class PredictorJudgeCommandTests(unittest.TestCase):
     def test_capture_forwards_user_settings_without_mutating_args(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);p=root/'maniguard/eval';p.mkdir(parents=True);(p/'recording.py').write_text('RECORDING_API_VERSION = 1\n')
+            source=root/'maniguard/data/recording';source.mkdir(parents=True);(source/'observer.py').touch()
             args=['--seed','0'];cmd,env=capture_command(root,'raw','p.json',args)
-            self.assertEqual(args,['--seed','0']);self.assertIn('safetyjev.predictor_judge_capture:create_observer',cmd)
+            self.assertEqual(args,['--seed','0']);self.assertIn('maniguard.data.recording.observer:create_observer',cmd)
+            self.assertIn('--source-profile',cmd);self.assertIn('640',cmd)
             self.assertTrue(env['PYTHONPATH'].startswith(str(root)))
     def test_build_discovers_nested_campaign_episodes_once(self):
         from unittest.mock import patch

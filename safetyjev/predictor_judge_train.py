@@ -72,9 +72,10 @@ def _run(config,output,*,tracker,device='cuda:0',resume=None,stop_after=None):
     package=Path(config['data']['package']).resolve();frame_cache=config['data'].get('frame_cache')
     datasets={s:PredictorJudgeWindowDataset(package,s,**({'frame_cache':frame_cache} if frame_cache else {})) for s in splits}
     meta=datasets['train'].summary
+    from .predictor_judge_dataset import resource_record_path
     def verify_sources():
         for res in meta['resources'].values():
-            if file_hash(package/res['raw_root']/'record.json')!=res['record_sha256']:raise ValueError('Raw source identity changed')
+            if file_hash(resource_record_path(package,res))!=res['record_sha256']:raise ValueError('Raw source identity changed')
             if file_hash(package/res['media_manifest'])!=res['media_manifest_sha256']:raise ValueError('Media manifest identity changed')
     _rank_zero_call(verify_sources)
     workers=config['data'].get('num_workers',0);sampling=dict(config['data'].get('sampling',{}))

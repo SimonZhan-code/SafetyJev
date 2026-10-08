@@ -71,6 +71,13 @@ class JudgeHandoffTests(unittest.TestCase):
         from safetyjev.predictor_judge_dataset import PredictorJudgeWindowDataset
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);package=cache_tests.JudgeCacheTests().package(root)
+            # Source-format packages keep derived indices in package/records.
+            (package/'records').mkdir(exist_ok=True)
+            metadata=json.loads((package/'dataset_metadata.json').read_text())
+            for eid,res in metadata['resources'].items():
+                res['record_file']='records/'+eid+'.json'
+                (package/res['raw_root']/'record.json').rename(package/res['record_file'])
+            (package/'dataset_metadata.json').write_text(json.dumps(metadata))
             config={'seed':42,'model':{'dtype':'float32'},
                     'data':{'package':str(package),'batch_size':1,'num_workers':0,'sampling':{'samples_per_epoch':16}},
                     'training':{'max_steps':2,'global_batch_size':2,'lr':.01,'head_lr':.01,'weight_decay':0.,

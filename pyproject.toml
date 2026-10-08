@@ -10,9 +10,9 @@ requires-python = ">=3.9"
 dependencies = []
 
 [project.optional-dependencies]
-data = ["numpy>=1.24", "av>=12", "Pillow>=9"]
+data = ["numpy>=1.24", "av>=12", "Pillow>=9", "h5py>=3.10", "msgpack>=1"]
 tracking = ["wandb>=0.19,<1"]
-train-data = ["numpy>=1.24", "av>=12", "Pillow>=9", "torch>=2"]
+train-data = ["numpy>=1.24", "av>=12", "Pillow>=9", "torch>=2", "h5py>=3.10", "msgpack>=1"]
 
 [project.scripts]
 safetyjev = "safetyjev.cli:main"

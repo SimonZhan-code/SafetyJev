@@ -55,10 +55,7 @@ def build_cache(package,output,*,max_bytes=None):
                                 relative=e['observations'][t if step is None else step]['images'][camera]
                                 imagekey=hashlib.sha256(json.dumps([row['episode_id'],relative]).encode()).hexdigest()
                                 if not db.execute('SELECT 1 FROM images WHERE key=?',(imagekey,)).fetchone():
-                                    path=(root/relative).resolve()
-                                    if not path.is_relative_to(root):raise ValueError('Image escapes source directory')
-                                    blob=path.read_bytes();digest=hashlib.sha256(blob).hexdigest()
-                                    if digest!=media[relative]:raise ValueError('Source image checksum differs')
+                                    blob=data.read_image(root,relative,media[relative]);digest=hashlib.sha256(blob).hexdigest()
                                     with Image.open(io.BytesIO(blob)) as im:im.load()
                                     db.execute('INSERT INTO images VALUES (?,?,?)',(imagekey,blob,digest))
                                 keys.append(imagekey)
@@ -66,7 +63,7 @@ def build_cache(package,output,*,max_bytes=None):
                         payload=json.dumps(values,allow_nan=False,separators=(',',':'))
                         db.execute('INSERT INTO windows VALUES (?,?,?)',(key,payload,hashlib.sha256(payload.encode()).hexdigest()))
                     if idx%100==0:db.commit();budget()
-                db.commit();budget()
+                db.commit();budget();data.close()
             for table,column in [('windows','payload'),('images','png')]:
                 for payload,digest in db.execute(f'SELECT {column},sha FROM {table}'):
                     if isinstance(payload,str):payload=payload.encode()

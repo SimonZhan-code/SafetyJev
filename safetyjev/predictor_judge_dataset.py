@@ -4,6 +4,7 @@ from collections import OrderedDict,Counter
 import hashlib,json,os,io
 from pathlib import Path
 import numpy as np
+from .source_episodes import MediaReader,load_source_record
 from .predictor_judge_schema import make_action_window,STATE_FEATURES,CAMERAS
 from .predictor_judge_data import build_predictor_judge_samples,split_groups
 
@@ -15,39 +16,56 @@ def file_hash(path):
     return h.hexdigest()
 
 
+def resource_record_path(package,res):
+    package=Path(package).resolve()
+    path=(package/res['record_file']).resolve() if res.get('record_file') else package/res['raw_root']/'record.json'
+    if res.get('record_file') and not path.is_relative_to(package):raise ValueError('Record escapes package')
+    return path
+
+
 def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.1,.1),
                   group_splits=None,unsafe_per_safe=4,active_motion_rad=.05,train_episodes='unsafe_only'):
     from PIL import Image
     from .predictor_judge_curation import inventory_episode,select_episodes,composition_report,write_summary
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False);(output/'BUILDING').touch()
     inventory=[];candidates={};resources={}
-    (output/'media').mkdir()
+    (output/'media').mkdir();(output/'records').mkdir()
     for directory in sorted(Path(d).resolve() for d in episode_dirs):
+        source=(directory/'trajectory.hdf5').is_file();preparation_error=None
         try:
-            e=json.loads((directory/'record.json').read_text())
-        except (OSError,ValueError):
+            e=load_source_record(directory) if source else json.loads((directory/'record.json').read_text())
+        except (OSError,ValueError,KeyError) as exc:
+            preparation_error=str(exc)
             # A crashed attempt may have episode.json but no finalized record.
             try:e=json.loads((directory/'episode.json').read_text())
             except (OSError,ValueError):e={}
+            if isinstance(e.get('observations'),int):e={}
             e.setdefault('episode_id',directory.name)
             e.setdefault('group_id',None)
         info=inventory_episode(e,active_motion_rad=active_motion_rad)
+        if preparation_error is not None:
+            info['quality_ok']=False;info['quality_reasons'].append('source_preparation: '+preparation_error)
         eid=info['episode_id']
         if not isinstance(eid,str) or not eid or eid in candidates:raise ValueError('Missing/duplicate episode ID')
         media={}
         if info['quality_ok']:
             try:
-                for observation in e['observations']:
-                    for relative in observation['images'].values():
-                        file=(directory/relative).resolve()
-                        if not file.is_relative_to(directory):raise ValueError('Image path escapes episode')
-                        media[relative]=file_hash(file)
-                        with Image.open(file) as im:im.load()
+                with MediaReader(directory) as reader:
+                    for observation in e['observations']:
+                        for relative in observation['images'].values():
+                            blob=reader.read(relative)
+                            media[relative]=hashlib.sha256(blob).hexdigest()
+                            with Image.open(io.BytesIO(blob)) as im:im.load()
             except (OSError,ValueError):
                 info['quality_ok']=False;info['quality_reasons'].append('invalid_media')
         info.update(raw_root=os.path.relpath(directory,output),
                     record_sha256=file_hash(directory/'record.json') if (directory/'record.json').is_file() else None)
-        inventory.append(info);candidates[eid]=(directory,media)
+        record_file=None
+        if source and info['quality_ok']:
+            record_file='records/'+hashlib.sha256(eid.encode()).hexdigest()+'.json'
+            (output/record_file).write_text(json.dumps(e,allow_nan=False)+'\n')
+            info['record_sha256']=file_hash(output/record_file)
+        inventory.append(info);candidates[eid]=(directory,media,record_file)
     groups=[r for r in inventory if r['group_id'] is not None]
     assignment=dict(group_splits) if group_splits is not None else split_groups(groups,seed=seed,fractions=fractions)
     if any(v not in ('train','validation','test') for v in assignment.values()):raise ValueError('Invalid frozen split')
@@ -66,12 +84,13 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     try:
         for info in selected:
             if not info['selected']:continue
-            eid=info['episode_id'];directory,media=candidates[eid]
-            e=json.loads((directory/'record.json').read_text());split=info['split']
+            eid=info['episode_id'];directory,media,record_file=candidates[eid]
+            e=json.loads(((output/record_file) if record_file else (directory/'record.json')).read_text());split=info['split']
             media_file='media/'+hashlib.sha256(eid.encode()).hexdigest()+'.json'
             (output/media_file).write_text(json.dumps(media)+'\n')
             resources[eid]={'raw_root':info['raw_root'],'record_sha256':info['record_sha256'],'group_id':info['group_id'],
                             'media_manifest':media_file,'media_manifest_sha256':file_hash(output/media_file)}
+            if record_file:resources[eid]['record_file']=record_file
             first={event['constraint_id']:event['step'] for event in info['events']}
             for row in build_predictor_judge_samples(e,history_frames=history_frames):
                 row.update(split=split,family=info['family'],policy=info['policy'],checkpoint_id=info['checkpoint_id'],episode_safety=info['safety'])
@@ -117,7 +136,7 @@ class PredictorJudgeWindowDataset:
         if (self.package/'BUILDING').exists():raise ValueError('Unfinished package')
         self.summary=json.loads((self.package/'dataset_metadata.json').read_text());self.path=self.package/(split+'.jsonl')
         if file_hash(self.path)!=self.summary['file_sha256'][split]:raise ValueError('Split bytes changed')
-        self.offsets=array('Q');self.cache=OrderedDict();self.cache_episodes=cache_episodes
+        self.media_readers=OrderedDict();self.offsets=array('Q');self.cache=OrderedDict();self.cache_episodes=cache_episodes
         self._reader=None;self._reader_pid=None;self.frame_cache=None
         if frame_cache:
             from .predictor_judge_cache import JudgeCache
@@ -139,6 +158,8 @@ class PredictorJudgeWindowDataset:
                 self.offsets.append(offset)
         if not self.offsets:raise ValueError('Selected split has no eligible samples')
     def close(self):
+        for reader in getattr(self,'media_readers',{}).values():reader.close()
+        self.media_readers=OrderedDict()
         self._reader_pid=None
         reader=getattr(self,'_reader',None)
         if reader is not None:reader.close();self._reader=None
@@ -153,16 +174,24 @@ class PredictorJudgeWindowDataset:
             self._reader=self.path.open('rb');self._reader_pid=os.getpid()
         self._reader.seek(self.offsets[index]);return json.loads(self._reader.readline())
     def __getstate__(self):
-        state=self.__dict__.copy();state.update(_reader=None,_reader_pid=None,cache=OrderedDict());return state
+        state=self.__dict__.copy();state.update(_reader=None,_reader_pid=None,cache=OrderedDict(),media_readers=OrderedDict());return state
     def _episode(self,eid):
         if eid not in self.cache:
             res=self.summary['resources'][eid];root=(self.package/res['raw_root']).resolve()
-            if file_hash(root/'record.json')!=res['record_sha256']:raise ValueError('Raw record bytes changed')
+            record_path=resource_record_path(self.package,res)
+            if file_hash(record_path)!=res['record_sha256']:raise ValueError('Raw record bytes changed')
             manifest=(self.package/res['media_manifest']).resolve()
             if not manifest.is_relative_to(self.package) or file_hash(manifest)!=res['media_manifest_sha256']:raise ValueError('Image manifest changed')
-            self.cache[eid]=(root,json.loads((root/'record.json').read_text()),json.loads(manifest.read_text()))
+            self.cache[eid]=(root,json.loads(record_path.read_text()),json.loads(manifest.read_text()))
             while len(self.cache)>self.cache_episodes:self.cache.popitem(last=False)
         self.cache.move_to_end(eid);return self.cache[eid]
+    def read_image(self,root,relative,digest):
+        if root not in self.media_readers:
+            self.media_readers[root]=MediaReader(root)
+            while len(self.media_readers)>self.cache_episodes:
+                self.media_readers.popitem(last=False)[1].close()
+        self.media_readers.move_to_end(root)
+        return self.media_readers[root].read(relative,digest)
     def __getitem__(self,index):
         from PIL import Image
         row=self.record(index)
@@ -177,10 +206,8 @@ class PredictorJudgeWindowDataset:
             frames=[]
             for step in row['history_steps']:
                 chosen=t if step is None else step
-                path=(root/e['observations'][chosen]['images'][camera]).resolve()
-                if not path.is_relative_to(root):raise ValueError('Image path escapes episode')
-                blob=path.read_bytes();expected=media[e['observations'][chosen]['images'][camera]]
-                if hashlib.sha256(blob).hexdigest()!=expected:raise ValueError('Image bytes changed')
+                relative=e['observations'][chosen]['images'][camera]
+                blob=self.read_image(root,relative,media[relative])
                 with Image.open(io.BytesIO(blob)) as im:frame=np.asarray(im.convert('RGB'),dtype=np.uint8).transpose(2,0,1).copy()
                 frames.append(np.zeros_like(frame) if step is None else frame)
             views[camera]=np.stack(frames)

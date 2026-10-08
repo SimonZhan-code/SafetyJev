@@ -11,10 +11,15 @@ def capture_command(repo,output,provenance,benchmark_args):
     for node in tree.body:
         if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='RECORDING_API_VERSION' for t in node.targets):version=ast.literal_eval(node.value)
     if version!=1:raise ValueError('Unsupported ManiGuard recording API')
+    if not (root/'maniguard/data/recording/observer.py').is_file():
+        raise ValueError('This ManiGuard checkout lacks generic source recording')
     args=list(benchmark_args)
     if args[:1]==['--']:args=args[1:]
     if any(a.split('=')[0].startswith('--recording-') for a in args):raise ValueError('Recording options are set by the capture command')
-    cmd=[sys.executable,'-m','maniguard.eval.benchmark',*args,'--recording-factory','safetyjev.predictor_judge_capture:create_observer',
+    if not any(a.split('=')[0]=='--source-profile' for a in args):
+        args += ['--source-profile',str(root/'configs/render/high_fidelity.yaml')]
+    if not any(a.split('=')[0]=='--camera-resolution' for a in args):args += ['--camera-resolution','640']
+    cmd=[sys.executable,'-m','maniguard.eval.benchmark',*args,'--recording-factory','maniguard.data.recording.observer:create_observer',
          '--recording-output-dir',str(Path(output).resolve()),'--recording-provenance',str(Path(provenance).resolve())]
     env=os.environ.copy();env['PYTHONPATH']=os.pathsep.join([str(root),str(Path(__file__).resolve().parents[1]),env.get('PYTHONPATH','')])
     return cmd,env
@@ -24,6 +29,7 @@ def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     cap=sub.add_parser('capture');cap.add_argument('--maniguard-root',required=True);cap.add_argument('--output',required=True);cap.add_argument('--provenance',required=True);cap.add_argument('benchmark_args',nargs=argparse.REMAINDER)
     build=sub.add_parser('build');build.add_argument('--episodes',required=True);build.add_argument('--output',required=True);build.add_argument('--history-frames',type=int,default=3);build.add_argument('--seed',type=int,default=42)
+    build.add_argument('--maniguard-root',help='Checkout containing the public source reader; only needed during source preparation')
     build.add_argument('--split-manifest',help='Frozen JSON mapping base-task group to train/validation/test')
     build.add_argument('--train-episodes',choices=['unsafe_only','unsafe_plus_safe'],default='unsafe_only',help='Training membership only; valid held-out episodes are all retained')
     build.add_argument('--unsafe-per-safe',type=float,default=4,help='Safe supplement ratio, used only with unsafe_plus_safe')
@@ -32,6 +38,7 @@ def main(argv=None):
     if a.command=='capture':
         cmd,env=capture_command(a.maniguard_root,a.output,a.provenance,a.benchmark_args)
         return subprocess.call(cmd,cwd=a.maniguard_root,env=env)
+    if a.maniguard_root:sys.path.insert(0,str(Path(a.maniguard_root).resolve()))
     directories=sorted({f.parent for name in ('record.json','episode.json','episode_status.json') for f in Path(a.episodes).rglob(name)})
     if not directories:raise ValueError('No captured episode records')
     assignment=json.loads(Path(a.split_manifest).read_text()) if a.split_manifest else None

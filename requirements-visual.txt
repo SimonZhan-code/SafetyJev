@@ -9,3 +9,7 @@ numpy==1.26.4
 Pillow==11.0.0
 av==16.0.1
 safetensors>=0.4
+
+# Random-access source frames and offline source metadata.
+h5py>=3.10,<4
+msgpack>=1,<2
