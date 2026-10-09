@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from .openjev_data import visual_model_payload
+from .package_layout import split_file,resource_path,verify_package_provenance
 
 
 class VideoWindowDecoder:
@@ -69,6 +70,7 @@ class APWindowDataset:
         if (self.package / "BUILDING").exists():
             raise ValueError("Dataset package build has not finished")
         self.summary = json.loads((self.package / "dataset_metadata.json").read_text())
+        verify_package_provenance(self.package,self.summary)
         self.source_media = OrderedDict()
         self.checked_annotations = set()
         if self.summary.get('method') == 'semantic_safety':
@@ -76,12 +78,12 @@ class APWindowDataset:
             if self.summary.get('task') != 'classifier':raise ValueError('Expected classifier package')
             if file_hash(self.package/'semantic_definitions.json') != self.summary['semantic_definitions_sha256']:
                 raise ValueError('Semantic definitions changed')
-            if file_hash(self.package/(split+'.jsonl')) != self.summary['file_sha256'][split]:
+            if file_hash(split_file(self.package,split,self.summary)) != self.summary['file_sha256'][split]:
                 raise ValueError('Split bytes changed')
         if split not in ("train", "calibration", "validation", "test", "ood"):
             raise ValueError("Unknown dataset split")
         self.split = split
-        self.path = self.package / (split + ".jsonl")
+        self.path = split_file(self.package,split,self.summary)
         self.offsets, self.strata = array("Q"), array("I")
         self.frame_cache = None
         if frame_cache is not None:
@@ -156,8 +158,8 @@ class APWindowDataset:
         if eid not in self.source_media:
             res=self.summary['resources'][eid]
             verify_semantic_resource(self.package,res)
-            path=(self.package/res['media_manifest']).resolve()
-            if not path.is_relative_to(self.package) or file_hash(path)!=res['media_manifest_sha256']:
+            path=resource_path(self.package,res,'media_manifest')
+            if file_hash(path)!=res['media_manifest_sha256']:
                 raise ValueError('Source image manifest changed')
             self.source_media[eid]=(MediaReader(self.package/res['raw_root']),json.loads(path.read_text()))
             while len(self.source_media)>2:self.source_media.popitem(last=False)[1][0].close()
@@ -209,15 +211,33 @@ class APWindowDataset:
                 "metadata": {k:v for k,v in row['metadata'].items() if k in (
                     'family','semantic_id','episode_id','group_id','start_step','definition_sha256','annotation_sha256')}}
 
-    def training_weights(self, mode="uniform"):
+    def training_weights(self, mode="uniform", positive_fraction=None):
         if self.split != "train":
             raise ValueError("Evaluation splits must retain their natural distribution")
+        if positive_fraction is not None:
+            if (isinstance(positive_fraction, bool) or not np.isfinite(positive_fraction)
+                    or not 0 < positive_fraction < 1):
+                raise ValueError("Positive fraction must be between zero and one")
+            if mode != "query_answer":
+                raise ValueError("Positive fraction requires query_answer balancing")
         if mode == "uniform":
             return np.ones(len(self), dtype=np.float64)
         if mode != "query_answer":
             raise ValueError("Balance must be uniform or query_answer")
         counts = Counter(self.strata)
-        return np.asarray([1.0 / counts[code] for code in self.strata], dtype=np.float64)
+        mass = {code: 1.0 for code in counts}
+        if positive_fraction is not None:
+            answers = {}
+            for index, code in enumerate(self.strata):
+                if code not in answers:
+                    answers[code] = int(self.record(index)["target"][1])
+                if len(answers) == len(counts):
+                    break
+            strata_per_answer = Counter(answers.values())
+            if len(strata_per_answer) == 2:
+                mass = {code: (positive_fraction if answer else 1-positive_fraction)
+                        / strata_per_answer[answer] for code, answer in answers.items()}
+        return np.asarray([mass[code] / counts[code] for code in self.strata], dtype=np.float64)
 
 
 def collate_numpy(items):

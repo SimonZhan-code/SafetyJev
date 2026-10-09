@@ -31,6 +31,9 @@ def main(argv=None):
     build=sub.add_parser('build');sources=build.add_mutually_exclusive_group(required=True)
     sources.add_argument('--episodes');sources.add_argument('--source-manifest',help='Frozen explicit source list; no directory scan')
     build.add_argument('--source-node',help='Node namespace from the frozen manifest')
+    build.add_argument('--source-manifest-sha256',help='Required content hash when pinning a delivery cohort')
+    build.add_argument('--source-manifest-count',type=int,help='Expected complete cohort size, before node selection')
+    build.add_argument('--allow-source-split-override',action='store_true',help='Use the explicit build split while retaining original source assignments in provenance')
     build.add_argument('--output',required=True);build.add_argument('--history-frames',type=int,default=3);build.add_argument('--seed',type=int,default=42)
     build.add_argument('--maniguard-root',help='Checkout containing the public source reader; only needed during source preparation')
     build.add_argument('--split-manifest',help='Frozen JSON mapping base-task group to train/validation/test')
@@ -40,6 +43,8 @@ def main(argv=None):
     build.add_argument('--active-motion-rad',type=float,default=.05)
     build.add_argument('--semantic-definitions',help='Explicit semantic supervision JSON; omission retains original monitor labels')
     build.add_argument('--semantic-task',choices=['classifier','predictor_judge'],default='predictor_judge')
+    build.add_argument('--media-workers',type=int,default=1,help='Image validation processes, 1 to 64')
+    build.add_argument('--reuse-media',help='Completed package with content-verified media for the same sources')
     build.add_argument('--reuse-annotations',help='Verified annotations/ from an earlier semantic package over the same immutable sources')
     build.add_argument('--liquid-asset-root',help='Licensed source dataset root for offline liquid geometry; defaults to OMNIGIBSON_DATA_PATH')
     build.add_argument('--review',action='store_true',help='Build a marked development package from candidate semantic definitions')
@@ -53,16 +58,20 @@ def main(argv=None):
     if a.source_manifest:
         from .source_manifest import read_source_manifest
         if not a.source_node or assignment is None:raise ValueError('Manifest requires source-node and explicit split')
-        provenance=read_source_manifest(a.source_manifest,node=a.source_node,group_splits=assignment)
+        provenance=read_source_manifest(a.source_manifest,node=a.source_node,group_splits=assignment,
+            allow_split_override=a.allow_source_split_override,expected_sha256=a.source_manifest_sha256,
+            expected_count=a.source_manifest_count)
         directories=provenance.pop('directories')
     else:
-        if a.source_node:raise ValueError('Source-node requires a source manifest')
+        if a.source_node or a.source_manifest_sha256 or a.source_manifest_count is not None or a.allow_source_split_override:
+            raise ValueError('Source selection options require a source manifest')
         directories=sorted({f.parent for name in ('record.json','episode.json','episode_status.json') for f in Path(a.episodes).rglob(name)})
     if not directories:raise ValueError('No captured episode records')
     build_package(directories,a.output,history_frames=a.history_frames,seed=a.seed,group_splits=assignment,
                   unsafe_per_safe=a.unsafe_per_safe,active_motion_rad=a.active_motion_rad,train_episodes=a.train_episodes,
                   semantic_definitions=json.loads(Path(a.semantic_definitions).read_text()) if a.semantic_definitions else None,
                   semantic_task=a.semantic_task,review=a.review,reuse_annotations=a.reuse_annotations,liquid_asset_root=a.liquid_asset_root,
+                  media_workers=a.media_workers,reuse_media=a.reuse_media,
                   input_contract=a.input_contract,source_provenance=provenance);return 0
 
 if __name__=='__main__':raise SystemExit(main())

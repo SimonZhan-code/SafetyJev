@@ -311,3 +311,117 @@ and retain its cohort provenance. Node-local raw paths are not remotely readable
 from another machine: actual training requires an explicit data-access layout.
 A catalog of shards alone does not establish cross-node DataLoader throughput.
 Do not generate large caches before measuring their cost on the intended host.
+
+### Portable delivery across source nodes
+
+The source manifest can be pinned with `--source-manifest-sha256 HASH` and
+`--source-manifest-count COUNT`. When an explicitly reviewed experimental group
+mapping differs from source collection splits, add `--allow-source-split-override`.
+The original manifest remains unchanged; `source_provenance.json` records both
+assignments and every override. Historical development exposure remains a separate
+provenance record.
+
+The published dataset is organized for training users. Both model packages share
+one episode directory; source-host identifiers are not part of the public paths:
+
+```text
+dataset/
+  README.md
+  classifier/
+    README.md
+    dataset_metadata.json
+    {train,validation,test,excluded}/part-00000.jsonl
+  predictor_judge/                # same package structure
+  episodes/<family>/<run>/
+    trajectory.hdf5              # original model-input JPEG bytes and offsets
+    record.json                  # state/action timeline and preserved evidence
+    annotation.json              # supervision, never an input field
+    image_manifest.json          # per-image integrity checks
+  metadata/
+    episodes.json                # original IDs, readable paths, policy and split
+    splits/                      # assignments and development provenance
+    composition.json
+    validation.json
+    release.json
+```
+
+Download the complete training repository and point the model configuration to
+`classifier/` or `predictor_judge/`. The catalogs resolve relative paths and
+numbered split parts automatically. Part numbers are storage chunks, not task
+groups or machines. Raw recordings are a separate optional archive.
+
+The following commands describe **internal source-host staging**. Node-local
+`media/`, `shared/` and `shards/` directories make concurrent construction easier;
+they are not the intended public repository layout. A delivery coordinator can
+relocate immutable files into the layout above and update resource paths,
+inventory hashes and split-file references before publication. Preserve index
+bytes/order, original IDs, labels, splits and normalization; verify both loaders
+after relocation. Keep infrastructure mappings in private operational records.
+
+`publish_node_package(package, root, task, node, source_paths)` in
+`safetyjev.package_layout` publishes derived resources using an explicit map from
+episode ID to its relative `sources/` location. It does not copy raw data. Files
+shared between both models are content-checked and linked when on one filesystem.
+Before assembling the global catalogs, the source host can export an independent
+training-media subset:
+
+```bash
+python -m safetyjev.training_media --root /data/dataset --node NODE_A
+```
+
+Run this once for each node after both model shards have been published. It
+copies the original compressed overview/wrist JPEG arrays and frame offsets,
+checks every image against the existing manifest, and points both model shards
+at the shared `media/` directory. It does not resize or re-encode images, alter
+labels or copy snapshots. Original source hashes and inventory paths remain
+provenance; they do not require downloading the backup for training. Partial
+media export can be resumed before combining the node shards.
+
+The coordinator assembles each logical package after receiving the derived
+shards, without concatenating or duplicating the large JSONL files:
+
+```bash
+python -m safetyjev.package_layout --package /data/dataset/classifier \
+  --nodes NODE_A NODE_B
+python -m safetyjev.package_layout --package /data/dataset/predictor_judge \
+  --nodes NODE_A NODE_B
+```
+
+The coordinator verifies source/inventory hashes, identical cohort and split
+identities, disjoint episode membership, and compatible input/semantic protocols.
+It merges train sufficient statistics and composition reports. Both DataLoaders,
+cache builders, training samplers, pair evaluation and episode shadow replay read
+the logical split parts. For the public training delivery, download `episodes/`,
+both model packages and `metadata/` together. Neither training loader requires
+the separate full raw backup. Both training entrypoints accept `data.frame_cache: null` to decode delivered JPEGs directly;
+decoded caches can be prepared later on the training machine. Packages that
+still reference `sources/` require those original media files. Existing
+single-file packages remain supported.
+
+`composition.json` reports natural query/window labels and starting-state groups.
+`state_segments` separately counts contiguous observed positive states, witnessed
+safe-to-unsafe onsets, and initial/unknown-boundary segments. Correlated queries
+may describe the same incident; these counts are not globally independent physical
+accidents. Liquid endpoint-loss windows do not determine unique physical events.
+
+Offline package preparation accepts `--media-workers N` (1–64, default 1)
+for bounded image validation processes. Every referenced image is still fully
+decoded and hashed; parallel execution preserves index order and labels. A
+classifier build over the same immutable sources can use `--reuse-media
+<completed-judge-package>` together with `--reuse-annotations
+<completed-judge-package>/annotations`. Media reuse verifies the complete source
+HDF5 SHA256, the image-manifest SHA256 and reference coverage before skipping
+repeated decoding. Older packages without source content hashes cannot be reused
+this way. Keep the total process budget within the source host's available CPU
+and memory; application callers using multiple workers need a guarded Python
+entrypoint (`if __name__ == '__main__':`).
+
+For an already audited, explicitly selected source cohort,
+`safetyjev.annotation_preparation.prepare_annotations(..., prepare_records=True)`
+can prepare annotations and adapter records in a separate process phase. Pass
+that output as `record_cache` to `build_package` for both model packages. The
+cache checks all six source-file hashes, adapter implementation hashes and record
+content before reuse. Keep this temporary preparation cache on the build host;
+the portable packages retain their usual shared records and annotations. Run
+annotation/record preparation and media validation as separate phases so worker
+counts do not multiply. This does not change label rules, model inputs or splits.

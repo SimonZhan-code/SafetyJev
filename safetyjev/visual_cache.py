@@ -1,4 +1,5 @@
 """Rebuildable, lossless current-frame cache with transactional preparation."""
+from .package_layout import split_file,resource_path
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import hashlib
@@ -18,7 +19,7 @@ from PIL import Image
 
 def file_hash(path):
     digest=hashlib.sha256()
-    with Path(path).open('rb') as stream:
+    with (path if hasattr(path,'open') else Path(path)).open('rb') as stream:
         for block in iter(lambda:stream.read(4*1024*1024),b''):digest.update(block)
     return digest.hexdigest()
 
@@ -119,7 +120,7 @@ def build_visual_cache(package, output, *, max_bytes=None, workers=1):
                 for split in summary['file_sha256']:
                     if split=='excluded':continue
                     strata={};idx=0
-                    with (package/(split+'.jsonl')).open('rb') as stream:
+                    with split_file(package,split,summary).open('rb') as stream:
                         while True:
                             offset=stream.tell();line=stream.readline()
                             if not line:break
@@ -151,7 +152,7 @@ def build_visual_cache(package, output, *, max_bytes=None, workers=1):
             from .source_episodes import MediaReader
             for (resource,) in db.execute('SELECT DISTINCT resource FROM frames WHERE fps=0 AND png IS NULL').fetchall():
                 res=summary['resources'][resource]
-                hashes=json.loads((package/res['media_manifest']).read_text())
+                hashes=json.loads(resource_path(package,res,'media_manifest').read_text())
                 with MediaReader(package/res['raw_root']) as reader:
                     for key,ref in db.execute('SELECT key,video FROM frames WHERE resource=? AND fps=0 AND png IS NULL',(resource,)):
                         with Image.open(io.BytesIO(reader.read(ref,hashes[ref]))) as image:

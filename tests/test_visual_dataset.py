@@ -64,6 +64,14 @@ class VisualDatasetTests(unittest.TestCase):
             self.assertEqual(dataset.record(2)["target"], [0, 1])
             weights = dataset.training_weights("query_answer")
             self.assertAlmostEqual(weights[2] / weights[0], 2.)
+            requested = dataset.training_weights("query_answer", positive_fraction=.6)
+            self.assertAlmostEqual(requested[2] / requested.sum(), .6)
+            self.assertEqual(dataset.record(2)["target"], [0, 1])
+            for fraction in (-.1, 0, 1, float("nan"), True):
+                with self.assertRaises(ValueError):
+                    dataset.training_weights("query_answer", positive_fraction=fraction)
+            with self.assertRaises(ValueError):
+                dataset.training_weights("uniform", positive_fraction=.6)
             self.assertEqual(dataset.media_path(dataset.record(0), "overview"), raw / "video.mp4")
             with self.assertRaises(ValueError):
                 APWindowDataset(root, "test").training_weights("query_answer")

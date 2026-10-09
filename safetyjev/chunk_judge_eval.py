@@ -57,9 +57,10 @@ def replay_episode_chunks(model,dataset,*,threshold=.5,output=None):
     from .predictor_judge_dataset import collate_predictor_judge
     if dataset.summary.get('input_contract')!='chunk_start_v2' or dataset.frame_cache:
         raise ValueError('Shadow replay requires uncached chunk package and original media')
-    split=dataset.path.stem;groups=defaultdict(list);invalid=0
-    for path in (dataset.path,dataset.package/'excluded.jsonl'):
-        with path.open() as stream:
+    from .package_layout import split_file
+    split=dataset.split;groups=defaultdict(list);invalid=0
+    for path in (dataset.path,split_file(dataset.package,'excluded',dataset.summary)):
+        with path.open('rb') as stream:
             for line in stream:
                 row=json.loads(line)
                 if row['split']!=split:continue

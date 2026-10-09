@@ -5,36 +5,42 @@ import hashlib,json,os,io
 from pathlib import Path
 import numpy as np
 from .source_episodes import MediaReader,load_source_record
+from .package_layout import split_file,resource_path,verify_package_provenance
 from .predictor_judge_schema import make_action_window,STATE_FEATURES,CAMERAS
 from .predictor_judge_data import build_predictor_judge_samples,split_groups
 
 
 def file_hash(path):
     h=hashlib.sha256()
-    with Path(path).open('rb') as f:
+    with (path if hasattr(path,'open') else Path(path)).open('rb') as f:
         for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
     return h.hexdigest()
 
 
 def resource_record_path(package,res):
     package=Path(package).resolve()
-    path=(package/res['record_file']).resolve() if res.get('record_file') else package/res['raw_root']/'record.json'
-    if res.get('record_file') and not path.is_relative_to(package):raise ValueError('Record escapes package')
+    path=resource_path(package,res,'record_file') if res.get('record_file') else package/res['raw_root']/'record.json'
     return path
 
 
 def verify_semantic_resource(package,res):
     if res.get('annotation_file'):
-        path=(Path(package)/res['annotation_file']).resolve()
-        if not path.is_relative_to(Path(package).resolve()) or file_hash(path)!=res['annotation_file_sha256']:
+        path=resource_path(package,res,'annotation_file')
+        if file_hash(path)!=res['annotation_file_sha256']:
             raise ValueError('Annotation file changed')
 
 
-def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.1,.1),
+def build_package(episode_dirs,output,*,media_workers=1,reuse_media=None,**options):
+    from .media_preparation import MediaValidator
+    with MediaValidator(media_workers,reuse_media) as validator:
+        return _build_package(episode_dirs,output,media_validator=validator,**options)
+
+
+def _build_package(episode_dirs,output,*,media_validator,record_cache=None,history_frames=3,seed=42,fractions=(.8,.1,.1),
                   group_splits=None,unsafe_per_safe=4,active_motion_rad=.05,train_episodes='unsafe_only',
                   semantic_definitions=None,semantic_task='predictor_judge',review=False,reuse_annotations=None,liquid_asset_root=None,
                   input_contract='per_step_v1',source_provenance=None):
-    from PIL import Image
+    from .media_preparation import MediaReuseError
     from .predictor_judge_curation import inventory_episode,select_episodes,composition_report,write_summary
     if input_contract not in ('per_step_v1','chunk_start_v2'):raise ValueError('Unsupported input contract')
     if input_contract=='chunk_start_v2':
@@ -62,7 +68,12 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     for directory in sorted(Path(d).resolve() for d in episode_dirs):
         source=(directory/'trajectory.hdf5').is_file();preparation_error=None
         try:
-            e=load_source_record(directory) if source else json.loads((directory/'record.json').read_text())
+            if source and record_cache is not None:
+                from .annotation_preparation import load_prepared_record
+                e=load_prepared_record(directory,record_cache)
+            else:e=load_source_record(directory) if source else json.loads((directory/'record.json').read_text())
+        except MediaReuseError:
+            raise
         except (OSError,ValueError,KeyError) as exc:
             preparation_error=str(exc)
             # A crashed attempt may have episode.json but no finalized record.
@@ -106,15 +117,12 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
                     shutil.copyfile(original,output/annotation_file)
             else:write_annotation(output/annotation_file,annotation)
             annotations[eid]={'annotation_file':annotation_file,'annotation_file_sha256':file_hash(output/annotation_file)}
-        media={}
+        media={};media_source_sha256=None
         if info['quality_ok']:
             try:
-                with MediaReader(directory) as reader:
-                    for observation in e['observations']:
-                        for relative in observation['images'].values():
-                            blob=reader.read(relative)
-                            media[relative]=hashlib.sha256(blob).hexdigest()
-                            with Image.open(io.BytesIO(blob)) as im:im.load()
+                media,media_source_sha256=media_validator.validate(directory,e,eid)
+            except MediaReuseError:
+                raise
             except (OSError,ValueError):
                 info['quality_ok']=False;info['quality_reasons'].append('invalid_media')
         info.update(raw_root=os.path.relpath(directory,output),
@@ -124,7 +132,7 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
             record_file='records/'+hashlib.sha256(eid.encode()).hexdigest()+'.json'
             (output/record_file).write_text(json.dumps(e,allow_nan=False)+'\n')
             info['record_sha256']=file_hash(output/record_file)
-        inventory.append(info);candidates[eid]=(directory,media,record_file)
+        inventory.append(info);candidates[eid]=(directory,media,record_file,media_source_sha256)
     groups=[r for r in inventory if r['group_id'] is not None]
     assignment=dict(group_splits) if group_splits is not None else split_groups(groups,seed=seed,fractions=fractions)
     if any(v not in ('train','validation','test') for v in assignment.values()):raise ValueError('Invalid frozen split')
@@ -138,23 +146,26 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
         for r in selected:f.write(json.dumps(r,allow_nan=False)+'\n')
     sums={k:[np.zeros(d),np.zeros(d),0] for k,d in [('state',16),('action',8)]}
     counts=Counter();reasons=Counter()
-    semantic_windows={};query_windows={}
+    semantic_windows={};query_windows={};semantic_segments=[]
     windows={key:{} for key in ['by_split','by_family','by_policy','by_checkpoint_id','by_constraint','by_valid_steps','by_label_reason']}
     writers={name:(output/(name+'.jsonl')).open('w') for name in ['train','validation','test','excluded']}
     try:
         for info in selected:
             if not info['selected']:continue
-            eid=info['episode_id'];directory,media,record_file=candidates[eid]
+            eid=info['episode_id'];directory,media,record_file,media_source_sha256=candidates[eid]
             e=json.loads(((output/record_file) if record_file else (directory/'record.json')).read_text());split=info['split']
             media_file='media/'+hashlib.sha256(eid.encode()).hexdigest()+'.json'
             (output/media_file).write_text(json.dumps(media)+'\n')
             resources[eid]={'raw_root':info['raw_root'],'record_sha256':info['record_sha256'],'group_id':info['group_id'],
                             'media_manifest':media_file,'media_manifest_sha256':file_hash(output/media_file)}
+            if media_source_sha256:resources[eid]['media_source_sha256']=media_source_sha256
             if record_file:resources[eid]['record_file']=record_file
             if eid in annotations:resources[eid].update(annotations[eid])
             first={event['constraint_id']:event['step'] for event in info['events']}
             if semantic_definitions is not None:
                 annotation=read_annotation(output/annotations[eid]['annotation_file'])
+                from .semantic_reporting import state_segments
+                semantic_segments.extend(dict(split=split,family=info['family'],**r) for r in state_segments(annotation))
                 rows=build_semantic_samples(e,annotation,semantic_definitions,task=semantic_task,history_frames=history_frames,review=review,input_contract=input_contract)
             else:rows=build_predictor_judge_samples(e,history_frames=history_frames)
             for row in rows:
@@ -192,6 +203,8 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     if semantic_definitions is not None:
         report['events']['definition']='first observed positive state per episode/semantic query; not original LTL rejections or a count of all physical events; interval-only labels excluded'
         report['supervision']='semantic_safety'
+        report['state_segments']=semantic_segments
+        report['state_segment_scope']='contiguous observed positive state segments per episode/query; safe-to-unsafe onsets counted separately from initial/unknown-boundary segments; correlated queries can describe the same incident; liquid intervals do not identify unique physical events'
         report['semantic_windows']=[dict(split=split,family=family,semantic_id=semantic,
             episodes=len(stats['episodes']),positive=stats['positive'],negative=stats['negative'],
             excluded=stats['excluded'],eligible=stats['positive']+stats['negative'],
@@ -240,8 +253,10 @@ class PredictorJudgeWindowDataset:
     def __init__(self,package,split,cache_episodes=2,frame_cache=None):
         self.package=Path(package).resolve()
         if split not in ('train','validation','test'):raise ValueError('Use train/validation/test')
+        self.split=split
         if (self.package/'BUILDING').exists():raise ValueError('Unfinished package')
-        self.summary=json.loads((self.package/'dataset_metadata.json').read_text());self.path=self.package/(split+'.jsonl')
+        self.summary=json.loads((self.package/'dataset_metadata.json').read_text());self.path=split_file(self.package,split,self.summary)
+        verify_package_provenance(self.package,self.summary)
         if self.summary.get('input_contract','per_step_v1') not in ('per_step_v1','chunk_start_v2'):
             raise ValueError('Unsupported input contract; rebuild older chunk packages for historical robot state')
         if self.summary.get('method')=='semantic_safety':
@@ -295,8 +310,8 @@ class PredictorJudgeWindowDataset:
             verify_semantic_resource(self.package,res)
             record_path=resource_record_path(self.package,res)
             if file_hash(record_path)!=res['record_sha256']:raise ValueError('Raw record bytes changed')
-            manifest=(self.package/res['media_manifest']).resolve()
-            if not manifest.is_relative_to(self.package) or file_hash(manifest)!=res['media_manifest_sha256']:raise ValueError('Image manifest changed')
+            manifest=resource_path(self.package,res,'media_manifest')
+            if file_hash(manifest)!=res['media_manifest_sha256']:raise ValueError('Image manifest changed')
             self.cache[eid]=(root,json.loads(record_path.read_text()),json.loads(manifest.read_text()))
             while len(self.cache)>self.cache_episodes:self.cache.popitem(last=False)
         self.cache.move_to_end(eid);return self.cache[eid]

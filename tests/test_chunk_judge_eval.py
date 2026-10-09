@@ -52,7 +52,7 @@ def test_shadow_calls_once_per_boundary_with_all_queries_and_no_label_inputs(tmp
             observations={c:np.zeros((8,3,8,8),dtype=np.uint8) for c in ('overview','wrist')},
             constraint_context=row['constraint_context']),target=row['target'],sample_id=row['id'],
             query_id=row['constraint_id'],valid_steps=8,metadata=_evaluation_metadata(row))
-    data=SimpleNamespace(summary={'input_contract':'chunk_start_v2'},frame_cache=None,path=path,package=tmp_path,sample=sample)
+    data=SimpleNamespace(summary={'input_contract':'chunk_start_v2'},split='validation',frame_cache=None,path=path,package=tmp_path,sample=sample)
     class Model(torch.nn.Module):
         def __init__(self):super().__init__();self.head=torch.nn.Linear(1,1);self.calls=[]
         def forward(self,**inputs):

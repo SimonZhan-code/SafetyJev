@@ -174,6 +174,21 @@ def test_recorded_world_support_plane_is_extracted_and_bad_frame_not_guessed(sem
     assert not extract(semantic_source,observation_ids=[0])['support_geometry']['top_z']['available']
 
 
+def test_usable_rectangle_retains_recorded_world_height_and_conflicts_are_excluded(semantic_source):
+    p=semantic_source/'diagnostics.jsonl'
+    d=json.loads(p.read_text());d['surface_info']['frame']='world_usable_rect'
+    p.write_text(json.dumps(d)+'\n')
+    assert extract(semantic_source,observation_ids=[0])['support_geometry']['top_z']['value']==.8
+    # The usable rectangle changes XY placement bounds, not the height frame.
+    other=json.loads(json.dumps(d));other['surface_info']['top_z']=.9
+    p.write_text(json.dumps(d)+'\n'+json.dumps(other)+'\n')
+    result=extract(semantic_source,observation_ids=[0])['support_geometry']['top_z']
+    assert result['value'] is None and result['reason']=='conflicting_surface_heights'
+    for height in (None, float('nan'), True):
+        d['surface_info']['top_z']=height;p.write_text(json.dumps(d)+'\n')
+        assert not extract(semantic_source,observation_ids=[0])['support_geometry']['top_z']['available']
+
+
 def test_validated_container_geometry_recovers_actual_counts(semantic_source):
     from safetyjev.liquid_geometry import ConvexContainerVolume
     import itertools

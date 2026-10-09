@@ -1,5 +1,18 @@
 # Classifier training
 
+For a shared training delivery, point the existing package/cache commands at
+`DATASET_ROOT/classifier`. See the [portable delivery layout](data-preparation.md#portable-delivery-across-source-nodes);
+the package catalog supplies the unified splits and train-only normalization.
+A training-media delivery includes the original compressed input images under
+`DATASET_ROOT/episodes/<family>/<run>/`; both models share these resources.
+The separate raw backup is not required. Set
+`data.frame_cache` to `null` to train directly from the delivered JPEGs, or build
+an optional input cache on the training machine later.
+For semantic training, `data.balance: "query_answer"` with
+`data.positive_fraction: 0.6` assigns 60% of sampling probability to Yes when
+both labels exist. This changes only training sampling; validation/test retain
+their natural distributions and labels remain unchanged.
+
 The classifier receives the current overview image, wrist image and a
 natural-language AP question, and returns `[No, Yes]` scores. It retains the native
 visual encoder and multimodal fusion of the Open-Jev fork, freezes the backbone,
@@ -14,6 +27,106 @@ instead of the legacy AP/video preparation below. In that explicit mode Yes mean
 the queried violation is present; single-frame liquid interval queries are excluded.
 Use the corresponding semantic package/cache and `evaluation.run_test=false` for
 development checks. The model and training entrypoint are unchanged.
+
+## Unsafe600 start to finish
+
+This is the current release workflow. First follow the shared
+[code/environment setup](../README.md#training-environment) and
+[pinned Unsafe600 download](../README.md#download-the-current-training-dataset).
+The legacy dataset/build instructions later in this guide are separate workflows.
+No simulator, raw download or semantic construction is needed here.
+
+### Prepare a run and a separate smoke test
+
+From the repository root, generate local configs. The formal reference budget is
+an initial recipe, **not a validated convergence budget**; choose `max_steps`,
+evaluation/save intervals and global batch after the pilot and record the choices.
+The classifier recipe filename retains its historical name but the generated
+config below explicitly uses the new six-family semantic package.
+
+```bash
+export HF_HOME="${HF_HOME:-$PWD/checkpoints/hf_cache}"
+.venv-visual/bin/python - <<'PYCONFIG'
+import copy,json
+from pathlib import Path
+from huggingface_hub import snapshot_download
+out=Path('outputs/unsafe600-config');out.mkdir(parents=True,exist_ok=True)
+c=json.loads(Path('configs/training/five_family_visual_27b_reference.json').read_text())
+c['data'].update(package=str(Path('datasets/unsafe600/classifier').resolve()),
+                 frame_cache=None)
+c['data'].update(balance='query_answer',positive_fraction=0.6)
+c['evaluation']['run_test']=False
+c['evaluation']['max_batches']=None
+(out/'classifier.json').write_text(json.dumps(c,indent=2)+'\n')
+pilot=copy.deepcopy(c)
+pilot['data']['batch_size']=1
+pilot['training'].update(max_steps=4,global_batch_size=8,warmup_steps=1,
+                         eval_every=2,save_every=2)
+pilot['evaluation']['max_batches']=1
+(out/'classifier-pilot.json').write_text(json.dumps(pilot,indent=2)+'\n')
+snapshot_download(c['model']['model_id'],revision=c['model']['revision'])
+PYCONFIG
+```
+
+Inspect GPU count/VRAM and free disk before loading the model. Set
+`NPROC_PER_NODE` explicitly for the actual host (1 for one GPU, 8 for eight GPUs).
+This launcher uses DDP: each GPU must fit the model; GPU memory is not pooled.
+Global batch must be divisible by microbatch times GPU count. The pilot assumes
+1, 2, 4 or 8 ranks; adapt its global batch for other counts. Keep the Judge's images,
+history/state/action fields and masks intact; reduce microbatch if necessary.
+
+Use a **separate pilot output** and retain its reports as interface diagnostics:
+
+```bash
+export NPROC_PER_NODE=8  # change to the actual supported host configuration
+bash scripts/train_visual.sh \
+  --config outputs/unsafe600-config/classifier-pilot.json \
+  --output outputs/unsafe600-classifier-pilot --stop-after-step 2
+
+bash scripts/train_visual.sh \
+  --config outputs/unsafe600-config/classifier-pilot.json \
+  --output outputs/unsafe600-classifier-pilot \
+  --resume outputs/unsafe600-classifier-pilot/checkpoints/step-00000002
+```
+
+Accept the pilot only after real forward/backward updates, finite loss,
+checkpoint save/resume and final model loading succeed. Check the actual batch,
+mask/token lengths, GPU peak memory and validation output. Four updates and capped
+validation are not model-quality evidence. The delivered dataset batch checks do
+not replace this GPU/optimizer/DDP check. Keep config/code/world size unchanged
+across the pilot resume.
+
+### Train, evaluate and hand over
+
+Configure optional W&B using the tracking section below. Keep credentials and
+account destinations on the host. In a persistent terminal session, launch a new
+formal output after selecting the budget; do not resume the pilot as a formal run:
+
+```bash
+bash scripts/train_visual.sh \
+  --config outputs/unsafe600-config/classifier.json \
+  --output outputs/unsafe600-classifier
+
+NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task classifier \
+  --checkpoint outputs/unsafe600-classifier/final/model \
+  --package datasets/unsafe600/classifier --split validation \
+  --batch-size 8 --workers 2 --output outputs/unsafe600-classifier/validation.json
+```
+
+Adjust evaluator rank count to the host as well. `final/model` is the trainer's
+validation-selected export. Verify it with standalone full-validation inference.
+After model/threshold selection, run the same independent evaluator with
+`--split test` and a distinct output. Training keeps test disabled; evaluation
+uses natural distributions. A capped pilot report must not enter the formal report.
+Report accuracy, recall, precision/confusion counts and measured inference duration;
+keep detailed diagnostics in JSON. Retain code/submodule/model/data revisions,
+resolved config, seed, sampling report, selected checkpoint, logs and metrics.
+Use the export section below when model publication is authorized.
+
+The semantic Classifier asks whether the queried violation is present now.
+It has no future-chunk/ordered shadow-evaluation role. Current-frame liquid-loss
+queries are excluded because they require interval evidence. The formal package
+contains 5,765,453 eligible windows; do not substitute the legacy AP counts below.
 
 ## Environment
 
@@ -77,9 +190,10 @@ Changes to splits, question wording, sampling, model or training budget define
 another experiment and must be recorded. Keep all conditions, policies and
 seeds of one base task together. Do not rebalance validation or test.
 
-## Prepare efficient input storage
+## Optional input cache
 
-After extracting the dataset, build and verify the cache from the repository root:
+Training-media deliveries can train directly with `data.frame_cache=null`. If you
+choose to prepare a cache, build and verify it from the repository root:
 
 ```bash
 .venv-visual/bin/python tools/prepare_visual_cache.py \
@@ -373,3 +487,15 @@ HF_HOME="$PWD/checkpoints/hf_cache" .venv-visual/bin/python -m safetyjev.visual_
 `answers.<name>.noul` probability for each question. It uses the reference native
 multimodal forward; this is not an accelerated HTTP service or a future-action
 predictor.
+
+Offline package preparation accepts `--media-workers N` (1–64, default 1)
+for bounded image validation processes. Every referenced image is still fully
+decoded and hashed; parallel execution preserves index order and labels. A
+classifier build over the same immutable sources can use `--reuse-media
+<completed-judge-package>` together with `--reuse-annotations
+<completed-judge-package>/annotations`. Media reuse verifies the complete source
+HDF5 SHA256, the image-manifest SHA256 and reference coverage before skipping
+repeated decoding. Older packages without source content hashes cannot be reused
+this way. Keep the total process budget within the source host's available CPU
+and memory; application callers using multiple workers need a guarded Python
+entrypoint (`if __name__ == '__main__':`).

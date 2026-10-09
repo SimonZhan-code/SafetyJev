@@ -218,7 +218,10 @@ def extract_semantic_evidence(directory, *, observation_ids=None, liquid_volumes
             surfaces = [json.loads(line).get('surface_info')
                         for line in (directory / 'diagnostics.jsonl').read_text().splitlines() if line.strip()]
             surfaces = [s for s in surfaces if isinstance(s, dict)]
-            if surfaces and all(s.get('frame') == 'world_aabb' and
+            # finalize_base._fresh_surface_info records the same world top_z
+            # for both frames; world_usable_rect only replaces the XY bounds
+            # with an inscribed placement rectangle on round support surfaces.
+            if surfaces and all(s.get('frame') in ('world_aabb', 'world_usable_rect') and
                     type(s.get('top_z')) in (int, float) and np.isfinite(s['top_z']) for s in surfaces):
                 heights = {s['top_z'] for s in surfaces}
                 top_z = (_evidence_value(heights.pop()) if len(heights) == 1 else

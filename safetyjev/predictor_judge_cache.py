@@ -1,4 +1,5 @@
 """Disposable indexed image/numeric cache for recorded Predictor Judge windows."""
+from .package_layout import split_file,resource_path
 import hashlib,io,json,os,sqlite3
 from pathlib import Path
 import numpy as np
@@ -40,7 +41,7 @@ def build_cache(package,output,*,max_bytes=None):
             for split in ['train','validation','test']:
                 # Train-only review packages legitimately have no held-out rows.
                 # Verify the empty file before skipping the nonempty loader.
-                split_path=package/(split+'.jsonl')
+                split_path=split_file(package,split)
                 if split_path.stat().st_size==0:
                     summary=json.loads((package/'dataset_metadata.json').read_text())
                     if file_hash(split_path)!=summary['file_sha256'][split]:raise ValueError('Split bytes changed')

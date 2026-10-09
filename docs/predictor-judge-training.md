@@ -1,5 +1,126 @@
 # Action-conditioned safety Predictor Judge
 
+For a shared training delivery, point the existing package/cache commands at
+`DATASET_ROOT/predictor_judge`. See the [portable delivery layout](data-preparation.md#portable-delivery-across-source-nodes);
+the package catalog supplies the unified splits and train-only normalization.
+A training-media delivery includes the original compressed input images under
+`DATASET_ROOT/episodes/<family>/<run>/`; both models share these resources.
+The separate raw backup is not required. Set
+`data.frame_cache` to `null` to train directly from the delivered JPEGs, or build
+an optional input cache on the training machine later.
+
+## Unsafe600 start to finish
+
+This is the current release workflow. First follow the shared
+[code/environment setup](../README.md#training-environment) and
+[pinned Unsafe600 download](../README.md#download-the-current-training-dataset).
+The legacy dataset/build instructions later in this guide are separate workflows.
+No simulator, raw download or semantic construction is needed here.
+
+### Prepare a run and a separate smoke test
+
+From the repository root, generate local configs. The formal reference budget is
+an initial recipe, **not a validated convergence budget**; choose `max_steps`,
+evaluation/save intervals and global batch after the pilot and record the choices.
+
+```bash
+export HF_HOME="${HF_HOME:-$PWD/checkpoints/hf_cache}"
+.venv-visual/bin/python - <<'PYCONFIG'
+import copy,json
+from pathlib import Path
+from huggingface_hub import snapshot_download
+out=Path('outputs/unsafe600-config');out.mkdir(parents=True,exist_ok=True)
+c=json.loads(Path('configs/training/predictor_judge_chunk_27b.json').read_text())
+c['data'].update(package=str(Path('datasets/unsafe600/predictor_judge').resolve()),
+                 frame_cache=None)
+c['data']['sampling']={'positive_fraction':0.6}
+c['evaluation']['run_test']=False
+c['evaluation']['max_batches']=None
+(out/'predictor_judge.json').write_text(json.dumps(c,indent=2)+'\n')
+pilot=copy.deepcopy(c)
+pilot['data']['batch_size']=1
+pilot['training'].update(max_steps=4,global_batch_size=8,warmup_steps=1,
+                         eval_every=2,save_every=2)
+pilot['evaluation']['max_batches']=1
+(out/'predictor_judge-pilot.json').write_text(json.dumps(pilot,indent=2)+'\n')
+snapshot_download(c['model']['model_id'],revision=c['model']['revision'])
+PYCONFIG
+```
+
+Inspect GPU count/VRAM and free disk before loading the model. Set
+`NPROC_PER_NODE` explicitly for the actual host (1 for one GPU, 8 for eight GPUs).
+This launcher uses DDP: each GPU must fit the model; GPU memory is not pooled.
+Global batch must be divisible by microbatch times GPU count. The pilot assumes
+1, 2, 4 or 8 ranks; adapt its global batch for other counts. Keep the Judge's images,
+history/state/action fields and masks intact; reduce microbatch if necessary.
+
+Use a **separate pilot output** and retain its reports as interface diagnostics:
+
+```bash
+export NPROC_PER_NODE=8  # change to the actual supported host configuration
+bash scripts/train_predictor_judge.sh \
+  --config outputs/unsafe600-config/predictor_judge-pilot.json \
+  --output outputs/unsafe600-predictor_judge-pilot --stop-after-step 2
+
+bash scripts/train_predictor_judge.sh \
+  --config outputs/unsafe600-config/predictor_judge-pilot.json \
+  --output outputs/unsafe600-predictor_judge-pilot \
+  --resume outputs/unsafe600-predictor_judge-pilot/checkpoints/step-00000002
+```
+
+Accept the pilot only after real forward/backward updates, finite loss,
+checkpoint save/resume and final model loading succeed. Check the actual batch,
+mask/token lengths, GPU peak memory and validation output. Four updates and capped
+validation are not model-quality evidence. The delivered dataset batch checks do
+not replace this GPU/optimizer/DDP check. Keep config/code/world size unchanged
+across the pilot resume.
+
+### Train, evaluate and hand over
+
+Configure optional W&B using the tracking section below. Keep credentials and
+account destinations on the host. In a persistent terminal session, launch a new
+formal output after selecting the budget; do not resume the pilot as a formal run:
+
+```bash
+bash scripts/train_predictor_judge.sh \
+  --config outputs/unsafe600-config/predictor_judge.json \
+  --output outputs/unsafe600-predictor_judge
+
+NPROC_PER_NODE=8 bash scripts/evaluate_model.sh --task predictor_judge \
+  --checkpoint outputs/unsafe600-predictor_judge/final/model \
+  --package datasets/unsafe600/predictor_judge --split validation \
+  --batch-size 1 --workers 2 --output outputs/unsafe600-predictor_judge/validation.json
+```
+
+Adjust evaluator rank count to the host as well. `final/model` is the trainer's
+validation-selected export. Verify it with standalone full-validation inference.
+After model/threshold selection, run the same independent evaluator with
+`--split test` and a distinct output. Training keeps test disabled; evaluation
+uses natural distributions. A capped pilot report must not enter the formal report.
+Report accuracy, recall, precision/confusion counts and measured inference duration;
+keep detailed diagnostics in JSON. Retain code/submodule/model/data revisions,
+resolved config, seed, sampling report, selected checkpoint, logs and metrics.
+Use the export section below when model publication is authorized.
+
+Run the second, ordered-episode evaluation with the selected model:
+
+```bash
+.venv-visual/bin/python -m safetyjev.chunk_judge_eval \
+  --package datasets/unsafe600/predictor_judge \
+  --checkpoint outputs/unsafe600-predictor_judge/final/model \
+  --split validation --output outputs/unsafe600-predictor_judge/shadow-validation.json \
+  --device cuda:0
+```
+
+Pair evaluation measures labeled-window performance. Shadow replay calls the judge
+at recorded chunk starts, measures episode alarm coverage and per-call duration,
+and continues recorded actions; it is not a closed-loop accident-prevention test.
+Repeat on test only after selection. Report current-safe→future-violation separately:
+only 1,809 of 238,626 positive windows have a known safe starting state; 236,798 already
+start violated and 19 have unknown starting status. Unsafe-only episodes cannot
+establish safe-episode false-alarm rates. Then run the pinned Qwen3.5-9B recipe as a separate
+experiment with the same dataset/split and documented budget comparison.
+
 ## Chunk-boundary semantic judge
 
 The new `chunk_start_v2` path checks a committed eight-step action segment once,
@@ -372,7 +493,8 @@ The classifier and Predictor Judge share the optimizer/DDP/checkpoint engine. Th
 Predictor Judge adds trainable state/action projections to the language LoRA and
 scalar head; the base weights and vision encoder stay frozen.
 
-Prepare the package above, then build its disposable training cache **on the server**:
+Training-media deliveries can train directly with `data.frame_cache=null`. If you
+choose to build a disposable input cache, do so **on the training server**:
 
 ```bash
 .venv-visual/bin/python tools/prepare_predictor_judge_cache.py \
@@ -570,3 +692,15 @@ includes tensor transfer but excludes worker preprocessing and data waiting; ins
 training input-wait and global-samples/s logs for throughput. The initial experiment
 should examine event recall and safe-operation false alarms alongside per-constraint
 metrics, rather than judging quality from training loss or pooled accuracy alone.
+
+Offline package preparation accepts `--media-workers N` (1–64, default 1)
+for bounded image validation processes. Every referenced image is still fully
+decoded and hashed; parallel execution preserves index order and labels. A
+classifier build over the same immutable sources can use `--reuse-media
+<completed-judge-package>` together with `--reuse-annotations
+<completed-judge-package>/annotations`. Media reuse verifies the complete source
+HDF5 SHA256, the image-manifest SHA256 and reference coverage before skipping
+repeated decoding. Older packages without source content hashes cannot be reused
+this way. Keep the total process budget within the source host's available CPU
+and memory; application callers using multiple workers need a guarded Python
+entrypoint (`if __name__ == '__main__':`).

@@ -14,13 +14,17 @@ class VisualTrainTests(unittest.TestCase):
     def test_validation_only_does_not_construct_or_evaluate_test(self):
         self.exercise_pipeline(False)
 
-    def exercise_pipeline(self, run_test):
+    def test_requested_positive_fraction_reaches_training_sampler(self):
+        self.exercise_pipeline(False, positive_fraction=.6)
+
+    def exercise_pipeline(self, run_test, positive_fraction=None):
         from unittest.mock import patch
         import numpy as np
         import torch
         from safetyjev.visual_train import run
 
         requested = []
+        weight_requests = []
         eval_sizes = []
         from torch.utils.data import DataLoader
         def loader(dataset, *args, **kwargs):
@@ -31,6 +35,9 @@ class VisualTrainTests(unittest.TestCase):
                 requested.append(split)
                 if split not in ("train", "validation", "test"):
                     raise AssertionError("Unexpected split: " + split)
+            def training_weights(self, mode, positive_fraction=None):
+                weight_requests.append((mode, positive_fraction))
+                return np.ones(4)
             def __len__(self): return 4
             def __getitem__(self, i):
                 image = np.zeros((1, 8, 8, 3), dtype=np.uint8)
@@ -54,6 +61,8 @@ class VisualTrainTests(unittest.TestCase):
             config={'model':{'dtype':'float32'},'data':{'package':str(package),'num_workers':0,'batch_size':2,'balance':'uniform'},
                     'seed':42,'training':{},'evaluation':{'max_batches':1}}
             if run_test is not None:config['evaluation']['run_test']=run_test
+            if positive_fraction is not None:
+                config['data'].update(balance='query_answer', positive_fraction=positive_fraction)
             with patch('safetyjev.visual_train.verify_package',return_value={'window':{'history_frames':1},'file_sha256':{}}), \
                  patch('safetyjev.visual_train.APWindowDataset',Dataset), \
                  patch('safetyjev.visual_train.DataLoader',side_effect=loader), \
@@ -61,6 +70,7 @@ class VisualTrainTests(unittest.TestCase):
                  patch('jev.visual_model.VisualDecisionModel.load',side_effect=lambda *args,**kwargs:Model()), \
                  patch('jev.visual_training.fit_updates',side_effect=train):
                 report=run(config,root/'run',device='cpu')
+            self.assertEqual(weight_requests, [('query_answer', positive_fraction)] if positive_fraction is not None else [])
             self.assertEqual(requested,['train','validation'] if run_test is False else ['train','validation','test'])
             self.assertEqual(eval_sizes,[2,2] if run_test is False else [2,2,2])
             self.assertEqual(report['temperature'],1.)

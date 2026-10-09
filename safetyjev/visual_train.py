@@ -1,4 +1,5 @@
 """Jar/multi-family launch layer for the fork's current-camera Noul trainer."""
+from .package_layout import split_file,resource_path,verify_package_provenance
 import copy
 from datetime import timedelta
 import torch.distributed as dist
@@ -70,7 +71,7 @@ def answer_metrics(targets, probabilities, threshold=.5):
 
 def _hash(path):
     h=hashlib.sha256()
-    with Path(path).open("rb") as stream:
+    with (path if hasattr(path,"open") else Path(path)).open("rb") as stream:
         for block in iter(lambda:stream.read(4*1024*1024),b""):h.update(block)
     return h.hexdigest()
 
@@ -78,8 +79,9 @@ def _hash(path):
 def verify_package(package, *, verify_raw=True):
     package=Path(package).resolve()
     summary=json.loads((package/"dataset_metadata.json").read_text())
+    verify_package_provenance(package,summary)
     for split,digest in summary["file_sha256"].items():
-        if _hash(package/(split+".jsonl"))!=digest:raise ValueError("Dataset split bytes changed: "+split)
+        if _hash(split_file(package,split,summary))!=digest:raise ValueError("Dataset split bytes changed: "+split)
     if summary.get('method')=='semantic_safety':
         from .predictor_judge_dataset import verify_semantic_resource,resource_record_path
         from .source_episodes import MediaReader
@@ -88,8 +90,8 @@ def verify_package(package, *, verify_raw=True):
         for res in summary['resources'].values():
             verify_semantic_resource(package,res)
             if _hash(resource_record_path(package,res))!=res['record_sha256']:raise ValueError('Source record changed')
-            path=(package/res['media_manifest']).resolve()
-            if not path.is_relative_to(package) or _hash(path)!=res['media_manifest_sha256']:
+            path=resource_path(package,res,'media_manifest')
+            if _hash(path)!=res['media_manifest_sha256']:
                 raise ValueError('Source image manifest changed')
             if verify_raw:
                 with MediaReader(package/res['raw_root']) as reader:
@@ -290,7 +292,8 @@ def _run(config, output, *, device, resume, stop_after, tracker):
     datasets={split:APWindowDataset(package,split,**({'frame_cache':frame_cache} if frame_cache else {})) for split in (("train","validation","test") if run_test else ("train","validation"))}
     workers=config["data"]["num_workers"];batch_size=config["data"]["batch_size"]
     balance=config["data"].get("balance","uniform")
-    weights=None if balance=="uniform" else datasets["train"].training_weights(balance)
+    positive_fraction=config['data'].get('positive_fraction')
+    weights=None if balance=="uniform" and positive_fraction is None else datasets["train"].training_weights(balance,positive_fraction=positive_fraction)
     collator=PreparedVisualCollator(config['model']) if config['data'].get('prepare_in_workers',False) else collate_torch
     loader_options={'num_workers':workers,'collate_fn':collator,'pin_memory':device.startswith('cuda')}
     if workers:

@@ -36,10 +36,14 @@ preprocessing, indexed caches, checkpoint resume, W&B tracking and HF model
 export. Validation selects checkpoints; test evaluation is separate. The semantic
 judge reports accuracy, recall, precision and confusion counts, with observed
 inference duration. Ordered episode shadow replay is a separate functional check.
-A completed semantic corpus, pretrained-model performance and closed-loop safety
-are not established by local interface acceptance.
+The Unsafe600 data release has passed data/interface acceptance. Trained-model
+performance and closed-loop safety require separate experiments.
 
 ## Get started
+
+For a new training run or agent handoff, start with the
+[training handoff](docs/training-handoff.md). It provides the execution order and
+links to the two model guides, from host preparation through evaluation.
 
 ### Get the code
 
@@ -72,18 +76,56 @@ Both model pipelines use this environment. W&B uses the optional tracking extra
 described in each model's guide. Account credentials and tracking destinations
 are configured on the training host, outside repository configuration.
 
+### Download the current training dataset
+
+The current semantic release is
+[SafetyJev-unsafe600](https://huggingface.co/datasets/IDEAS-Lab-Northwestern/SafetyJev-unsafe600),
+pinned to `598da866544f0ea218853e3b0d8fe64c2b000ab5`: 600 episodes,
+480/60/60 whole-task-group train/validation/test, approximately 302.81 GB.
+Allow additional disk space for model weights, training checkpoints and optional
+caches. The independent `-raw` backup is not required. Do not run a source builder,
+relabel, resplit or download a legacy ZIP for this release.
+
+Use a published SafetyJev commit containing the
+[current training workflow](docs/training-handoff.md) and its data-loader
+implementation. Record `git rev-parse HEAD` and
+`git -C third_party/Open-Jev rev-parse HEAD` after checkout/submodule initialization.
+The data has passed interface acceptance; first-run GPU/DDP and optimizer/resume
+acceptance must still be performed on the training host. Code publication and
+formal model training are separate from data publication.
+
+After installing the environment above and obtaining gated dataset/model access,
+authenticate on the training host (never put tokens in commands or documents):
+
+```bash
+.venv-visual/bin/hf auth login
+.venv-visual/bin/python - <<'PYDATA'
+from huggingface_hub import snapshot_download
+snapshot_download('IDEAS-Lab-Northwestern/SafetyJev-unsafe600',
+                  repo_type='dataset',
+                  revision='598da866544f0ea218853e3b0d8fe64c2b000ab5',
+                  local_dir='datasets/unsafe600')
+PYDATA
+```
+
+Keep `episodes/`, `metadata/`, `classifier/` and `predictor_judge/` together.
+Both loaders use the delivered JPEGs directly (`frame_cache=null`); decoded caches
+are optional. Follow the current-release section of the selected guide next.
+Start with Predictor Judge Qwen3.8-27B; the later Qwen3.5-9B run compares backbones,
+not parameter count alone. The Classifier is a separate experiment.
+
 ### Follow the selected model's guide
 
 | Workflow | Classifier | Predictor Judge |
 |---|---|---|
-| Download, extract and verify data | [Dataset and splits](docs/classifier-training.md#fixed-inputs) | [Prepared dataset](docs/predictor-judge-training.md#use-a-prepared-dataset) |
+| Current dataset, pilot and training | [Unsafe600 workflow](docs/classifier-training.md#unsafe600-start-to-finish) | [Unsafe600 workflow](docs/predictor-judge-training.md#unsafe600-start-to-finish) |
 | Prepare cache and train | [Host preparation and training](docs/classifier-training.md#prepare-and-verify-the-host) | [Cache and training](docs/predictor-judge-training.md#cache-train-and-evaluate) |
 | Configure tracking | [W&B](docs/classifier-training.md#optional-wb-logging) | [W&B](docs/predictor-judge-training.md#experiment-tracking) |
 | Test and publish the model | [Test and delivery](docs/classifier-training.md#final-test-and-interpretation) | [Test and delivery](docs/predictor-judge-training.md#export-and-publish-the-selected-checkpoint) |
 
-Run commands from the repository root. For new semantic data, use the
-[fixed-cohort builder](docs/data-preparation.md#fixed-cohort-chunk-build) on the
-source host, then verify indexes, shared media and splits before training. Legacy
+Run commands from the repository root. Unsafe600 is already constructed. The
+[fixed-cohort builder](docs/data-preparation.md#fixed-cohort-chunk-build) is for
+preparing a different source release, not for starting this training run. Legacy
 published datasets have separate pinned revisions and extraction instructions in
 the guides. Generate disposable caches on the training host as needed.
 
