@@ -9,6 +9,12 @@ it is not universally an unsafe label.
 This guide covers data download, preprocessing, training, evaluation and model
 delivery. The action-conditioned model has its own [Predictor Judge guide](predictor-judge-training.md).
 
+For source-derived semantic packages, follow the [semantic build and cache sequence](data-preparation.md#semantic-safety-labels-from-source-recordings)
+instead of the legacy AP/video preparation below. In that explicit mode Yes means
+the queried violation is present; single-frame liquid interval queries are excluded.
+Use the corresponding semantic package/cache and `evaluation.run_test=false` for
+development checks. The model and training entrypoint are unchanged.
+
 ## Environment
 
 Install the [shared training environment](../README.md#training-environment).

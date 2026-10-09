@@ -53,7 +53,7 @@ def inventory_episode(record, *, active_motion_rad=.05):
 
 
 def select_episodes(inventory, assignments, *, seed=42, unsafe_per_safe=4, train_episodes='unsafe_only'):
-    if train_episodes not in ('unsafe_only','unsafe_plus_safe'):
+    if train_episodes not in ('unsafe_only','unsafe_plus_safe','all'):
         raise ValueError('Unknown training episode selection')
     if not math.isfinite(unsafe_per_safe) or unsafe_per_safe<=0:
         raise ValueError('Positive unsafe_per_safe required')
@@ -66,12 +66,13 @@ def select_episodes(inventory, assignments, *, seed=42, unsafe_per_safe=4, train
         r.update(split=assignments[r['group_id']],selected=False,selection_reason='quality_excluded')
         if not r['quality_ok']:continue
         if r['split']!='train':r.update(selected=True,selection_reason='heldout_complete')
+        elif train_episodes=='all':r.update(selected=True,selection_reason='fixed_cohort_training')
         elif r['safety']=='unsafe':r.update(selected=True,selection_reason='unsafe_training_core')
         elif train_episodes=='unsafe_only':r['selection_reason']='safe_training_reserve'
         elif not r['active']:r['selection_reason']='inactive_safe'
         else:r['selection_reason']='safe_training_quota'
         if r['split']=='train':by_family[r['family']].append(r)
-    if train_episodes=='unsafe_only':return rows
+    if train_episodes in ('unsafe_only','all'):return rows
     rng=random.Random(seed)
     for family in sorted(by_family):
         candidates=by_family[family];unsafe=sum(r['safety']=='unsafe' for r in candidates)
@@ -136,7 +137,15 @@ def write_summary(path, report):
     lines+=['','| Split | Positive windows | Negative windows | Excluded windows |','|---|---:|---:|---:|']
     for split,r in sorted(report['windows']['by_split'].items()):
         lines.append(f"| {split} | {r.get('positive',0)} | {r.get('negative',0)} | {r.get('excluded',0)} |")
-    lines+=['',f"Selected first-rejection events: {report['events']['selected']}. {report['events']['definition']}.",'',
+    if report.get('supervision')=='semantic_safety':
+        lines+=['','## Semantic windows','',
+                '| Split | Family | Semantic | Episodes | Positive | Negative | Excluded |',
+                '|---|---|---|---:|---:|---:|---:|']
+        for row in report['semantic_windows']:
+            lines.append(f"| {row['split']} | {row['family']} | {row['semantic_id']} | {row['episodes']} | {row['positive']} | {row['negative']} | {row['excluded']} |")
+        event_label='Selected episode/query first-positive summaries'
+    else:event_label='Selected first-rejection events'
+    lines+=['',f"{event_label}: {report['events']['selected']}. {report['events']['definition']}.",'',
             'Full episode inventory: `episode_inventory.jsonl`. Counts by family, checkpoint, constraint, remaining length and exclusion reason: `composition.json`.',
             'The training pool is not duplicated to balance labels. Actual epoch draws, unique samples and repetition are reported separately by the training sampler.',
             'Absent or rare violations are retained as observed. Recall is undefined without held-out positives; duplicated windows do not supply new events.']

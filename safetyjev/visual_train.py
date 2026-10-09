@@ -80,6 +80,21 @@ def verify_package(package, *, verify_raw=True):
     summary=json.loads((package/"dataset_metadata.json").read_text())
     for split,digest in summary["file_sha256"].items():
         if _hash(package/(split+".jsonl"))!=digest:raise ValueError("Dataset split bytes changed: "+split)
+    if summary.get('method')=='semantic_safety':
+        from .predictor_judge_dataset import verify_semantic_resource,resource_record_path
+        from .source_episodes import MediaReader
+        if _hash(package/'semantic_definitions.json')!=summary['semantic_definitions_sha256']:
+            raise ValueError('Semantic definitions changed')
+        for res in summary['resources'].values():
+            verify_semantic_resource(package,res)
+            if _hash(resource_record_path(package,res))!=res['record_sha256']:raise ValueError('Source record changed')
+            path=(package/res['media_manifest']).resolve()
+            if not path.is_relative_to(package) or _hash(path)!=res['media_manifest_sha256']:
+                raise ValueError('Source image manifest changed')
+            if verify_raw:
+                with MediaReader(package/res['raw_root']) as reader:
+                    for ref,digest in json.loads(path.read_text()).items():reader.read(ref,digest)
+        return summary
     for resource in summary["resources"].values():
         raw=(package/resource["raw_root"]).resolve();manifest=raw/"manifest.jsonl"
         if _hash(manifest)!=resource["raw_manifest_sha256"]:raise ValueError("Raw manifest changed")
@@ -106,10 +121,31 @@ def publish_final(output, build):
         raise
 
 
+def _semantic_metrics(targets, probabilities, metadata):
+    """Group semantic binary supervision; metadata never enters model.forward."""
+    from .metrics import binary_metrics
+    if not len(targets) == len(probabilities) == len(metadata):
+        raise ValueError('Evaluation metadata and predictions must align')
+    groups = {'by_semantic':defaultdict(list), 'by_family':defaultdict(list)}
+    for target, probability, meta in zip(targets, probabilities, metadata):
+        if not meta.get('semantic_id'):
+            continue
+        if target not in ([1.,0.], [0.,1.]):
+            raise ValueError('Semantic evaluation requires binary No/Yes targets')
+        pair = (int(target[1]), probability[1])
+        groups['by_semantic'][meta['semantic_id']].append(pair)
+        if meta.get('family'):
+            groups['by_family'][meta['family']].append(pair)
+    if not groups['by_semantic']:
+        return {}
+    return {key:{name:binary_metrics(pairs,.5) for name,pairs in values.items()}
+            for key,values in groups.items()}
+
+
 @torch.inference_mode()
 def _evaluate_visual_local(model, loader, *, temperature=1., max_batches=None, output=None):
     from jev.metrics import evaluate_probabilities, softmax
-    model.eval();logits_all=[];targets_all=[];ids=[];queries=[];elapsed=0.
+    model.eval();logits_all=[];targets_all=[];ids=[];queries=[];metadata=[];elapsed=0.
     for index,batch in enumerate(loader):
         if max_batches is not None and index>=max_batches:break
         if model.head.weight.device.type=="cuda":torch.cuda.synchronize(model.head.weight.device)
@@ -119,11 +155,13 @@ def _evaluate_visual_local(model, loader, *, temperature=1., max_batches=None, o
         if not torch.isfinite(logits).all():raise FloatingPointError("Nonfinite evaluation logits")
         logits_all.extend(logits.float().cpu().tolist());targets_all.extend(batch["targets"].tolist())
         ids.extend(batch["sample_ids"]);queries.extend(batch["query_ids"])
+        metadata.extend(batch.get('metadata', [{} for _ in batch['sample_ids']]))
     if not logits_all:raise ValueError("Evaluation split produced no observations")
     probabilities=[softmax(values,temperature) for values in logits_all]
     metrics=evaluate_probabilities(targets_all,probabilities)
     metrics["confusion"]=confusion(targets_all,[p[1] for p in probabilities])
     metrics['answers']=answer_metrics(targets_all,[p[1] for p in probabilities])
+    metrics.update(_semantic_metrics(targets_all,probabilities,metadata))
     groups=defaultdict(list)
     for i,query in enumerate(queries):groups[query].append(i)
     metrics["by_query"]={q:{**evaluate_probabilities([targets_all[i] for i in ix],[probabilities[i] for i in ix]),
@@ -137,7 +175,8 @@ def _evaluate_visual_local(model, loader, *, temperature=1., max_batches=None, o
         with output.open("w") as stream:
             for i in range(len(ids)):
                 stream.write(json.dumps({"id":ids[i],"query_id":queries[i],"logits":logits_all[i],
-                                         "target":targets_all[i],"probabilities":probabilities[i]},allow_nan=False)+"\n")
+                                         "target":targets_all[i],"probabilities":probabilities[i],
+                                         "metadata":metadata[i]},allow_nan=False)+"\n")
     return metrics,logits_all,targets_all
 
 
@@ -168,7 +207,7 @@ def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=N
     timings=[None]*world;dist.all_gather_object(timings,elapsed)
     def merge():
         from jev.metrics import evaluate_probabilities
-        targets=[];probs=[];groups=defaultdict(list);seen=set()
+        targets=[];probs=[];metadata=[];groups=defaultdict(list);seen=set()
         temporary=output.with_suffix(output.suffix+'.tmp')
         with temporary.open('w') as writer:
             for r in range(world):
@@ -178,10 +217,12 @@ def evaluate_visual(model, loader, *, temperature=1., max_batches=None, output=N
                         if row['id'] in seen:raise ValueError("Duplicate distributed evaluation sample")
                         seen.add(row['id']);groups[row['query_id']].append(len(targets))
                         targets.append(row['target']);probs.append(row['probabilities']);writer.write(line)
+                        metadata.append(row.get('metadata',{}))
         if not targets:raise ValueError("Evaluation has no samples")
         result=evaluate_probabilities(targets,probs)
         result['confusion']=confusion(targets,[p[1] for p in probs])
         result['answers']=answer_metrics(targets,[p[1] for p in probs])
+        result.update(_semantic_metrics(targets,probs,metadata))
         result['by_query']={q:{**evaluate_probabilities([targets[i] for i in ix],[probs[i] for i in ix]),
                             'confusion':confusion([targets[i] for i in ix],[probs[i][1] for i in ix]),
                             'answers':answer_metrics([targets[i] for i in ix],[probs[i][1] for i in ix])} for q,ix in groups.items()}

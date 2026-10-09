@@ -18,6 +18,7 @@ def main():
         dataset=PredictorJudgeWindowDataset(data['package'],'train',frame_cache=data.get('frame_cache'))
         sampler=JudgeBatchSampler(SamplingRows(dataset),data['batch_size'],seed=config['seed'],epoch=0,**data.get('sampling',{}))
         model_config={**config['model'],**{k:dataset.summary[k] for k in ['history_frames','max_actions']}}
+        if dataset.summary.get('input_contract')=='chunk_start_v2':model_config['input_contract']='chunk_start_v2'
         collator=PreparedPredictorJudgeCollator(model_config) if data.get('prepare_in_workers') else collate_predictor_judge
     elif task=='classifier':
         dataset=APWindowDataset(data['package'],'train',frame_cache=data.get('frame_cache'))

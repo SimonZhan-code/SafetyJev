@@ -38,6 +38,14 @@ def build_cache(package,output,*,max_bytes=None):
             db.execute('DELETE FROM samples');db.commit();budget()
             counts={}
             for split in ['train','validation','test']:
+                # Train-only review packages legitimately have no held-out rows.
+                # Verify the empty file before skipping the nonempty loader.
+                split_path=package/(split+'.jsonl')
+                if split_path.stat().st_size==0:
+                    summary=json.loads((package/'dataset_metadata.json').read_text())
+                    if file_hash(split_path)!=summary['file_sha256'][split]:raise ValueError('Split bytes changed')
+                    counts[split]=0
+                    continue
                 data=PredictorJudgeWindowDataset(package,split);counts[split]=len(data)
                 for idx in range(len(data)):
                     row=data.record(idx);key=window_key(row)
@@ -49,6 +57,10 @@ def build_cache(package,output,*,max_bytes=None):
                         values={'robot_state':e['observations'][t]['robot_state'],'remaining_actions':w['actions'].tolist(),
                                 'action_mask':w['action_mask'].tolist(),'action_dt_s':w['action_dt_s'],
                                 'history_mask':[s is not None for s in row['history_steps']],'views':{}}
+                        if row.get('input_contract')=='chunk_start_v2':
+                            from .chunk_judge import chunk_numeric_inputs
+                            for name,value in chunk_numeric_inputs(e,row).items():
+                                values[name]=value.tolist() if isinstance(value,np.ndarray) else value
                         for camera in CAMERAS:
                             keys=[]
                             for step in row['history_steps']:
@@ -111,6 +123,10 @@ class JudgeCache:
             views[camera]=np.stack(images)
         for key in ['robot_state','remaining_actions']:values[key]=np.asarray(values[key],dtype=np.float32)
         for key in ['action_mask','history_mask']:values[key]=np.asarray(values[key],dtype=bool)
+        if 'executed_actions' in values:
+            values['executed_actions']=np.asarray(values['executed_actions'],dtype=np.float32)
+            values['history_robot_states']=np.asarray(values['history_robot_states'],dtype=np.float32)
+            values['history_action_mask']=np.asarray(values['history_action_mask'],dtype=bool)
         values.update(questions=row['question'],observations=views,constraint_context=row['constraint_context']);return values
 
 

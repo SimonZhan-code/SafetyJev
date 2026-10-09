@@ -117,6 +117,7 @@ def build_visual_cache(package, output, *, max_bytes=None, workers=1):
                 # Indexing is idempotent after interruption; frame payloads are filled only afterwards.
                 db.execute('DELETE FROM samples');db.execute('DELETE FROM frames');db.commit()
                 for split in summary['file_sha256']:
+                    if split=='excluded':continue
                     strata={};idx=0
                     with (package/(split+'.jsonl')).open('rb') as stream:
                         while True:
@@ -130,19 +131,36 @@ def build_visual_cache(package, output, *, max_bytes=None, workers=1):
                             group=(row['metadata']['family'],row['metadata']['query_id'],int(row['target'][1]))
                             code=strata.setdefault(group,len(strata))
                             db.execute('INSERT INTO samples VALUES (?,?,?,?)',(split,idx,offset,code))
-                            frame=media['frame_indices'][0];fps=media['video_fps']
-                            if type(frame) is not int or frame<0 or not math.isfinite(fps) or fps<=0:raise ValueError('Invalid frame clock')
-                            for video in media['videos'].values():
+                            source='image_refs' in media
+                            frame=media['frame_indices'][0];fps=0 if source else media['video_fps']
+                            if type(frame) is not int or frame<0 or (not source and (not math.isfinite(fps) or fps<=0)):raise ValueError('Invalid frame clock')
+                            refs=[v[0] for v in media['image_refs'].values()] if source else media['videos'].values()
+                            for video in refs:
                                 resource=media['resource_id'];key=frame_key(resource,video,frame,fps)
                                 db.execute('INSERT OR IGNORE INTO frames(key,resource,video,frame,fps) VALUES (?,?,?,?,?)',(key,resource,video,frame,fps))
                             idx+=1
                             if idx%10000==0:db.commit();budget()
                 db.execute("INSERT OR REPLACE INTO progress VALUES ('indexed','true')");db.commit()
             budget()
-            videos=db.execute('SELECT resource,video,fps,count(*) FROM frames WHERE png IS NULL GROUP BY resource,video,fps').fetchall()
+            videos=db.execute('SELECT resource,video,fps,count(*) FROM frames WHERE png IS NULL AND fps>0 GROUP BY resource,video,fps').fetchall()
             total=db.execute('SELECT count(*) FROM frames').fetchone()[0]
-            progress.update(stage='decoding',total_frames=total,ready_frames=total-sum(v[3] for v in videos))
+            progress.update(stage='decoding',total_frames=total,ready_frames=db.execute('SELECT count(*) FROM frames WHERE png IS NOT NULL').fetchone()[0])
             publish_progress()
+            # HDF5 already stores independently indexed JPEGs. Keep one reader per
+            # episode, rather than opening the file for each frame or making MP4s.
+            from .source_episodes import MediaReader
+            for (resource,) in db.execute('SELECT DISTINCT resource FROM frames WHERE fps=0 AND png IS NULL').fetchall():
+                res=summary['resources'][resource]
+                hashes=json.loads((package/res['media_manifest']).read_text())
+                with MediaReader(package/res['raw_root']) as reader:
+                    for key,ref in db.execute('SELECT key,video FROM frames WHERE resource=? AND fps=0 AND png IS NULL',(resource,)):
+                        with Image.open(io.BytesIO(reader.read(ref,hashes[ref]))) as image:
+                            buffer=io.BytesIO();image.convert('RGB').save(buffer,format='PNG',compress_level=1)
+                        payload=buffer.getvalue()
+                        db.execute('UPDATE frames SET png=?,sha=? WHERE key=?',(payload,hashlib.sha256(payload).hexdigest(),key))
+                        progress['ready_frames']+=1
+                        if progress['ready_frames']%100==0:db.commit();budget()
+                db.commit();budget()
             def jobs():
                 for resource,video,fps,_ in videos:
                     raw=(package/summary['resources'][resource]['raw_root']).resolve();path=(raw/video).resolve()

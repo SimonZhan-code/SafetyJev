@@ -21,7 +21,8 @@ MODEL_FILES = {
 METRIC_KEYS = ('evaluated', 'nll', 'brier', 'accuracy', 'confusion', 'answers', 'by_query',
                'temperature', 'ece', 'model_time_seconds', 'time_scope',
                'samples', 'micro', 'by_constraint', 'by_family_constraint', 'by_valid_steps',
-               'events', 'safe_source_episodes', 'threshold', 'model_batch_seconds', 'interpretation')
+               'events', 'safe_source_episodes', 'threshold', 'model_batch_seconds', 'evaluation_seconds',
+               'evaluation_time_scope', 'interpretation', 'headline')
 
 
 def sha256(path):
@@ -50,7 +51,7 @@ def checkpoint_hashes(model):
 def model_task(config):
     if config.get('method') == 'native_qwen_visual_noul' and config.get('history_frames') == 1:
         return 'classifier'
-    if config.get('method') == 'native_qwen_action_conditioned_noul':
+    if config.get('method') in ('native_qwen_action_conditioned_noul','native_qwen_chunk_noul'):
         return 'predictor_judge'
     raise ValueError('Expected a current-camera classifier or Predictor Judge checkpoint')
 
@@ -174,6 +175,29 @@ Adjacent windows are correlated, and constraints without positive examples have
 no recall evidence. Event metrics cover only events with eligible windows.
 Scores are not established deployment probabilities or evidence of intervention
 benefits. Read the recorded threshold when interpreting classification metrics.
+
+Preserve all applicable base-model and dataset terms when using this artifact.
+'''
+        if config.get('input_contract')=='chunk_start_v2':
+            judge_card='''# SafetyJev chunk-boundary Predictor Judge
+
+The previous executed action segment, its post-action overview/wrist images and
+aligned historical robot states, plus current proprio, eight future committed commands and one safety query produce
+shared No/Yes scores. Yes means a semantic violation during the future segment,
+including an ongoing state violation. Check once before each new segment.
+
+Load with `safetyjev.chunk_judge_model.load_judge`. This is not a standalone
+AutoModel checkpoint. `model/model.json` pins the separately obtained backbone;
+`predictor_judge.pt` stores numeric projections and train-only normalization.
+The chunk_start_v2 contract is incompatible with v1 chunk and legacy per-step
+checkpoints. Historical and current states share train-only normalization and
+the state projection. Metrics retain actual model-call and evaluation durations.
+
+`metrics.json` retains compact headline confusion metrics and detailed diagnostics;
+`provenance.json` records source/data identity. Training sampling uses episode/status
+units, not independent physical event counts. Validation/test retain their supplied
+distribution. Shadow replay is not evidence of intervention benefit, and an
+unsafe-only cohort cannot establish safe-episode false-alarm rates.
 
 Preserve all applicable base-model and dataset terms when using this artifact.
 '''

@@ -23,13 +23,42 @@ def resource_record_path(package,res):
     return path
 
 
+def verify_semantic_resource(package,res):
+    if res.get('annotation_file'):
+        path=(Path(package)/res['annotation_file']).resolve()
+        if not path.is_relative_to(Path(package).resolve()) or file_hash(path)!=res['annotation_file_sha256']:
+            raise ValueError('Annotation file changed')
+
+
 def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.1,.1),
-                  group_splits=None,unsafe_per_safe=4,active_motion_rad=.05,train_episodes='unsafe_only'):
+                  group_splits=None,unsafe_per_safe=4,active_motion_rad=.05,train_episodes='unsafe_only',
+                  semantic_definitions=None,semantic_task='predictor_judge',review=False,reuse_annotations=None,liquid_asset_root=None,
+                  input_contract='per_step_v1',source_provenance=None):
     from PIL import Image
     from .predictor_judge_curation import inventory_episode,select_episodes,composition_report,write_summary
+    if input_contract not in ('per_step_v1','chunk_start_v2'):raise ValueError('Unsupported input contract')
+    if input_contract=='chunk_start_v2':
+        if semantic_definitions is None or semantic_task!='predictor_judge':raise ValueError('Chunk inputs require semantic predictor judge')
+        history_frames=8
+    if semantic_definitions is None and (semantic_task!='predictor_judge' or review or reuse_annotations is not None or liquid_asset_root is not None):
+        raise ValueError('Semantic task/review options require semantic definitions')
+    if semantic_definitions is not None:
+        from .semantic_labels import validate_semantic_definitions
+        from .semantic_data import build_semantic_samples,write_annotation,read_annotation,to_classifier_record,prepare_semantic_annotation
+        validate_semantic_definitions(semantic_definitions,for_production=not review)
+        if semantic_task not in ('classifier','predictor_judge'):raise ValueError('Invalid semantic task')
+        if group_splits is None:raise ValueError('Semantic preparation requires a frozen task-group split')
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False);(output/'BUILDING').touch()
-    inventory=[];candidates={};resources={}
+    inventory=[];candidates={};resources={};annotations={}
+    liquid_resolver=None
+    asset_root=liquid_asset_root or os.environ.get('OMNIGIBSON_DATA_PATH')
+    if semantic_definitions is not None and asset_root and reuse_annotations is None:
+        from .liquid_geometry import LiquidAssetResolver
+        liquid_resolver=LiquidAssetResolver(asset_root)
     (output/'media').mkdir();(output/'records').mkdir()
+    if semantic_definitions is not None:
+        (output/'annotations').mkdir()
+        (output/'semantic_definitions.json').write_text(json.dumps(semantic_definitions,indent=2)+'\n')
     for directory in sorted(Path(d).resolve() for d in episode_dirs):
         source=(directory/'trajectory.hdf5').is_file();preparation_error=None
         try:
@@ -47,6 +76,36 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
             info['quality_ok']=False;info['quality_reasons'].append('source_preparation: '+preparation_error)
         eid=info['episode_id']
         if not isinstance(eid,str) or not eid or eid in candidates:raise ValueError('Missing/duplicate episode ID')
+        if semantic_definitions is not None and info['quality_ok']:
+            if not source:raise ValueError('Semantic labels require source HDF5 physical evidence')
+            annotation=prepare_semantic_annotation(directory,eid,semantic_definitions,review=review,reuse_annotations=reuse_annotations,liquid_asset_root=liquid_asset_root,liquid_resolver=liquid_resolver)
+            rows=build_semantic_samples(e,annotation,semantic_definitions,task=semantic_task,history_frames=history_frames,review=review,input_contract=input_contract)
+            info['legacy_safety']=info['safety']
+            state_values=[s['label'] for q in annotation['queries'].values() if q['temporal_kind']=='state' for s in q['states']]
+            interval_rows=[r for r in rows if annotation['queries'][r['constraint_id']]['temporal_kind']=='interval']
+            unavailable_states=sum(v is None for v in state_values)
+            unavailable_intervals=sum(r['target'] is None for r in interval_rows)
+            info['semantic_coverage']={'state_observations':len(state_values),'unavailable_state_observations':unavailable_states,
+                                      'interval_queries':len(interval_rows),'unavailable_interval_queries':unavailable_intervals}
+            positive=1 in state_values or any(r['target']==[0.,1.] for r in rows)
+            eligible=any(r['target'] is not None for r in rows)
+            info['safety']='unsafe' if positive else ('safe' if eligible and not unavailable_states and not unavailable_intervals else 'unknown')
+            info['events']=[{'constraint_id':qid,'step':next(s['step'] for s in q['states'] if s['label']==1)}
+                            for qid,q in annotation['queries'].items() if any(s['label']==1 for s in q['states'])]
+            if not eligible:
+                info['quality_ok']=False;info['quality_reasons'].append('no_eligible_semantic_samples')
+            annotation_file='annotations/'+hashlib.sha256(eid.encode()).hexdigest()+'.json'
+            if reuse_annotations is not None:
+                # Immutable annotations share storage on the same filesystem;
+                # each package retains its own portable directory entry.
+                import errno,shutil
+                original=Path(reuse_annotations)/Path(annotation_file).name
+                try:os.link(original,output/annotation_file)
+                except OSError as exc:
+                    if exc.errno!=errno.EXDEV:raise
+                    shutil.copyfile(original,output/annotation_file)
+            else:write_annotation(output/annotation_file,annotation)
+            annotations[eid]={'annotation_file':annotation_file,'annotation_file_sha256':file_hash(output/annotation_file)}
         media={}
         if info['quality_ok']:
             try:
@@ -79,6 +138,7 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
         for r in selected:f.write(json.dumps(r,allow_nan=False)+'\n')
     sums={k:[np.zeros(d),np.zeros(d),0] for k,d in [('state',16),('action',8)]}
     counts=Counter();reasons=Counter()
+    semantic_windows={};query_windows={}
     windows={key:{} for key in ['by_split','by_family','by_policy','by_checkpoint_id','by_constraint','by_valid_steps','by_label_reason']}
     writers={name:(output/(name+'.jsonl')).open('w') for name in ['train','validation','test','excluded']}
     try:
@@ -91,17 +151,35 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
             resources[eid]={'raw_root':info['raw_root'],'record_sha256':info['record_sha256'],'group_id':info['group_id'],
                             'media_manifest':media_file,'media_manifest_sha256':file_hash(output/media_file)}
             if record_file:resources[eid]['record_file']=record_file
+            if eid in annotations:resources[eid].update(annotations[eid])
             first={event['constraint_id']:event['step'] for event in info['events']}
-            for row in build_predictor_judge_samples(e,history_frames=history_frames):
+            if semantic_definitions is not None:
+                annotation=read_annotation(output/annotations[eid]['annotation_file'])
+                rows=build_semantic_samples(e,annotation,semantic_definitions,task=semantic_task,history_frames=history_frames,review=review,input_contract=input_contract)
+            else:rows=build_predictor_judge_samples(e,history_frames=history_frames)
+            for row in rows:
                 row.update(split=split,family=info['family'],policy=info['policy'],checkpoint_id=info['checkpoint_id'],episode_safety=info['safety'])
                 # Sampling metadata stays outside the model input allowlist.
                 t=first.get(row['constraint_id'])
                 row['negative_stratum']='near_event' if t is not None and 0<t-row['end_step']<=8 else 'ordinary'
                 reasons[row['label_reason']]+=1;destination=split if row['target'] is not None else 'excluded'
-                writers[destination].write(json.dumps(row,allow_nan=False)+'\n');counts[destination]+=1
+                exported=to_classifier_record(row,e) if semantic_definitions is not None and semantic_task=='classifier' else row
+                writers[destination].write(json.dumps(exported,allow_nan=False)+'\n');counts[destination]+=1
                 label='excluded' if row['target'] is None else ('positive' if row['target'][1] else 'negative')
+                if semantic_definitions is not None:
+                    key=(split,info['family'],row['semantic_id'])
+                    stats=semantic_windows.setdefault(key,dict(episodes=set(),positive=0,negative=0,excluded=0,excluded_reasons=Counter()))
+                    stats['episodes'].add(eid);stats[label]+=1
+                    if label=='excluded':stats['excluded_reasons'][row['label_reason']]+=1
+                    qkey=(split,info['family'],row['constraint_id'])
+                    qstats=query_windows.setdefault(qkey,dict(episodes=set(),positive=0,negative=0,excluded=0,
+                        excluded_reasons=Counter(),by_starting_status={}))
+                    qstats['episodes'].add(eid);qstats[label]+=1
+                    if label=='excluded':qstats['excluded_reasons'][row['label_reason']]+=1
+                    status={True:'already_violated',False:'not_violated',None:'unknown'}[row['starts_violated']]
+                    qstats['by_starting_status'].setdefault(status,Counter())[label]+=1
                 for field,value in [('split',split),('family',info['family']),('policy',info['policy']),('checkpoint_id',info['checkpoint_id']),
-                                    ('constraint',info['family']+'/'+row['constraint_id']),('valid_steps',str(row['valid_steps'])),('label_reason',row['label_reason'])]:
+                                    ('constraint',info['family']+'/'+row['constraint_id']),('valid_steps',str(row.get('valid_steps',0))),('label_reason',row['label_reason'])]:
                     counter=windows['by_'+field].setdefault(value,Counter());counter[label]+=1
             if split=='train':
                 values={'state':[o['robot_state'] for o in e['observations']], 'action':[a['command'] for a in e['execution']]}
@@ -111,6 +189,20 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
     finally:
         for writer in writers.values():writer.close()
     report=composition_report(selected,windows)
+    if semantic_definitions is not None:
+        report['events']['definition']='first observed positive state per episode/semantic query; not original LTL rejections or a count of all physical events; interval-only labels excluded'
+        report['supervision']='semantic_safety'
+        report['semantic_windows']=[dict(split=split,family=family,semantic_id=semantic,
+            episodes=len(stats['episodes']),positive=stats['positive'],negative=stats['negative'],
+            excluded=stats['excluded'],eligible=stats['positive']+stats['negative'],
+            candidates=stats['positive']+stats['negative']+stats['excluded'],
+            excluded_reasons=dict(stats['excluded_reasons']))
+            for (split,family,semantic),stats in sorted(semantic_windows.items())]
+        report['query_windows']=[dict(split=split,family=family,query_id=query,episodes=len(stats['episodes']),
+            positive=stats['positive'],negative=stats['negative'],excluded=stats['excluded'],
+            eligible=stats['positive']+stats['negative'],candidates=stats['positive']+stats['negative']+stats['excluded'],
+            excluded_reasons=dict(stats['excluded_reasons']),by_starting_status=stats['by_starting_status'])
+            for (split,family,query),stats in sorted(query_windows.items())]
     report['selection']={'train_episodes':train_episodes,'unsafe_per_safe':unsafe_per_safe,'active_motion_rad':active_motion_rad,
                          'split_source':'frozen_manifest' if group_splits is not None else 'engineering_auto_split',
                          'safe_quota':'none' if train_episodes=='unsafe_only' else 'per training family, ceil(unsafe/ratio); one active safe if no unsafe'}
@@ -122,9 +214,24 @@ def build_package(episode_dirs,output,*,history_frames=3,seed=42,fractions=(.8,.
         normalization[key+'_mean']=mean.tolist();normalization[key+'_std']=std.tolist()
     metadata={'method':'per_step_action_conditioned_safety_judgment','history_frames':history_frames,'max_actions':8,
         'state_features':STATE_FEATURES,'resources':resources,'group_splits':assignment,'normalization':normalization,
+        'normalization_statistics':{key:dict(sum=total.tolist(),sum_squares=square.tolist(),count=n)
+                                    for key,(total,square,n) in sums.items()},
         'selection':report['selection'],'counts':dict(counts),'label_reasons':dict(reasons),
         'inventory_sha256':file_hash(output/'episode_inventory.jsonl'),
         'file_sha256':{name:file_hash(output/(name+'.jsonl')) for name in writers}}
+    if semantic_definitions is not None:
+        metadata.update(method='semantic_safety',task=semantic_task,status='review_only' if review else 'reviewed',
+                        input_contract=input_contract,
+                        history_frames=1 if semantic_task=='classifier' else history_frames,
+                        semantic_definitions_sha256=file_hash(output/'semantic_definitions.json'))
+        if semantic_task=='classifier':metadata['window']={'history_frames':1,'frame_stride':1,'sample_stride':1}
+    if source_provenance is not None:
+        provenance_path=output/'source_provenance.json'
+        provenance_path.write_text(json.dumps(source_provenance,indent=2)+'\n')
+        metadata['source_provenance_sha256']=file_hash(provenance_path)
+        origins={r['episode_id']:r for r in source_provenance['selected']}
+        for eid,res in resources.items():
+            res['source_node']=str(origins[eid]['source_node'])
     (output/'dataset_metadata.json').write_text(json.dumps(metadata,indent=2)+'\n');(output/'BUILDING').unlink()
     return metadata
 
@@ -135,8 +242,15 @@ class PredictorJudgeWindowDataset:
         if split not in ('train','validation','test'):raise ValueError('Use train/validation/test')
         if (self.package/'BUILDING').exists():raise ValueError('Unfinished package')
         self.summary=json.loads((self.package/'dataset_metadata.json').read_text());self.path=self.package/(split+'.jsonl')
+        if self.summary.get('input_contract','per_step_v1') not in ('per_step_v1','chunk_start_v2'):
+            raise ValueError('Unsupported input contract; rebuild older chunk packages for historical robot state')
+        if self.summary.get('method')=='semantic_safety':
+            if self.summary.get('task')!='predictor_judge':raise ValueError('Expected predictor judge package')
+            if file_hash(self.package/'semantic_definitions.json')!=self.summary['semantic_definitions_sha256']:
+                raise ValueError('Semantic definitions changed')
         if file_hash(self.path)!=self.summary['file_sha256'][split]:raise ValueError('Split bytes changed')
         self.media_readers=OrderedDict();self.offsets=array('Q');self.cache=OrderedDict();self.cache_episodes=cache_episodes
+        self.checked_annotations=set()
         self._reader=None;self._reader_pid=None;self.frame_cache=None
         if frame_cache:
             from .predictor_judge_cache import JudgeCache
@@ -174,10 +288,11 @@ class PredictorJudgeWindowDataset:
             self._reader=self.path.open('rb');self._reader_pid=os.getpid()
         self._reader.seek(self.offsets[index]);return json.loads(self._reader.readline())
     def __getstate__(self):
-        state=self.__dict__.copy();state.update(_reader=None,_reader_pid=None,cache=OrderedDict(),media_readers=OrderedDict());return state
+        state=self.__dict__.copy();state.update(_reader=None,_reader_pid=None,cache=OrderedDict(),media_readers=OrderedDict(),checked_annotations=set());return state
     def _episode(self,eid):
         if eid not in self.cache:
             res=self.summary['resources'][eid];root=(self.package/res['raw_root']).resolve()
+            verify_semantic_resource(self.package,res)
             record_path=resource_record_path(self.package,res)
             if file_hash(record_path)!=res['record_sha256']:raise ValueError('Raw record bytes changed')
             manifest=(self.package/res['media_manifest']).resolve()
@@ -193,8 +308,15 @@ class PredictorJudgeWindowDataset:
         self.media_readers.move_to_end(root)
         return self.media_readers[root].read(relative,digest)
     def __getitem__(self,index):
+        return self.sample(self.record(index))
+    def sample(self,row):
         from PIL import Image
-        row=self.record(index)
+        if row.get('input_contract','per_step_v1')!=self.summary.get('input_contract','per_step_v1'):
+            raise ValueError('Sample/package input contracts differ')
+        eid=row['episode_id']
+        if eid not in self.checked_annotations and self.summary.get('method')=='semantic_safety':
+            verify_semantic_resource(self.package,self.summary['resources'][eid])
+            self.checked_annotations.add(eid)
         if self.frame_cache:
             inputs=self.frame_cache.inputs(row)
             return {'inputs':inputs,'target':row['target'],'sample_id':row['id'],'query_id':row['constraint_id'],'valid_steps':int(inputs['action_mask'].sum()),'metadata':_evaluation_metadata(row)}
@@ -211,14 +333,19 @@ class PredictorJudgeWindowDataset:
                 with Image.open(io.BytesIO(blob)) as im:frame=np.asarray(im.convert('RGB'),dtype=np.uint8).transpose(2,0,1).copy()
                 frames.append(np.zeros_like(frame) if step is None else frame)
             views[camera]=np.stack(frames)
+        numeric={}
+        if row.get('input_contract')=='chunk_start_v2':
+            from .chunk_judge import chunk_numeric_inputs
+            numeric=chunk_numeric_inputs(e,row)
         return {'inputs':{'questions':row['question'],'observations':views,'robot_state':np.asarray(e['observations'][t]['robot_state'],dtype=np.float32),
             'remaining_actions':w['actions'],'action_mask':w['action_mask'],'action_dt_s':w['action_dt_s'],
-            'history_mask':np.asarray([s is not None for s in row['history_steps']]),'constraint_context':row['constraint_context']},
+            'history_mask':np.asarray([s is not None for s in row['history_steps']]),'constraint_context':row['constraint_context'],**numeric},
             'target':row['target'],'sample_id':row['id'],'query_id':row['constraint_id'],'valid_steps':w['valid_steps'],'metadata':_evaluation_metadata(row)}
 
 
 def _evaluation_metadata(row):
-    return {k:row.get(k) for k in ['episode_id','family','group_id','episode_safety','start_step','end_step','first_violation_step']}
+    return {k:row.get(k) for k in ['episode_id','family','group_id','episode_safety','start_step','end_step','first_violation_step',
+                                  'semantic_id','starts_violated','definition_sha256','annotation_sha256','input_contract','proposal_id','observed_end']}
 
 
 def collate_predictor_judge(items):
@@ -229,6 +356,11 @@ def collate_predictor_judge(items):
             'observations':{c:torch.from_numpy(np.stack([r['inputs']['observations'][c] for r in items])) for c in CAMERAS}}
     for key in ['robot_state','remaining_actions','action_mask','action_dt_s','history_mask']:
         inputs[key]=torch.from_numpy(np.asarray([r['inputs'][key] for r in items]))
+    chunk=['executed_actions' in r['inputs'] for r in items]
+    if any(chunk):
+        if not all(chunk):raise ValueError('Cannot mix predictor input contracts in a batch')
+        for key in ('executed_actions','history_robot_states','history_action_mask'):
+            inputs[key]=torch.from_numpy(np.asarray([r['inputs'][key] for r in items]))
     return {'inputs':inputs,'targets':torch.tensor([r['target'] for r in items],dtype=torch.float32),
             'sample_ids':[r['sample_id'] for r in items],'query_ids':[r['query_id'] for r in items],
             'valid_steps':[r['valid_steps'] for r in items],'metadata':[r.get('metadata',{}) for r in items]}
@@ -240,6 +372,7 @@ class PreparedPredictorJudgeCollator:
     def __call__(self,items):
         from transformers import AutoProcessor
         from jev.predictor_judge_model import encode_predictor_judge_visual_inputs
+        chunk=self.config.get('input_contract')=='chunk_start_v2'
         if self.processor is None:
             os.environ.setdefault('TOKENIZERS_PARALLELISM','false')
             self.processor=AutoProcessor.from_pretrained(self.config['model_id'],revision=self.config['revision'],
@@ -248,6 +381,12 @@ class PreparedPredictorJudgeCollator:
             if self.processor.tokenizer.pad_token_id is None:self.processor.tokenizer.pad_token=self.processor.tokenizer.eos_token
         batch=collate_predictor_judge(items);inputs=batch['inputs']
         visual={k:inputs[k] for k in ['questions','observations','action_mask','action_dt_s','history_mask','constraint_context']}
-        encoded=encode_predictor_judge_visual_inputs(self.processor,self.config,**visual)
+        if chunk:
+            from .chunk_judge_model import encode_chunk_inputs
+            visual['history_action_mask']=inputs['history_action_mask']
+            encoded=encode_chunk_inputs(self.processor,self.config,**visual)
+        else:encoded=encode_predictor_judge_visual_inputs(self.processor,self.config,**visual)
         batch['inputs']={k:inputs[k] for k in ['robot_state','remaining_actions','action_mask','action_dt_s','history_mask']}
+        if chunk:
+            batch['inputs'].update({k:inputs[k] for k in ('executed_actions','history_robot_states','history_action_mask')})
         batch['inputs']['encoded']=encoded;return batch

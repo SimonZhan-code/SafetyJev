@@ -69,6 +69,15 @@ class APWindowDataset:
         if (self.package / "BUILDING").exists():
             raise ValueError("Dataset package build has not finished")
         self.summary = json.loads((self.package / "dataset_metadata.json").read_text())
+        self.source_media = OrderedDict()
+        self.checked_annotations = set()
+        if self.summary.get('method') == 'semantic_safety':
+            from .predictor_judge_dataset import file_hash
+            if self.summary.get('task') != 'classifier':raise ValueError('Expected classifier package')
+            if file_hash(self.package/'semantic_definitions.json') != self.summary['semantic_definitions_sha256']:
+                raise ValueError('Semantic definitions changed')
+            if file_hash(self.package/(split+'.jsonl')) != self.summary['file_sha256'][split]:
+                raise ValueError('Split bytes changed')
         if split not in ("train", "calibration", "validation", "test", "ood"):
             raise ValueError("Unknown dataset split")
         self.split = split
@@ -113,6 +122,8 @@ class APWindowDataset:
         self.decoder = VideoWindowDecoder(cache_windows=cache_windows)
 
     def close(self):
+        for reader,_ in getattr(self,'source_media',{}).values():reader.close()
+        self.source_media = OrderedDict()
         self._reader_pid=None
         reader=getattr(self,'_reader',None)
         if reader is not None:reader.close();self._reader=None
@@ -132,7 +143,34 @@ class APWindowDataset:
 
     def __getstate__(self):
         state=self.__dict__.copy();state['_reader']=None;state['_reader_pid']=None
+        state['source_media']=OrderedDict()
+        state['checked_annotations']=set()
         return state
+
+    def source_images(self,media):
+        import io
+        from PIL import Image
+        from .source_episodes import MediaReader
+        from .predictor_judge_dataset import file_hash,verify_semantic_resource
+        eid=media['resource_id']
+        if eid not in self.source_media:
+            res=self.summary['resources'][eid]
+            verify_semantic_resource(self.package,res)
+            path=(self.package/res['media_manifest']).resolve()
+            if not path.is_relative_to(self.package) or file_hash(path)!=res['media_manifest_sha256']:
+                raise ValueError('Source image manifest changed')
+            self.source_media[eid]=(MediaReader(self.package/res['raw_root']),json.loads(path.read_text()))
+            while len(self.source_media)>2:self.source_media.popitem(last=False)[1][0].close()
+        self.source_media.move_to_end(eid)
+        reader,hashes=self.source_media[eid]
+        images={}
+        for camera,refs in media['image_refs'].items():
+            frames=[]
+            for ref in refs:
+                with Image.open(io.BytesIO(reader.read(ref,hashes[ref]))) as im:
+                    frames.append(np.asarray(im.convert('RGB')).copy())
+            images[camera]=np.stack(frames)
+        return images
 
     def media_path(self, record, camera):
         media = record["state"]["observation_window"]
@@ -146,16 +184,30 @@ class APWindowDataset:
     def __getitem__(self, index):
         row = self.record(index)
         media = row["state"]["observation_window"]
-        if self.frame_cache is None:
+        eid=media['resource_id']
+        if eid not in self.checked_annotations and self.summary.get('method')=='semantic_safety':
+            from .predictor_judge_dataset import verify_semantic_resource
+            verify_semantic_resource(self.package,self.summary['resources'][eid])
+            self.checked_annotations.add(eid)
+        if self.frame_cache is None and 'image_refs' in media:
+            images=self.source_images(media)
+        elif self.frame_cache is None:
             images = {camera: self.decoder.decode(self.media_path(row, camera), media["frame_indices"], media["video_fps"])
                       for camera in media["videos"]}
+        elif 'image_refs' in media:
+            from .visual_cache import frame_key
+            images={camera:np.stack([self.frame_cache.read(frame_key(media['resource_id'],ref,frame,0))
+                                    for ref,frame in zip(refs,media['frame_indices'])])
+                    for camera,refs in media['image_refs'].items()}
         else:
             from .visual_cache import frame_key
             images = {camera: np.stack([self.frame_cache.read(frame_key(media["resource_id"], video, frame, media["video_fps"]))
                                       for frame in media["frame_indices"]]) for camera, video in media["videos"].items()}
         inputs = visual_model_payload(row, images)
         return {"inputs": inputs, "target": np.asarray(row["target"], dtype=np.float32), "sample_id": row["id"],
-                "query_id": row["metadata"]["query_id"]}
+                "query_id": row["metadata"]["query_id"],
+                "metadata": {k:v for k,v in row['metadata'].items() if k in (
+                    'family','semantic_id','episode_id','group_id','start_step','definition_sha256','annotation_sha256')}}
 
     def training_weights(self, mode="uniform"):
         if self.split != "train":
@@ -185,7 +237,8 @@ def collate_numpy(items):
         raise ValueError("Expected two-class Noul targets")
     return {"inputs": {"questions": [item["inputs"]["question"] for item in items], "observations": observations},
             "targets": targets, "sample_ids": [item["sample_id"] for item in items],
-            "query_ids": [item.get("query_id", "unspecified") for item in items]}
+            "query_ids": [item.get("query_id", "unspecified") for item in items],
+            "metadata": [item.get('metadata', {}) for item in items]}
 
 
 def collate_torch(items):

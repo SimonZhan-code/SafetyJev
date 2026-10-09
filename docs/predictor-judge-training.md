@@ -1,11 +1,108 @@
 # Action-conditioned safety Predictor Judge
 
+## Chunk-boundary semantic judge
+
+The new `chunk_start_v2` path checks a committed eight-step action segment once,
+before its first action executes. It uses the **previous execution segment** as
+one history set: up to eight actually executed actions paired with their
+post-action overview/wrist observations and robot proprio from that same post-action timestamp: `(a_i, o_(i+1), s_(i+1))`. The last observation and historical state are current. A short
+previous segment is masked; it is not filled with actions from an older segment.
+At episode/reset start there is a current image and no historical action.
+
+| Input | Per-sample shape / meaning |
+|---|---|
+| `questions` | One resolved natural-language safety query |
+| `observations` | Two cameras, each `(8, 3, H, W)`, uint8; historical action results |
+| `executed_actions` | `(8, 8)` actual previous commands, left padded |
+| `history_robot_states` | `(8, 16)` post-action proprio, left padded; same valid slots as executed actions |
+| `history_action_mask` | `(8,)`, shared valid historical action/state suffix |
+| `history_mask` | `(8,)`, valid observation suffix; current image available even at cold start |
+| `robot_state` | Current 16-dimensional proprio only |
+| `remaining_actions` | `(8, 8)` newly committed future commands |
+| `action_mask` | Eight true entries; shorter commitments are explicitly excluded |
+| `action_dt_s` | Recorded control interval |
+
+`safetyjev.chunk_judge_model.ChunkJudgeModel` wraps the existing native visual
+backbone inside this repository. It interleaves each historical action token, its
+post-action state token and resulting images, then adds current proprio and future
+action tokens. All states use the same state projection and train-only normalization.
+The 16 state features are seven arm joint positions, seven arm velocities, mean
+gripper position and mean gripper velocity. Missing history states are zero-padded
+and masked before normalization/projection; cold start retains current proprio
+and current images separately. No future state or annotation evidence is input.
+There are 25 numeric slots and all sixteen images in a full history.
+Past and future use the command projection with signed relative times and distinct
+text roles. Vision remains frozen; language LoRA, numeric projections and the
+shared binary head train. Checkpoints carry `method=native_qwen_chunk_noul` and an
+explicit input contract. Use `safetyjev.chunk_judge_model.load_judge` to dispatch
+new and legacy per-step checkpoints; they are not interchangeable. Old
+`chunk_start_v1` packages/caches/checkpoints must be rebuilt/retrained for this
+contract; no silent upgrade is performed.
+
+Supervision asks whether a state violation is present at any observed point in
+`(t,t+8]`, or whether liquid occupancy loses at least 20% between those endpoints.
+An ongoing violation can be Yes; it need not start during this chunk. Current
+violation status stays in evaluation metadata, outside model inputs. An early
+observed state positive remains usable after truncation; an unobserved negative
+or missing liquid endpoint is excluded. No next proposal supplies unknown actions.
+
+Use [the explicit source-manifest build](data-preparation.md#fixed-cohort-chunk-build)
+with `--input-contract chunk_start_v2 --train-episodes all`. The latter retains the
+quality-eligible source cohort even if the new definitions yield only negative
+windows. Split by base-task group before slicing; never randomly split windows.
+Annotations and original HDF5 media are shared with classifier preparation.
+
+The initial configs are `configs/training/predictor_judge_chunk_27b.json`
+(Qwen3.8-27B) and `configs/training/predictor_judge_chunk_9b.json` (Qwen3.5-9B),
+both pinned to exact revisions. This compares two backbones, not parameter count
+alone. They use binary cross entropy, 60% positive training draws when both labels
+exist, no additional class weighting, and natural validation/test distributions.
+The sampler balances family/query and episode/status units; overlapping persistent
+violations are not labeled independent events. Test evaluation is disabled during
+training. Inspect real token counts and memory before increasing the initial
+microbatch of one; sixteen images per full history must not be silently truncated.
+
+Pair evaluation uses `python -m safetyjev.evaluate_trained --task predictor_judge`.
+The console headline contains accuracy, recall, precision and confusion counts,
+including a currently-safe subset; detailed machine-readable diagnostics remain in
+the report file. `model_batch_seconds` records synchronized model-call duration;
+`evaluation_seconds` includes loader, preprocessing, scoring and prediction output,
+but excludes checkpoint loading. Worker preprocessing is outside model-call timing;
+raw-input preprocessing inside the model is included. Distributed reports use
+maximum rank durations. Input fidelity and accuracy take priority: do not reduce
+history, image detail or state features solely to improve latency. Run ordered
+episode shadow replay separately:
+
+```bash
+python -m safetyjev.chunk_judge_eval \
+  --package /path/to/chunk-package --checkpoint /path/to/model \
+  --split validation --output /path/to/shadow-report.json --device cuda:0
+```
+
+Replay reads original source media, batches all questions at each real proposal
+start, and continues the recorded trajectory after alarms. It includes valid inputs
+with unavailable labels in calls, while excluding them from supervised metrics.
+It reports chunk-level confusion, first-positive-chunk episode coverage, and
+per-call latency p50/p95 with the first call separate. End-to-end time includes
+assembly, decoding, preprocessing and model execution. These are shadow results;
+accident prevention requires later closed-loop intervention evaluation. An
+unsafe-only source cohort also cannot establish safe-episode false-alarm rates.
+
+## Legacy per-step packages
+
 The Predictor Judge receives adjacent overview/wrist observations, the current robot
 state, the unexecuted suffix of the current execution segment, and a natural-language
 constraint. It outputs a shared Noul `[No, Yes]` score for a **new violation during
 that suffix**. Formal monitor states and AP truth are supervision, not model inputs.
 It judges action-conditioned safety; it does not generate future actions, states or images.
 The existing current-image classifier and agentic planner remain separate entrypoints.
+
+The optional [semantic source-data mode](data-preparation.md#semantic-safety-labels-from-source-recordings)
+uses different supervision: state violations anywhere in `(t, t+H]`, including
+ones already present at `t`, and endpoint net liquid loss over the committed
+suffix. It does not require a new monitor-rejection onset. Follow that build/cache
+sequence, set the semantic package/cache in a copied training config, and use
+`evaluation.run_test=false` for development checks. The model interface is unchanged.
 
 ## Use a prepared dataset
 

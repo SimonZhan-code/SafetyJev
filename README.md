@@ -11,29 +11,33 @@ Both models retain the native visual encoder and multimodal backbone of the
 Open-Jev fork. Natural-language questions share one scalar decision head, with
 outputs in `[No, Yes]` order; there is no separate head per task family.
 
-| | Classifier | Predictor Judge |
+The current semantic pipeline uses the following contracts. The guides also
+retain the separately versioned legacy AP/monitor workflows and their published
+datasets; those packages are not the new semantic release.
+
+| | Classifier | Predictor Judge (`chunk_start_v2`) |
 |---|---|---|
-| Question | Does the queried AP hold now? | Will the constraint be newly violated during the remaining commands? |
-| Visual input | Current overview and wrist images | Current and two preceding adjacent frames from each camera |
-| Additional input | Natural-language AP question | Current robot state, remaining actions with timing/masks, natural-language constraint |
-| Meaning of Yes | Question-dependent: may describe a safe or unsafe state | A new violation within the valid action suffix |
-| Supervision | Same-step AP truth | Monitor outcomes over the actually executed suffix |
+| Question | Is the queried semantic violation present now? | Will the queried violation occur during the next eight committed actions? |
+| Visual input | Current overview and wrist images | Post-action images from the previous execution segment, up to eight steps per camera |
+| Additional input | Natural-language safety query | Historical executed actions and aligned robot states, current state, eight future commands, query and masks |
+| Meaning of Yes | Current state violation | Future-segment violation, including one that is already ongoing |
+| Supervision | Same-step semantic evidence; interval-only liquid labels excluded | Observed future semantic evidence over the committed segment |
 | Trainable components | Language LoRA and shared decision head | Language LoRA, shared head and state/action projections |
-| Data package | Five families, 4,816 episodes, 3,113,929 image/question pairs | Six families, 532 episodes, frozen action-conditioned window labels |
-| Detailed workflow | [Classifier guide](docs/classifier-training.md) | [Predictor Judge guide](docs/predictor-judge-training.md) |
-| Reference configuration | [Classifier config](configs/training/five_family_visual_27b_reference.json) | [Predictor Judge config](configs/training/predictor_judge_27b_reference.json) |
+| Detailed workflow | [Classifier guide](docs/classifier-training.md) | [Predictor Judge guide](docs/predictor-judge-training.md#chunk-boundary-semantic-judge) |
+| Configuration | [Classifier reference](configs/training/five_family_visual_27b_reference.json) | [Qwen3.8-27B](configs/training/predictor_judge_chunk_27b.json), then [Qwen3.5-9B](configs/training/predictor_judge_chunk_9b.json) |
 
-Monitor outputs serve as supervision, not model inputs. Predictor Judge evaluates
-proposed commands; it does not generate future actions or images. The two data
-packages and label meanings are distinct.
+Raw GT is preserved. Semantic evidence is used for supervision and never fed to
+the model. A historical command is paired with its post-action images and robot
+state; missing history is masked. Predictor Judge runs before the first action of
+each new chunk and does not generate future actions, states or images.
 
-Both training pipelines support single-device or single-node DDP execution,
-worker-side preprocessing, indexed image caches, gradient accumulation,
-checkpoint resume, W&B tracking and HF model export. Reference runs select
-checkpoints using validation; full test evaluation is a separate step. Evaluation
-includes per-question or per-constraint results, rather than relying only on
-pooled accuracy. Predictor Judge also reports event recall and safe-episode
-false alarms.
+Both pipelines support single-device or single-node DDP training, worker-side
+preprocessing, indexed caches, checkpoint resume, W&B tracking and HF model
+export. Validation selects checkpoints; test evaluation is separate. The semantic
+judge reports accuracy, recall, precision and confusion counts, with observed
+inference duration. Ordered episode shadow replay is a separate functional check.
+A completed semantic corpus, pretrained-model performance and closed-loop safety
+are not established by local interface acceptance.
 
 ## Get started
 
@@ -77,14 +81,14 @@ are configured on the training host, outside repository configuration.
 | Configure tracking | [W&B](docs/classifier-training.md#optional-wb-logging) | [W&B](docs/predictor-judge-training.md#experiment-tracking) |
 | Test and publish the model | [Test and delivery](docs/classifier-training.md#final-test-and-interpretation) | [Test and delivery](docs/predictor-judge-training.md#export-and-publish-the-selected-checkpoint) |
 
-Each guide pins its dataset revision and specifies the extraction layout. Run
-its commands from the repository root. Prepared datasets already include window
-indices and splits; rebuilding the dataset is not required to start training.
-Generate the disposable cache on the training host and keep the source files
-available alongside it.
+Run commands from the repository root. For new semantic data, use the
+[fixed-cohort builder](docs/data-preparation.md#fixed-cohort-chunk-build) on the
+source host, then verify indexes, shared media and splits before training. Legacy
+published datasets have separate pinned revisions and extraction instructions in
+the guides. Generate disposable caches on the training host as needed.
 
-The 27B reference configurations start with per-device batch 8 and global batch
-128. Adjust `NPROC_PER_NODE`, `--batch-size`, `--global-batch-size` and `--workers`
+The new chunk configurations start with per-device batch 1 and global batch 128;
+legacy reference configurations use per-device batch 8. Adjust `NPROC_PER_NODE`, `--batch-size`, `--global-batch-size` and `--workers`
 to the host; gradient accumulation is derived automatically. Training budgets
 and sampling differ between the two models and are described in their guides.
 
@@ -125,19 +129,25 @@ improved closed-loop safety.
 |---|---|---|
 | Classifier data | `safetyjev/visual_dataset.py`, `safetyjev/visual_cache.py` | [Data format and construction](docs/data-preparation.md) |
 | Classifier training | `scripts/train_visual.sh`, `safetyjev/visual_train.py` | [Training mechanics](docs/classifier-training.md) |
-| Predictor Judge data | `safetyjev/predictor_judge_commands.py`, `safetyjev/predictor_judge_dataset.py`, `safetyjev/predictor_judge_cache.py` | [Input and supervision contract](docs/predictor-judge-training.md#input-and-supervision-contract) |
+| Predictor Judge data | `safetyjev/predictor_judge_commands.py`, `safetyjev/predictor_judge_dataset.py`, `safetyjev/predictor_judge_cache.py` | [Input and supervision contract](docs/predictor-judge-training.md#chunk-boundary-semantic-judge) |
 | Predictor Judge training | `scripts/train_predictor_judge.sh`, `safetyjev/predictor_judge_train.py` | [Training and delivery](docs/predictor-judge-training.md) |
-| Model implementations | `third_party/Open-Jev/jev/visual_model.py`, `third_party/Open-Jev/jev/predictor_judge_model.py` | [Open-Jev integration](docs/open-jev-integration.md) |
+| Model implementations | `safetyjev/chunk_judge_model.py`, `third_party/Open-Jev/jev/visual_model.py`, `third_party/Open-Jev/jev/predictor_judge_model.py` | [Open-Jev integration](docs/open-jev-integration.md) |
 | Shared evaluation and export | `scripts/evaluate_model.sh`, `safetyjev/model_export.py` | Model-specific guides above |
 | Agentic runtime | `safetyjev/cli.py`, `maniguard.py`, `capture.py`, `guard.py`, `planner.py`, `predictors.py` under `safetyjev/` | [Runtime runbook](docs/runbook.md) |
 
 ## Local verification
 
-After installing the training environment:
+The unittest command covers training/runtime tests. The semantic data suite also
+contains pytest functions; run it in a source-reader environment with pytest,
+ManiGuard recording dependencies and licensed USD assets available. The two
+environments have different optional dependencies. After preparing the relevant
+environment:
 
 ```bash
 .venv-visual/bin/python -m unittest discover -s tests -v
 .venv-visual/bin/python -m safetyjev.cli --help
+# In the prepared source-reader environment:
+python -m pytest tests -q
 ```
 
 For the pinned simulator-adapter checks, use

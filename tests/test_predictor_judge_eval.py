@@ -29,3 +29,12 @@ class PredictorJudgeEvalTests(unittest.TestCase):
         self.assertEqual(report['safe_source_episodes']['any_false_alarm_rate'],1.)
         self.assertEqual(report['by_family_constraint']['jar/tilt']['n'],5)
         with self.assertRaisesRegex(ValueError,'Duplicate'):summarize_predictions(rows+rows[:1])
+
+    def test_duration_includes_loader_separately_from_model_call(self):
+        from unittest.mock import patch
+        batch=dict(inputs={'logits':torch.tensor([[0.,1.]])},targets=torch.tensor([[0.,1.]]),
+                   sample_ids=['x'],query_ids=['tilt'],valid_steps=[8])
+        with patch('safetyjev.predictor_judge_eval.time.perf_counter',side_effect=[0.,1.,4.,8.]):
+            report=evaluate_predictor_judge(FixedModel(),[batch])
+        self.assertEqual(report['model_batch_seconds'],3.)
+        self.assertEqual(report['evaluation_seconds'],8.)

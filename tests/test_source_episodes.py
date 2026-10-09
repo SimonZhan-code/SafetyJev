@@ -7,14 +7,14 @@ import unittest
 import tempfile
 
 
-def source_fixture(path, task=0):
+def source_fixture(path, task=0, *, semantic=False, planned_steps=8, observation_count=5):
     from maniguard.data.recording.writer import EpisodeWriter
     metadata = {
         'episode_id':f'source{task}', 'camera_keys':['image_left','wrist_image'], 'resolution':[16,16],
         'rgb_encoding':{'codec':'jpeg','quality':95,'subsampling':'444','color_order':'RGB'},
         'action_hz':20, 'physics_hz':120, 'joint_groups':{'arm':list(range(7)), 'gripper':[7,8]},
         'configuration':{'state_mode':'joint','action_dim':8,'ik_eef_to_joint':False,
-                         'gripper_binarize':True,'controller_preset':'joint_position_raw','execute_horizon':8},
+                         'gripper_binarize':True,'controller_preset':'joint_position_raw','execute_horizon':planned_steps},
         'scene':{'scene_file':f'/bench/jar_transport/task_{task:04d}/base/scene_ep1.json',
                  'prompt':'Carry the jar', 'target_name':'jar_1', 'ltl_safety':{
                     'constraints':[{'id':'upright','ltl':'G upright','description':'Keep the jar upright'}],
@@ -23,21 +23,27 @@ def source_fixture(path, task=0):
         'proposition_bindings':{'upright':{'over':[{'name':'jar_1','category':'jar'}]}},
         'ap_names':['upright'], 'provenance':{},
     }
+    if semantic:
+        metadata['object_names']=['jar_1']
     raw=np.tile(np.arange(8,dtype=np.float32)/10,(16,1));cmd=raw[:8].copy();cmd[:,-1]=1
     with EpisodeWriter(path,metadata,max_output_bytes=10000000) as writer:
         writer.append_event({'type':'proposal','proposal_id':0,'source_observation_id':0,
-                             'actions':raw,'planned_steps':8,'action_low':[-2]*8,'action_high':[2]*8})
+                             'actions':raw,'planned_steps':planned_steps,'action_low':[-2]*8,'action_high':[2]*8})
         # Terminates after four actions; future commanded tail must remain censored.
-        for t in range(5):
+        for t in range(observation_count):
             if t:
                 writer.append_transition({'source_observation_id':t-1,'target_observation_id':t,
-                    'proposal_id':0,'proposal_offset':t-1,'source_boundary_id':-1,'issued':True,
-                    'raw':raw[t-1],'transformed':cmd[t-1],'applied':cmd[t-1],'duration_s':.05})
+                    'proposal_id':(t-1)//planned_steps,'proposal_offset':(t-1)%planned_steps,'source_boundary_id':-1,'issued':True,
+                    'raw':raw[(t-1)%planned_steps],'transformed':cmd[(t-1)%planned_steps],'applied':cmd[(t-1)%planned_steps],'duration_s':.05})
+            if t and t%planned_steps==0 and t<observation_count-1:
+                writer.append_event({'type':'proposal','proposal_id':t//planned_steps,'source_observation_id':t,
+                    'actions':raw,'planned_steps':planned_steps,'action_low':[-2]*8,'action_high':[2]*8})
             writer.append_observation({'observation_id':t,'physics_tick':60+t*6,'sim_time_s':.5+t*.05,
                 'camera_frames':{c:np.full((16,16,3),t*20,np.uint8) for c in metadata['camera_keys']},
                 'robot':{'q':np.arange(9,dtype=np.float32)+t/10,'dq':np.arange(9,dtype=np.float32)/10},
-                'safety':{'monitor_valid':True,'monitor_rejected':t>=3,'ap_values':np.array([t<3]),'ap_valid':np.array([True])},
-                'constraint_records':{'upright':{'doomed':t>=3}},'monitor_record':{'valid':True}})
+                'objects':{'pose_world':np.array([[0,0,1,np.sin(np.deg2rad(25)/2) if t==3 else 0,0,0,np.cos(np.deg2rad(25)/2) if t==3 else 1]],dtype=np.float32)} if semantic else {},
+                'safety':{'monitor_valid':True,'monitor_rejected':False if semantic else t>=3,'ap_values':np.array([True if semantic else t<3]),'ap_valid':np.array([True])},
+                'constraint_records':{'upright':{'doomed':False if semantic else t>=3}},'monitor_record':{'valid':True}})
         writer.finish('complete',{'status':'completed','success':False})
 
 

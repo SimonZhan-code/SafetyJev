@@ -51,13 +51,16 @@ def distributed_worker(rank, rendezvous, folder):
         class EvaluationModel(torch.nn.Module):
             def __init__(self):super().__init__();self.head=torch.nn.Linear(1,1)
             def forward(self, features):return torch.stack([features*0,features],-1)
-        records=[{'inputs':{'features':float(i-2)},'targets':[int(i<2),int(i>=2)],'sample_ids':str(i),'query_ids':'q'} for i in range(5)]
+        records=[{'inputs':{'features':float(i-2)},'targets':[int(i<2),int(i>=2)],'sample_ids':str(i),'query_ids':'q', 'metadata':{'semantic_id':'excessive_tilt','family':'jar_transport' if i<2 else 'stack_retrieve'}} for i in range(5)]
         from torch.utils.data import DataLoader
         loader=DataLoader(records[rank::2],batch_size=2,collate_fn=lambda b:{
             'inputs':{'features':torch.tensor([x['inputs']['features'] for x in b])},
-            'targets':torch.tensor([x['targets'] for x in b]),'sample_ids':[x['sample_ids'] for x in b],'query_ids':['q']*len(b)})
+            'targets':torch.tensor([x['targets'] for x in b]),'sample_ids':[x['sample_ids'] for x in b],'query_ids':['q']*len(b),'metadata':[x['metadata'] for x in b]})
         report,_,_=evaluate_visual(EvaluationModel(),loader,output=Path(folder)/'predictions.jsonl')
         assert report['evaluated']==5
+        assert report['by_semantic']['excessive_tilt']['n']==5
+        assert report['by_family']['jar_transport']['n']==2
+        assert report['by_family']['stack_retrieve']['n']==3
         assert report['confusion']['fp']==0 and report['confusion']['fn']==0
         assert len((Path(folder)/'predictions.jsonl').read_text().splitlines())==5
     finally:dist.destroy_process_group()

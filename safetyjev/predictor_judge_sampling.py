@@ -17,20 +17,30 @@ class SamplingRows:
 
 
 def draw_report(rows, order, *, available_labels=None):
-    labels=Counter();breakdowns={k:{} for k in ['family','policy','checkpoint_id','constraint_id','valid_steps','episode_safety','negative_stratum']}
-    events=set();unique=set();episodes=set()
+    labels=Counter();breakdowns={k:{} for k in ['family','policy','checkpoint_id','constraint_id','valid_steps','episode_safety','negative_stratum','starts_violated']}
+    events=set();units=set();unique=set();episodes=set()
     for i in order:
         r=rows[i];label='positive' if r['target'][1] else 'negative'
         labels[label]+=1;unique.add(r['id']);episodes.add(r['episode_id'])
-        if label=='positive':events.add((r['episode_id'],r['constraint_id'],r['first_violation_step']))
+        if label=='positive':
+            units.add((r['episode_id'],r['constraint_id'],_positive_unit(r)))
+            if not r.get('semantic_id'):events.add((r['episode_id'],r['constraint_id'],r['first_violation_step']))
         for field in breakdowns:
             value=str(r.get(field,'unknown'));breakdowns[field].setdefault(value,Counter())[label]+=1
     total=sum(labels.values())
     if available_labels is None:available_labels={int(r['target'][1]) for r in rows}
     return {'draws':total,'labels':dict(labels),'positive_fraction':labels['positive']/total if total else None,
             'unique_samples':len(unique),'repeated_draws':total-len(unique),
-            'unique_episodes':len(episodes),'distinct_positive_events':len(events),'by':breakdowns,
+            'unique_episodes':len(episodes),'distinct_positive_events':len(events),'distinct_positive_sampling_units':len(units),'by':breakdowns,
             'missing_labels':[name for name,bit in [('positive',1),('negative',0)] if bit not in available_labels]}
+
+
+def _positive_unit(row):
+    if row.get('semantic_id'):
+        return 'semantic:'+str(row.get('starts_violated'))
+    event=row['first_violation_step']
+    if type(event) is not int:raise ValueError('Positive legacy samples need a witnessed event')
+    return event
 
 
 def sampling_pools(rows):
@@ -43,8 +53,7 @@ def sampling_pools(rows):
         positives+=int(r['target'][1])
         y=int(r['target'][1]);category=(r['family'],r['constraint_id']);node=pools[y].setdefault(category,{})
         if y:
-            event=r['first_violation_step']
-            if type(event) is not int:raise ValueError('Positive samples need a witnessed event')
+            event=_positive_unit(r)
             node.setdefault((r['episode_id'],event),array('Q')).append(i)
         else:
             node=node.setdefault(r['episode_safety'],{}).setdefault(r['negative_stratum'],{})
@@ -61,7 +70,8 @@ def availability_report(rows):
         events=pools[1].get((family,cid),{})
         negatives=pools[0].get((family,cid),{})
         categories[family+'/'+cid]={
-            'positive_windows':sum(len(v) for v in events.values()),'positive_events':len(events),
+            'positive_windows':sum(len(v) for v in events.values()),
+            'positive_events':sum(type(key[1]) is int for key in events),'positive_sampling_units':len(events),
             'negative_windows':sum(len(indices) for sources in negatives.values() for episodes in sources.values() for indices in episodes.values())}
     return {'positive_windows':positives,'negative_windows':len(rows)-positives,
             'positive_events':sum(v['positive_events'] for v in categories.values()),'by_family_constraint':categories}

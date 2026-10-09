@@ -19,9 +19,11 @@ def run(args):
     package=Path(args.package);output=Path(args.output)
     if args.task=='predictor_judge':
         from .predictor_judge_dataset import PredictorJudgeWindowDataset,PreparedPredictorJudgeCollator
-        from jev.predictor_judge_model import PredictorJudgeModel
+        from .chunk_judge_model import load_judge
         data=PredictorJudgeWindowDataset(package,args.split,frame_cache=args.frame_cache)
-        model=PredictorJudgeModel.load(args.checkpoint,device=device)
+        model=load_judge(args.checkpoint,device=device)
+        if model.model_config.get('input_contract','per_step_v1')!=data.summary.get('input_contract','per_step_v1'):
+            raise ValueError('Model/data input contract differs')
         for key in ['history_frames','max_actions','state_features']:
             if model.model_config.get(key)!=data.summary[key]:raise ValueError('Model/data contract differs: '+key)
         collator=PreparedPredictorJudgeCollator(model.model_config)
@@ -64,7 +66,7 @@ def main(argv=None):
     args=p.parse_args(argv)
     try:
         report=run(args)
-        if int(os.environ.get('RANK','0'))==0:print(json.dumps(report,indent=2))
+        if int(os.environ.get('RANK','0'))==0:print(json.dumps(report.get('headline',report),indent=2))
     finally:
         if dist.is_initialized():dist.destroy_process_group()
 

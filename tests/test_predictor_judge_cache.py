@@ -55,3 +55,28 @@ class JudgeCacheTests(unittest.TestCase):
             root=Path(temp);package=self.package(root);cache=root/'cache';build_cache(package,cache)
             with sqlite3.connect(cache/'frames.sqlite') as db:db.execute("UPDATE samples SET offset=offset+1 WHERE split='train' AND idx=0")
             with self.assertRaisesRegex(ValueError,'index checksum'):PredictorJudgeWindowDataset(package,'train',frame_cache=cache)
+
+    def test_train_only_cache_keeps_empty_heldout_splits_and_checks_their_hashes(self):
+        from safetyjev.predictor_judge_cache import build_cache,validate_cache
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);self.package(root)
+            package=root/'train_only'
+            build_package([root/'raw'/'0'],package,group_splits={'jar/task_0000':'train'})
+            cache=root/'cache';report=build_cache(package,cache)
+            self.assertGreater(report['splits']['train'],0)
+            self.assertEqual(report['splits']['validation'],0)
+            self.assertEqual(report['splits']['test'],0)
+            self.assertEqual(validate_cache(cache,package)['samples'],report['samples'])
+            direct=PredictorJudgeWindowDataset(package,'train')
+            cached=PredictorJudgeWindowDataset(package,'train',frame_cache=cache)
+            try:
+                self.assertEqual(len(direct),len(cached))
+                np.testing.assert_array_equal(direct[0]['inputs']['remaining_actions'],cached[0]['inputs']['remaining_actions'])
+            finally:direct.close();cached.close()
+            with self.assertRaisesRegex(ValueError,'no eligible'):
+                PredictorJudgeWindowDataset(package,'validation')
+            # Empty heldout data is valid only when it matches the package manifest.
+            p=package/'dataset_metadata.json';m=json.loads(p.read_text())
+            m['file_sha256']['test']='0'*64;p.write_text(json.dumps(m))
+            with self.assertRaisesRegex(ValueError,'Split bytes changed'):
+                build_cache(package,root/'bad_cache')

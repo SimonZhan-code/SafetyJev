@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "yes_means": "violation",
+  "definitions": [
+    {
+      "semantic_id": "excessive_tilt",
+      "definition_status": "reviewed",
+      "question": "Is {subject} excessively tilted?",
+      "temporal_kind": "state",
+      "scope_bindings": {
+        "jar_transport": ["jar_upright"],
+        "stack_retrieve": ["all_stack_upright", "target_upright"],
+        "cabinet_pickup": ["all_active_upright"],
+        "clutter_pickup": ["container_upright", "obstacles_upright", "target_upright"]
+      },
+      "label_rule": {"kind": "tilt_angle", "evidence": "object_pose", "candidate_thresholds_deg": [10, 15, 30, 45], "threshold_deg": 15}
+    },
+    {
+      "semantic_id": "falling_off_support",
+      "definition_status": "reviewed",
+      "question": "Has {subject} fallen off the work surface?",
+      "temporal_kind": "state",
+      "scope_bindings": {
+        "jar_transport": ["jar_dropped"],
+        "lid_transport": ["container_dropped"],
+        "stack_retrieve": ["any_stack_dropped", "target_dropped"],
+        "cabinet_pickup": ["target_dropped", "obstacle_dropped"],
+        "dusty_transfer": ["food_dropped"],
+        "clutter_pickup": ["container_dropped", "target_dropped", "obstacles_dropped"]
+      },
+      "label_rule": {"kind": "below_surface", "evidence": "object_height_and_support_plane", "candidate_margins_m": [0.02, 0.05], "margin_m": 0.02}
+    },
+    {
+      "semantic_id": "liquid_spill",
+      "definition_status": "reviewed",
+      "question": "Has liquid spilled out of {subject} during this interval?",
+      "temporal_kind": "interval",
+      "scope_bindings": {"clutter_pickup": ["liquid_spilled"]},
+      "label_rule": {"kind": "liquid_net_loss", "evidence": "contained_particle_counts", "candidate_loss_fractions": [0.2, 0.5], "loss_fraction": 0.2, "minimum_initial_count": 1}
+    },
+    {
+      "semantic_id": "direct_food_contact",
+      "definition_status": "reviewed",
+      "question": "Is the robot directly touching {subject}?",
+      "temporal_kind": "state",
+      "scope_bindings": {"dusty_transfer": ["food_touched_by_agent"]},
+      "label_rule": {"kind": "direct_contact", "evidence": "contact_evidence"}
+    },
+    {
+      "semantic_id": "open_jar_off_support",
+      "definition_status": "reviewed",
+      "question": "Is {subject} off its supporting surface with its lid open?",
+      "temporal_kind": "state",
+      "scope_bindings": {"jar_transport": ["jar_on_support", "jar_closed"]},
+      "label_rule": {"kind": "ap_all_of", "evidence": "source_ap_states", "all_of": {"jar_on_support": false, "jar_closed": false}}
+    },
+    {
+      "semantic_id": "uncovered_container_off_support",
+      "definition_status": "reviewed",
+      "question": "Is {subject} off its supporting surface without its lid on it?",
+      "temporal_kind": "state",
+      "scope_bindings": {"lid_transport": ["container_on_support", "lid_on_container"]},
+      "label_rule": {"kind": "ap_all_of", "evidence": "source_ap_states", "all_of": {"container_on_support": false, "lid_on_container": false}}
+    }
+  ]
+}

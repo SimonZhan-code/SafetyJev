@@ -129,3 +129,63 @@ Rejected candidates have no observed ground truth; label only selected executed
 windows. The planner may change the VLA instruction but never the original task
 or safety specification. Predictor accuracy still needs unchanged-policy shadow
 data, since guard-selected windows have selection bias.
+
+## Derived semantic supervision
+
+Packages marked `method: semantic_safety` use their saved definitions and annotations
+instead of the legacy monitor labels described above. Yes means the queried safety
+violation. Classifier supervision is the current observation; predictor judge state
+supervision covers `(t, t + remaining_steps]` under the recorded committed commands.
+Already-violated current states remain eligible and are reported separately by the
+predictor judge. Liquid supervision is endpoint net loss over the complete interval;
+a transient loss that recovers does not count as positive endpoint loss.
+
+Keep the frozen task-group train/validation/test split. Report the package's excluded
+sample counts and reasons alongside evaluated counts. A current-frame classifier
+cannot evaluate an interval liquid-loss question, so these rows remain explicitly
+excluded. The classifier reports confusion counts, precision/recall and ranking
+metrics by semantic concept and family, in addition to the existing per-query
+reports. Family metadata is used for reporting only, never passed to the model.
+Distributed evaluation merges sample predictions before computing these metrics.
+
+The predictor judge reports semantic, constraint, family/constraint, remaining-length
+and starting-status groups. Its legacy first-rejection event recall/lead-time fields
+are not populated from semantic windows. Overlapping positive windows are not
+independent physical events; neither their count nor a first positive state per
+query should be presented as a count of all spill/drop/tilt events.
+
+
+## Chunk-boundary semantic evaluation
+
+For `chunk_start_v2`, evaluate held-out query/chunk pairs on their natural group
+split and report the compact `headline`: accuracy, violation recall, precision
+and TP/FP/TN/FN. Include the currently-safe subset separately from already-violated
+states. Loss/NLL is retained for training checkpoint selection, not as a substitute
+for the confusion metrics. Do not confuse a 60/40 training sampler with the
+validation/test population.
+
+Ordered shadow replay (`python -m safetyjev.chunk_judge_eval`) calls the model once
+per actual committed proposal start, batching every query. It includes valid-input
+rows with unavailable supervision in the call, excludes them from pair metrics,
+and treats a chunk as unknown unless a positive is known or every query is known
+negative. The compact report includes chunk confusion and whether the first
+eligible positive chunk in each positive episode was detected. This is not an
+independent-event count or evidence of accident prevention: the recorded trajectory
+continues after alarms. Closed-loop evaluation must later apply the intervention
+and observe the resulting changed trajectory.
+
+Accuracy is the present development priority; do not trade away input information
+for lower latency. Record actual pair-evaluation `model_batch_seconds` and
+`evaluation_seconds` with their timing scopes. The latter includes data loading,
+preprocessing and report aggregation, excluding checkpoint load. Distributed
+durations are maximum rank totals.
+
+Report per-boundary latency with all active queries, first call separately, then
+steady p50/p95. End-to-end replay includes media decoding, assembly, preprocessing
+and model execution. `total_model_call_seconds` and `total_boundary_seconds`
+include the first call. Model-call timing includes any in-model preprocessing;
+worker preprocessing remains outside it. Compare 27B/9B
+on the same hardware, precision, image budget and query batching. Qwen3.8-27B versus
+Qwen3.5-9B also changes backbone generation. CPU fixture timings are interface
+checks, not measured pretrained-model deployment latency. An original-unsafe-only
+cohort cannot establish normal safe-episode false-alarm frequency.

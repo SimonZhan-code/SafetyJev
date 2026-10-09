@@ -1,0 +1,43 @@
+{
+  "purpose": "Chunk-boundary semantic judge with post-action historical proprio: Qwen3.8-27B baseline",
+  "seed": 42,
+  "deterministic": true,
+  "model": {
+    "model_id": "Qwen/Qwen3.8-27B",
+    "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "dtype": "bfloat16",
+    "lora_rank": 8,
+    "max_length": 8192,
+    "min_pixels": 65536,
+    "max_pixels": 65536,
+    "gradient_checkpointing": true,
+    "input_contract": "chunk_start_v2"
+  },
+  "data": {
+    "package": "datasets/predictor_judge/chunk_package",
+    "batch_size": 1,
+    "num_workers": 2,
+    "prepare_in_workers": true,
+    "prefetch_factor": 2,
+    "sampling": {
+      "positive_fraction": 0.6
+    }
+  },
+  "training": {
+    "max_steps": 100,
+    "lr": 2e-05,
+    "head_lr": 0.0001,
+    "weight_decay": 0.01,
+    "warmup_steps": 10,
+    "clip_grad_norm": 1.0,
+    "brier_weight": 0.0,
+    "eval_every": 25,
+    "save_every": 25,
+    "global_batch_size": 128
+  },
+  "evaluation": {
+    "max_batches": null,
+    "run_test": false
+  },
+  "task": "predictor_judge"
+}

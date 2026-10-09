@@ -32,6 +32,25 @@ def judge_export_fixture(root):
 
 
 class JudgeHandoffTests(unittest.TestCase):
+    def test_chunk_export_keeps_contract_and_compact_metrics(self):
+        from safetyjev.model_export import build_export,checkpoint_hashes
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);run,model,test=judge_export_fixture(root)
+            cfg=json.loads((model/'model.json').read_text())
+            cfg.update(method='native_qwen_chunk_noul',input_contract='chunk_start_v2',history_frames=8)
+            (model/'model.json').write_text(json.dumps(cfg))
+            report=json.loads(test.read_text());report['checkpoint_sha256']=checkpoint_hashes(model)
+            report['headline']={'pairs':{'accuracy':.75}}
+            report.update(evaluation_seconds=2.,evaluation_time_scope='fixture total wall duration')
+            test.write_text(json.dumps(report))
+            out=root/'export';build_export(run,test,out)
+            card=(out/'README.md').read_text()
+            self.assertIn('load_judge',card);self.assertIn('executed',card)
+            self.assertNotIn('event-balanced',card)
+            self.assertIn('historical robot states',card)
+            self.assertEqual(json.loads((out/'metrics.json').read_text())['test']['evaluation_seconds'],2.)
+            self.assertEqual(json.loads((out/'metrics.json').read_text())['test']['headline'],report['headline'])
+
     def test_export_preserves_judge_weights_metrics_and_upload_manifest(self):
         from safetyjev.model_export import build_export, upload_export
         with tempfile.TemporaryDirectory() as folder:

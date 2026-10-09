@@ -14,12 +14,12 @@ from .predictor_judge_sampling import JudgeBatchSampler,consumed_draw_report,Sam
 
 
 def training_source_hashes():
-    from . import predictor_judge_data,predictor_judge_schema,predictor_judge_dataset,predictor_judge_eval,predictor_judge_sampling,predictor_judge_cache,visual_cache,visual_distributed,visual_train,metrics,labels
+    from . import predictor_judge_data,predictor_judge_schema,predictor_judge_dataset,predictor_judge_eval,predictor_judge_sampling,predictor_judge_cache,visual_cache,visual_distributed,visual_train,metrics,labels,chunk_judge,chunk_judge_model,semantic_data
     import jev.predictor_judge_model as model
     import jev.visual_training as training
     import jev.visual_model as visual
     files=[__file__]+[m.__file__ for m in (predictor_judge_data,predictor_judge_schema,predictor_judge_dataset,
-           predictor_judge_eval,predictor_judge_sampling,predictor_judge_cache,visual_cache,visual_distributed,visual_train,metrics,labels,model,training,visual)]
+           predictor_judge_eval,predictor_judge_sampling,predictor_judge_cache,visual_cache,visual_distributed,visual_train,metrics,labels,model,training,visual,chunk_judge,chunk_judge_model,semantic_data)]
     return {Path(p).name:file_hash(p) for p in files}
 
 
@@ -72,6 +72,11 @@ def _run(config,output,*,tracker,device='cuda:0',resume=None,stop_after=None):
     package=Path(config['data']['package']).resolve();frame_cache=config['data'].get('frame_cache')
     datasets={s:PredictorJudgeWindowDataset(package,s,**({'frame_cache':frame_cache} if frame_cache else {})) for s in splits}
     meta=datasets['train'].summary
+    contract=meta.get('input_contract','per_step_v1')
+    if config['model'].get('input_contract',contract)!=contract:raise ValueError('Model and data input contracts differ')
+    if contract=='chunk_start_v2':
+        from .chunk_judge_model import ChunkJudgeModel
+        PredictorJudgeModel=ChunkJudgeModel
     from .predictor_judge_dataset import resource_record_path
     def verify_sources():
         for res in meta['resources'].values():
@@ -82,6 +87,7 @@ def _run(config,output,*,tracker,device='cuda:0',resume=None,stop_after=None):
     if set(sampling)-{'samples_per_epoch','positive_fraction'}:raise ValueError('Unsupported sampling settings')
     train_rows=SamplingRows(datasets['train'])
     model_cfg={**config['model'],'history_frames':meta['history_frames'],'max_actions':meta['max_actions'],'state_dim':len(meta['state_features'])}
+    if contract=='chunk_start_v2':model_cfg['input_contract']=contract
     collator=PreparedPredictorJudgeCollator(model_cfg) if config['data'].get('prepare_in_workers') else collate_predictor_judge
     options={'num_workers':workers,'collate_fn':collator,'pin_memory':device.startswith('cuda')}
     if workers:options.update(persistent_workers=True,prefetch_factor=config['data'].get('prefetch_factor',2),multiprocessing_context='spawn')
@@ -148,7 +154,7 @@ def _run(config,output,*,tracker,device='cuda:0',resume=None,stop_after=None):
                 'test_status':'evaluated' if run_test else 'not_evaluated',
                 'checkpoint_selection':{'metric':'diagnostic_validation_nll','sampling':validation_sampling},
                 'data_counts':meta['counts'],'label_reasons':meta['label_reasons'],'identity':identity,
-                'target':'new constraint violation during the actual remaining command suffix','checkpoint':str(output/'final/model'),
+                'target':('semantic violation during next committed eight actions' if contract=='chunk_start_v2' else 'new constraint violation during the actual remaining command suffix'),'checkpoint':str(output/'final/model'),
                 'peak_cuda_allocated_bytes':torch.cuda.max_memory_allocated(device) if device.startswith('cuda') else None,
                 'evaluation_capped':limit is not None,'scope':config.get('purpose','predictor judge training')}
         (stage/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n');return report

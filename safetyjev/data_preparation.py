@@ -222,7 +222,7 @@ def iter_ap_windows(root, config, *, history_frames, frame_stride, sample_stride
 
 def model_payload(sample, decoded_observations):
     """The training adapter decodes media first; only this payload enters the model."""
-    cameras = set(sample["media"]["videos"])
+    cameras = set(sample["media"].get("image_refs", sample["media"].get("videos", {})))
     frames = len(sample["media"]["frame_indices"])
     if set(decoded_observations) != cameras or any(len(v) != frames for v in decoded_observations.values()):
         raise ValueError("Decoded observations must match the indexed cameras and frame count")
