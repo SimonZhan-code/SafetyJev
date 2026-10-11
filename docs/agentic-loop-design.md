@@ -296,3 +296,51 @@ newer PyArrow 26 failed to import with that simulator's NumPy pin. Explicit
 an already-installed incompatible CUDA build from satisfying an unqualified pin.
 The predictor used `torch==2.14.1+cu130`. Full package lists are in the saved result
 record. Stop model services after the test; rental shutdown is a separate action.
+
+### Cloud Jar comparison on the prepared Vast.ai node
+
+`scripts/remote/jar-agentic-eval.py` uses the existing `/workspace` simulator,
+policy and native predictor environments. It is not a fresh-machine installer.
+The full plan is 26 pinned Jar base scenes × seeds 0/1/2 × baseline, local retries,
+and System 1: 234 episodes. `--pilot` selects the first five sorted scenes and
+seed 0 (15 episodes); use a separate output directory for this development pilot.
+Every episode uses the original 2,000-action cap. Baseline records simulator truth
+without a guard; local disables instruction repairs; System 1 uses the private
+config defaults. The policy service restarts before each episode to reset its
+sampling stream even when consecutive methods have the same episode seed.
+
+On the already prepared node (`root@154.59.156.28`, SSH port `33632`):
+
+```bash
+cd /workspace/SafetyJev
+/workspace/native-env/bin/python scripts/remote/jar-agentic-eval.py --prepare
+/workspace/native-env/bin/python scripts/remote/jar-agentic-eval.py --launch
+```
+
+The supplied credentials live only in `configs/agentic-loop.local.json` (0600).
+The launcher derives private method configs and writes redacted plans. A cloud
+worker needs its own authorized SSH key; a new chat does not transfer local SSH
+credentials. The node already contains the deployed source, so no GitHub token is
+needed there. Pull the committed code into the cloud checkout before editing;
+do not replace the deployed runtime during an active queue.
+
+Supervisor job `safetyjev-jar-agentic-eval` survives chat/SSH disconnection. Read
+`artifacts/jar-agentic-id/progress.json`, `summary.json`, `queue.log`, and per-case
+capture logs. `--check` performs a CPU-only setup check. The queue refuses other
+active SafetyJev jobs or GPU compute processes, checks source hashes on resume
+and between cases, reserves 20 GB of disk, and stops at the first infrastructure
+failure. Completed cases are audited and skipped on resume. Interrupted captures
+with complete valid records are recovered; otherwise they need inspection and
+explicit `--retry-failed`, which archives the prior attempt. Stop a running queue
+with `supervisorctl stop safetyjev-jar-agentic-eval`; restarting uses the same
+output and skips completed cases. Model services stop on exit; rental shutdown
+is deliberately separate. Back up raw outputs off-node before deleting a rental.
+
+Rates in the JSON summary exclude infrastructure failures and show per-seed
+coverage and unweighted seed means. Partial coverage is provisional; only a full
+paired grid supports the planned comparison. Raw and engagement-gated violations
+remain separate. Candidate labels, repair timing, selections, images and executed
+commands are retained in episode records. The known 1/12 replay disagreement,
+experimental simulator parity, and unverified training-group independence remain
+limitations, not resolved by this launcher. Setup/CPU tests do not constitute a
+completed 234-episode evaluation.
