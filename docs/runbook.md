@@ -1,5 +1,7 @@
 # SafetyJev runbook
 
+For the Unsafe600 step-500 predictor loop, use the [native design and launch guide](agentic-loop-design.md). Its private config and best-valid fallback are separate from the legacy modes below.
+
 This guide covers shadow capture, guard-and-regenerate execution, and OpenRouter
 instruction repair. Shadow mode remains the default.
 
@@ -578,11 +580,21 @@ python /workspace/SafetyJev/scripts/remote/jar-visual-quick-eval.py
 ```
 
 This fixed development plan uses `task_0000/base`, `task_0001/base`, and
-`task_0002/base`, seed 0, 256 actions maximum per scene, and a sample every eight
-actions including step 0. It resets policy sampling between cases, retains
-failed/incomplete outcomes, records GPU memory every second, and does not alter
+`task_0002/base`, seed 0, 256 actions maximum per scene, and classification at
+step 0 and after every executed action (`sample_stride: 1`). A full 256-action
+episode produces 257 camera-pair requests. The VLA continues to replan at its
+configured chunk boundaries. Each request uses the resulting state's images
+and same-step AP labels, including a terminal state inside a chunk. It resets
+policy sampling between cases, retains failed/incomplete outcomes, records GPU
+memory every second, and does not alter
 the policy. The output directory is
-`artifacts/jar-visual-step20000-20261006`. It refuses to overwrite an existing run.
+`artifacts/jar-visual-step20000-per-step`. It refuses to overwrite an existing run.
+The October 6 results remain historical stride-8 evaluations. All current visual
+capture configs and base/domain sweep plans use stride 1; stale stride-8 configs
+are rejected for capture but remain readable by report/audit. Use a fresh
+`--output` directory for base/domain sweeps: resume checks intentionally reject
+old plans/source hashes. Per-step inference increases wall time and frame storage;
+simulation still pauses during each request.
 Scenes are base-only; training-group independence has not been established.
 
 The simulator process stores `classification-inputs.jsonl` (question text,
@@ -594,8 +606,8 @@ in the ignored artifact backup.
 
 ```bash
 python -m safetyjev.visual_runtime report \
-  --episodes artifacts/jar-visual-step20000-20261006/episodes \
-  --output artifacts/jar-visual-step20000-20261006/report.json
+  --episodes artifacts/jar-visual-step20000-per-step/episodes \
+  --output artifacts/jar-visual-step20000-per-step/report.json
 ```
 
 Raw Yes probability is `sigmoid(logit)`. The release's calibration is
@@ -618,9 +630,9 @@ Audit the saved raw captures without restarting GPU services:
 
 ```bash
 PYTHONPATH=. python scripts/remote/audit-visual-evaluation.py \
-  artifacts/jar-visual-step20000-20261006 \
+  artifacts/jar-visual-step20000-per-step \
   --calibration /workspace/checkpoints/safetyjev/round2-amd-20k/calibration.json \
-  --output artifacts/jar-visual-step20000-20261006/audit-summary.json
+  --output artifacts/jar-visual-step20000-per-step/audit-summary.json
 ```
 
 This verifies recorded alignment, image/request hashes, and score formulas;

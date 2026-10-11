@@ -125,7 +125,7 @@ class PlannerAPITests(unittest.TestCase):
                 self.assertNotIn("TEST_SECRET_KEY", str(raised.exception))
 
     def test_configuration_requires_credentials_and_bounded_settings(self):
-        for config in ({"api_key": "forbidden"}, {"history_limit": 0}, {"max_calls_per_episode": -1},
+        for config in ({"unexpected_field": "forbidden"}, {"history_limit": 0}, {"max_calls_per_episode": -1},
                        {"timeout": float("nan")}, {"include_images": "true"}, {"max_tokens": 0}):
             with self.subTest(config=config), self.assertRaises(ValueError):
                 OpenRouterPlanner(config)

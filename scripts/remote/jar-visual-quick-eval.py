@@ -12,7 +12,7 @@ import time
 from urllib.request import urlopen
 
 ROOT=Path('/workspace/SafetyJev')
-ART=ROOT/'artifacts/jar-visual-step20000-20261006'
+ART=ROOT/'artifacts/jar-visual-step20000-per-step'
 PY='/workspace/conda/behavior51/bin/python'
 ENV=dict(os.environ,OMNI_KIT_ACCEPT_EULA='YES',OMNIGIBSON_HEADLESS='1',
          OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',
@@ -24,7 +24,7 @@ SCENES=['task_0000/base','task_0001/base','task_0002/base']
 def main():
     ART.mkdir(parents=True,exist_ok=False)
     (ART/'plan.json').write_text(json.dumps({'scenes':SCENES,'seed':0,'max_steps':256,
-       'sample_stride':8,'threshold':.5,'execution':'unchanged_pi05',
+       'sample_stride':1,'threshold':.5,'execution':'unchanged_pi05',
        'checkpoint_selection':'released final step-20000, chosen before new rollout results',
        'split_note':'base-only development evaluation; training-group overlap not yet verified'},indent=2)+'\n')
     with urlopen('http://127.0.0.1:8792/health',timeout=10) as r:

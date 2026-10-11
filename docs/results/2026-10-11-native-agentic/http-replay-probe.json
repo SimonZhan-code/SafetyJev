@@ -1,0 +1,22 @@
+{
+  "checkpoint_repo": "IDEAS-Lab-Northwestern/SafetyJev-Checkpoints",
+  "checkpoint_revision": "7c1c0fc46227eca60473577a4450b86f93403603",
+  "checkpoint_subdirectory": "predictor-judge-27b-unsafe600/step-00000500/model",
+  "base_model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "input_contract": "chunk_start_v2",
+  "loader_sha256": "013c4c1c62a657472ddf680d7db7993df511351a333b8d6e6fc66f7b9707ce1f",
+  "status": "ready",
+  "device": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "training_loader_sha256": "d33dca3d21c7cf6a73432536fc71e7759f7fab0a60557b7c40a446ec5b7ee39d",
+  "loader_note": "Published NVIDIA loader; unpublished AMD patch not applied",
+  "checkpoint_manifest_sha256": "bb9bd1577697cbccd237cd71a7be7bf88104b302807b9a5ab0d89a4af7d8cbf0",
+  "batch_size": 1,
+  "request_id": "8cd626899fe8414797b415739e164d2d:predictor_judge:8:excessive_tilt:jar_upright",
+  "answers": {
+    "excessive_tilt:jar_upright": {
+      "violated": false,
+      "logit": -4.609085559844971
+    }
+  },
+  "latency_s": 0.8467777073383331
+}

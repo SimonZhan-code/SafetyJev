@@ -9,3 +9,6 @@ checkpoints/
 !.env.example
 .DS_Store
 *.log
+
+# Private runtime configs contain service credentials.
+configs/*.local.json

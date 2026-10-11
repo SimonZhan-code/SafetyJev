@@ -34,17 +34,17 @@ class PlannerError(RuntimeError):
 
 class OpenRouterPlanner:
     def __init__(self, config):
-        allowed = {"model", "model_env", "api_key_env", "include_images", "timeout",
+        allowed = {"model", "model_env", "api_key_env", "api_key", "include_images", "timeout",
                    "max_tokens", "max_calls_per_episode", "history_limit", "reasoning_enabled"}
         if not isinstance(config, dict) or set(config) - allowed:
-            raise ValueError("Unknown planner config fields; store credentials only in an environment variable")
+            raise ValueError("Unknown planner config fields")
         self.model = config.get("model") or os.environ.get(config.get("model_env", "OPENROUTER_MODEL"))
         if not isinstance(self.model, str) or not self.model.strip() or "/" not in self.model:
             raise ValueError("Set an explicit OpenRouter model ID in config.model or OPENROUTER_MODEL")
         self.key_env = config.get("api_key_env", "OPENROUTER_API_KEY")
-        self._api_key = os.environ.get(self.key_env)
-        if not self._api_key:
-            raise ValueError("Set the planner API key environment variable on the runtime machine")
+        self._api_key = config.get("api_key") or os.environ.get(self.key_env)
+        if not isinstance(self._api_key, str) or not self._api_key.strip():
+            raise ValueError("Set api_key in a private local config or its environment variable")
         self.include_images = config.get("include_images", True)
         self.timeout = config.get("timeout", 30)
         self.max_tokens = config.get("max_tokens", 256)
@@ -78,7 +78,7 @@ class OpenRouterPlanner:
         data["constraints"] = [{k: row[k] for k in ("id", "description", "ltl", "propositions") if k in row}
                                for row in context["constraints"]]
         def feedback(rows):
-            return [{k: row[k] for k in ("constraint_id", "score", "verdict")} for row in rows]
+            return [{k: row[k] for k in ("constraint_id", "score", "verdict") if k in row} for row in rows]
         data["guard_feedback"] = feedback(context["guard_feedback"])
         data["executed_history"] = [
             {k: row[k] for k in ("step", "robot_state", "executed_action", "policy_instruction")}

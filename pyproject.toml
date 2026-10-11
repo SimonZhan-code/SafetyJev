@@ -9,6 +9,9 @@ description = "Shadow evaluation of constraint-conditioned safety forecasts on M
 requires-python = ">=3.9"
 dependencies = []
 
+[project.optional-dependencies]
+agentic = ["numpy", "Pillow", "h5py", "huggingface_hub"]
+
 [project.scripts]
 safetyjev = "safetyjev.cli:main"
 

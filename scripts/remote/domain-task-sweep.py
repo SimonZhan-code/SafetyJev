@@ -60,7 +60,7 @@ def main():
     if args.reverse_scenes:
         for spec in selected.values():spec['scenes']=list(reversed(spec['scenes']))
     plan={'families':selected,'seed':0,'max_scenes_override':args.max_scenes,
-          'max_steps_override':args.max_steps,'sample_stride':8,'threshold':.5,
+          'max_steps_override':args.max_steps,'sample_stride':1,'threshold':.5,
           'scope':args.level+' current predicate classification; no interventions', 'benchmark_level':args.level,
           'clutter':'VLA and simulator oracle only, requested by user',
           'checkpoint_selection':resources['checkpoint_selection'],

@@ -1,0 +1,28 @@
+{
+  "local_retries": 2,
+  "repairs_per_decision": 1,
+  "execution_horizon": 8,
+  "score": "satisfied_constraints",
+  "acceptance": "all_no",
+  "fallback": "best_valid",
+  "tie_break": "earliest",
+  "constraint_ids": null,
+  "predictor": {
+    "endpoint": "http://127.0.0.1:8794",
+    "timeout": 120,
+    "checkpoint_dir": "../checkpoints/unsafe600",
+    "hf_token": "",
+    "batch_size": 1
+  },
+  "system1": {
+    "enabled": true,
+    "model": "deepseek/deepseek-v4.1-flash",
+    "api_key": "",
+    "include_images": true,
+    "reasoning_enabled": false,
+    "timeout": 30,
+    "max_tokens": 256,
+    "max_calls_per_episode": 3,
+    "history_limit": 8
+  }
+}

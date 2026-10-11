@@ -46,7 +46,7 @@ def main():
     selected={f:resources['families'][f] for f in args.families}
     if not all(s.get('ready') for s in selected.values()):raise RuntimeError('Downloads incomplete')
     plan={'families':selected,'seed':0,'max_scenes_override':args.max_scenes,
-          'max_steps_override':args.max_steps,'sample_stride':8,'threshold':.5,
+          'max_steps_override':args.max_steps,'sample_stride':1,'threshold':.5,
           'scope':'base-only current predicate classification; no interventions',
           'clutter':'VLA and simulator oracle only, requested by user',
           'checkpoint_selection':resources['checkpoint_selection'],

@@ -9,7 +9,7 @@
   "loader_sha256": "288416a9025441c169b92b8ee4ef0e8c67536630ae0b52f4fd77e05dc3aeb8c6",
   "calibration_step": "step-20000",
   "input_mode": "current_dual_camera",
-  "sample_stride": 8,
+  "sample_stride": 1,
   "timeout": 120,
   "queries": [
     {

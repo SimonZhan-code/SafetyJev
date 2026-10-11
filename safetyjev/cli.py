@@ -32,13 +32,14 @@ def main(argv=None):
     subs = parser.add_subparsers(dest="command", required=True)
     verify = subs.add_parser("verify-integration")
     verify.add_argument("--maniguard-root", required=True)
-    capture = subs.add_parser("capture", help="Run original policy with shadow sidecars; use -- before ManiGuard args")
+    capture = subs.add_parser("capture", allow_abbrev=False, help="Run original policy with shadow sidecars; use -- before ManiGuard args")
     capture.add_argument("--maniguard-root", required=True)
     capture.add_argument("--output", required=True)
     capture.add_argument("--provenance", required=True, help="JSON with policy repo/revision and benchmark revision")
     capture.add_argument("--recheck-every", type=int, default=0, help="0: chunk starts only; N: every N executed actions")
     capture.add_argument("--online-predictor", help="JSON with endpoint/model_id/predictor_revision/input_mode/timeout")
     capture.add_argument("--execution-mode", choices=["shadow", "guard_regenerate"], default="shadow")
+    capture.add_argument("--agentic-config", help="Native Unsafe600 loop and private OpenRouter config")
     capture.add_argument("--planner-config", help="Optional OpenRouter instruction-repair JSON; guard_regenerate only")
     capture.add_argument("--guard-threshold", type=float, default=.5,
                          help="Reject if any constraint score >= threshold; development default, not calibrated")
@@ -61,15 +62,32 @@ def main(argv=None):
         from .maniguard import COMMIT, instrument, verify_sources
         verify_sources(args.maniguard_root)
         path = Path(args.maniguard_root) / "maniguard/eval/benchmark.py"
-        for mode in ("shadow", "guard_regenerate"):
+        for mode in ("shadow", "guard_regenerate", "agentic_native"):
             instrument(path.read_text(), mode)
         print(json.dumps({"status": "source_hooks_verified", "maniguard_commit": COMMIT,
-                          "execution_modes": ["shadow", "guard_regenerate"],
+                          "execution_modes": ["shadow", "guard_regenerate", "agentic_native"],
                           "gpu_simulator_tested": False}))
     elif args.command == "capture":
         from .maniguard import COMMIT, launch
         if args.recheck_every < 0:
             raise ValueError("recheck-every cannot be negative")
+        agentic_config = None
+        if args.agentic_config:
+            tokens = sys.argv[1:] if argv is None else argv
+            own_args = tokens[:tokens.index('--')] if '--' in tokens else tokens
+            conflicts = {'--planner-config', '--guard-threshold', '--max-regenerations',
+                         '--online-predictor', '--recheck-every', '--execution-mode'}
+            if any(token.split('=',1)[0] in conflicts for token in own_args):
+                raise ValueError('agentic-config cannot be combined with legacy guard/planner/predictor flags')
+            from .agentic_config import load_config
+            from .agentic_predictor import NativePredictor
+            from .planner import OpenRouterPlanner
+            agentic_config = load_config(args.agentic_config)
+            system1 = agentic_config['system1']
+            if system1['enabled'] and system1['max_calls_per_episode'] and agentic_config['repairs_per_decision']:
+                OpenRouterPlanner({k:v for k,v in system1.items() if k != 'enabled'})
+            NativePredictor(agentic_config['predictor']).health()
+            args.execution_mode = 'agentic_native'
         from .guard import validate_guard_options
         validate_guard_options(args.guard_threshold, args.max_regenerations)
         planner_config = None
@@ -100,6 +118,8 @@ def main(argv=None):
         options = {"output": str(Path(args.output).resolve()), "provenance": provenance,
                    "recheck_every": args.recheck_every, "execution_mode": args.execution_mode,
                    "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}
+        if agentic_config:
+            options["agentic_config"] = agentic_config
         if planner_config:
             options["planner_config"] = planner_config
         if args.online_predictor:

@@ -31,7 +31,7 @@ def verify_sources(repo):
 def instrument(source, execution_mode="shadow"):
     if hashlib.sha256(source.encode()).hexdigest() != RUNNER_SHA256:
         raise ValueError("Unsupported ManiGuard runner. Use pinned commit " + COMMIT)
-    if execution_mode not in ("shadow", "guard_regenerate", "visual_classification", "oracle_only"):
+    if execution_mode not in ("shadow", "guard_regenerate", "visual_classification", "oracle_only", "agentic_native"):
         raise ValueError("Unknown execution mode")
     episode_import = ("from safetyjev.guard import GuardedEpisode as ShadowEpisode\n"
                       if execution_mode == "guard_regenerate"
@@ -40,6 +40,8 @@ def instrument(source, execution_mode="shadow"):
         episode_import = "from safetyjev.visual_runtime import VisualClassificationEpisode as ShadowEpisode\n"
     if execution_mode == "oracle_only":
         episode_import = "from safetyjev.visual_runtime import OracleEpisode as ShadowEpisode\n"
+    if execution_mode == "agentic_native":
+        episode_import = "from safetyjev.agentic import AgenticEpisode as ShadowEpisode\n"
     edits = [
         ("import json\n", "import json\n" + episode_import),
         ("        step_idx = 0\n", "        sj_shadow = ShadowEpisode(scene_info, cfg, monitor, obs, episode_seed)\n\n        step_idx = 0\n"),
@@ -50,7 +52,10 @@ def instrument(source, execution_mode="shadow"):
         ("        all_results.append(result)\n        _ltl_str",
          "        sj_shadow.finish(result)\n        all_results.append(result)\n        _ltl_str"),
     ]
-    if execution_mode == "guard_regenerate":
+    if execution_mode == "agentic_native":
+        old, new = edits[1]
+        edits[1] = (old, new.replace("obs, episode_seed)", "obs, episode_seed, robot)"))
+    if execution_mode in ("guard_regenerate", "agentic_native"):
         anchor = "                chunk = query_policy(policy, obs, client_type, cfg)\n"
         edits.insert(2, (anchor, anchor +
             "                chunk = sj_shadow.select_chunk(\n"

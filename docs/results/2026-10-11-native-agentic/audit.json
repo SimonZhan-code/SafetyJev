@@ -1,0 +1,45 @@
+{
+  "checks": {
+    "observation_count": true,
+    "state_dimensions": true,
+    "episode_repair_budget": true,
+    "all_predictions_complete": true,
+    "local_attempt_bounds": true,
+    "best_valid_and_earliest_selection": true,
+    "history_action_result_alignment": true
+  },
+  "candidates": 56,
+  "constraint_predictions": 168,
+  "duplicates": 0,
+  "fallback_steps": [
+    168,
+    176,
+    184,
+    192,
+    224,
+    240,
+    248
+  ],
+  "pre_repair_fallback_steps": [
+    168,
+    176,
+    184
+  ],
+  "repair_steps": [
+    168,
+    176,
+    184
+  ],
+  "repair_latencies_s": [
+    2.2158132940530777,
+    8.172557022422552,
+    0.5969268158078194
+  ],
+  "openrouter_cost_usd": 0.00246385,
+  "candidate_prediction_latency_s": {
+    "median": 2.1275228690356016,
+    "max": 2.3923325203359127,
+    "mean": 2.1242411620249704
+  },
+  "peak_gpu_memory_mib": 66590.0
+}

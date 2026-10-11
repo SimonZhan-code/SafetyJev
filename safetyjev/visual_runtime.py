@@ -18,6 +18,20 @@ from .io import append_jsonl, read_jsonl, write_json
 from .metrics import binary_metrics, quantile
 
 
+def per_step_config(config):
+    """Require dense current-state evaluation for new captures, not chunk sampling.
+
+    Saved historical stride-8 captures remain readable by the reporting tools.
+    Reject stale capture configs rather than silently misrecording their cadence.
+    """
+    config = copy.deepcopy(config)
+    stride = config.setdefault('sample_stride', 1)
+    if type(stride) is not int or stride != 1:
+        raise ValueError('Classifier capture requires sample_stride=1 (every executed action); '
+                         'update the classifier config and use a new output directory')
+    return config
+
+
 def allowed_questions(queries):
     """Fixed question IDs/text from the trained catalog, including object names."""
     return {(q['id'], text) for q in queries
@@ -85,14 +99,20 @@ class VisualClassificationEpisode(ShadowEpisode):
 
     def __init__(self, *args):
         from .capture import OPTIONS
-        self.visual_config = copy.deepcopy(OPTIONS['visual_config'])
+        self.visual_config = per_step_config(OPTIONS['visual_config'])
         self.classification_count = self.classification_failures = 0
         self.ready = False
         super().__init__(*args)
         self.queries = resolve_queries(self.visual_config['queries'], args[0]['name'], self.spec['propositions'])
         self.provenance['classification_queries'] = self.queries
         self.provenance.update(label_semantics='Current AP truth at the image step; not cumulative LTL rejection or future-chunk risk',
-                               visual_classifier=self.visual_config)
+                               visual_classifier=self.visual_config,
+                               classification_sampling={
+                                   'sample_stride': 1, 'include_initial_state': True,
+                                   'phase': 'after_action_and_monitor_before_next_action',
+                                   'step_semantics': 'State 0 is the initial baseline; state k follows action k-1. '
+                                                     'Each executed action with valid observation/monitor data '
+                                                     'contributes one resulting-state classification, including the terminal step.'})
         write_json(self.directory/'episode.json', self.provenance)
         self.ready = True
         self.classify(0, args[3])
@@ -103,7 +123,10 @@ class VisualClassificationEpisode(ShadowEpisode):
     def after_step(self, step, monitor, observation):
         super().after_step(step, monitor, observation)
         self.current_ap = copy.deepcopy(monitor._ltl_log[-1]['ap']) if not self.invalid else None
-        if self.ready and step % self.visual_config['sample_stride'] == 0:
+        # The upstream hook is inside the VLA chunk loop, after env.step and
+        # monitor.step and before goal termination or the next action. Never
+        # gate current-state classification on the policy's replanning cadence.
+        if self.ready:
             self.classify(step, observation)
 
     def classify(self, step, observation):
@@ -164,6 +187,16 @@ def report(root, output):
         signatures.add(json.dumps(meta['visual_classifier'],sort_keys=True))
         labels=read_jsonl(ep/'classification-labels.jsonl')
         predictions=read_jsonl(ep/'classification-predictions.jsonl')
+        # Older reports may omit cadence/final-step metadata. When available,
+        # audit all expected states, so a dropped label cannot look like 100%
+        # coverage. Honor the saved stride for historical captures.
+        stride = meta['visual_classifier'].get('sample_stride')
+        final_step = completion.get('final_step')
+        if stride is not None and final_step is not None:
+            if type(stride) is not int or stride < 1 or type(final_step) is not int or final_step < 0:
+                raise ValueError('Invalid saved classification cadence or final step')
+            if [r.get('step') for r in labels] != list(range(0, final_step + 1, stride)):
+                raise ValueError('Classification label steps do not match saved cadence: ' + ep.name)
         if len({r['sample_id'] for r in labels})!=len(labels):
             raise ValueError('Duplicate classification label ID')
         lookup={r['sample_id']:r for r in predictions}
@@ -221,8 +254,7 @@ def main():
                'execution_mode':'oracle_only','recheck_every':0})
         return
     if not args.classifier_config:raise ValueError('Classifier config required for visual scoring')
-    config=json.loads(Path(args.classifier_config).read_text())
-    if type(config['sample_stride']) is not int or config['sample_stride']<1:raise ValueError('Invalid sample stride')
+    config=per_step_config(json.loads(Path(args.classifier_config).read_text()))
     with urlopen(config['endpoint']+'/health',timeout=10) as response: health=json.load(response)
     for field in ('checkpoint_revision','checkpoint_subdirectory','base_model_revision','loader_revision'):
         if health[field]!=config[field]:raise ValueError('Serving identity mismatch: '+field)

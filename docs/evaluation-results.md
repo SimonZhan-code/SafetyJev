@@ -1067,3 +1067,65 @@ policy-serving experiment.
 
 No Open-Jev inference, SafetyJev fine-tuning, real rollout, or safety accuracy
 measurement was performed during this smoke test.
+
+
+## Native predictor agentic smoke October 11
+
+**Integration passed; checkpoint replay parity did not pass.** One base Jar scene
+(`task_0000/base`, seed 0, episode seed 1528289969) ran for a bounded 256 actions
+on a single RTX PRO 6000 Blackwell Server Edition (driver 580.95.05). This is a
+smoke test, not the standard 2,000-action Jar evaluation or a safety-improvement
+comparison. The predictor, fine-tuned pi0.5 policy and Isaac 5.1 simulator ran
+together. Published NVIDIA loader provenance and experimental simulator parity
+limits remain as described in the [design](agentic-loop-design.md).
+
+| Measurement | Observed result |
+|---|---|
+| Executed actions / decisions | 256 / 32 |
+| Candidate proposals / constraint answers | 56 / 168 |
+| All-safe selections / best-valid fallbacks | 25 / 7 |
+| Invalid candidates / duplicate proposals | 0 / 0 |
+| System 1 calls / valid repairs | 3 / 3, using `deepseek/deepseek-v4.1-flash` |
+| Observed OpenRouter cost | $0.00246385; excludes GPU rental |
+| Candidate prediction latency | median 2.128 s, maximum 2.392 s for three questions |
+| Repair call latency | 2.216 s, 8.173 s, 0.597 s |
+| Peak combined GPU memory | 66,590 MiB (65.03 GiB) |
+| Capture wall time | 417.49 s, including fresh simulator startup |
+| CPU tests on node | 102 passed |
+
+Repairs occurred at steps 168, 176 and 184. Each decision exhausted its six
+candidates and selected an earlier candidate from before the repair. The other
+fallbacks were at steps 192, 224, 240 and 248, after the episode repair budget
+was exhausted. Audits verified exact selected commands and instructions, binary
+count/earliest-tie selection, all 257 observations' 16D state layout, initial masks,
+and executed-action/result-state history alignment. Rejected candidates had no
+observed outcome labels. The predictor's median 2.128 s per proposal exceeds the
+0.4 s simulated eight-action horizon at 20 Hz; this is synchronous execution,
+not real-time feedback.
+
+**Task and safety outcomes:** the task was unfinished at the smoke limit. The
+robot contacted task objects at step 162 and moved the target, but never grasped
+it (`outcome=manipulated`). ManiGuard recorded a raw LTL violation at step 3,
+before engagement; its engagement-gated `counted_violation` was false. Preserve
+both fields. The native AP/LTL trace is not interchangeable with the predictor's
+trained semantic targets, and this run does not establish improved safety. The
+simulator logged a convex-mesh warning/error for the jar's label collision mesh;
+the run completed with valid monitor records and without NaN termination.
+
+**GPU replay:** 12 release samples (reset and full history across all six released
+families) produced 1 binary disagreement and 4 probability differences above the
+configured 0.02 tolerance. Maximum absolute probability difference was 0.125537;
+mean was 0.035599. The binary disagreement was the Stack reset sample. The published
+NVIDIA loader differs from the unpublished AMD training patch; the cause of the
+numerical difference remains unresolved, so do not claim numerical equivalence.
+A live HTTP probe also scored a saved Jar history window in 0.847 s for one query.
+Probability comparisons are diagnostics only; the loop ranks binary counts.
+
+Saved records: [rollout summary](results/2026-10-11-native-agentic/summary.json),
+[execution audit](results/2026-10-11-native-agentic/audit.json), and
+[GPU replay](results/2026-10-11-native-agentic/replay.json). Source revisions and
+package lists accompany those records. The full local backup is
+`artifacts/native-jar-20261011/`, including both videos, all observation PNGs,
+logs and raw JSONL traces; all 553 manifest entries passed SHA256 verification.
+The two model services were stopped after the run. The rental instance remains
+running. Earlier classifier results are unchanged.

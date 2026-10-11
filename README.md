@@ -3,7 +3,17 @@
 An agentic robotics system that enhances safety through an in-the-loop,
 safety-centric fine-tuned Jev model at runtime.
 
-## Prediction evaluation and a first guarded loop
+## Native predictor-guided loop
+
+`capture --agentic-config configs/agentic-loop.local.json` uses the pinned Unsafe600
+step-500 predictor with configurable VLA retries and OpenRouter instruction repairs.
+It accepts all-No predictions or, after budget exhaustion, executes the valid
+candidate satisfying the most trained queries. See the [design and launch guide](docs/agentic-loop-design.md)
+and [credential-free config](configs/agentic-loop.example.json). A [single-task NVIDIA smoke test](docs/evaluation-results.md#native-predictor-agentic-smoke-october-11)
+exercised live repairs and fallback; checkpoint replay parity did not pass. Earlier
+classifier results are unchanged.
+
+## Historical prediction evaluation and first guarded loop
 
 We separate two experiments:
 
@@ -15,7 +25,8 @@ We separate two experiments:
    success, engagement, and overhead. The optional `guard_regenerate` mode checks
    every constraint before executing a chunk. A rejection triggers a new VLA
    proposal from the same observation; bounded retry exhaustion ends the simulated
-   episode unsuccessfully. No second VLM or prompt rewriting is used.
+   episode unsuccessfully. Its optional System 1 extension is described below.
+   This legacy exhaustion behavior does not apply to the native predictor loop.
 
 Optional **System 1 planner**: add `--planner-config configs/openrouter-planner.json`
 to guarded execution to send rejection feedback, current cameras/state, and bounded
@@ -61,8 +72,12 @@ All 61 CPU tests passed on the node.
 This checkpoint consumes images and trained predicate questions. It does **not**
 condition on proposed actions or forecast their future violations. The new
 `visual_classification` observer evaluates current AP labels separately from
-the future-window pipeline. These three development scenes do not establish
-held-out generalization or improved closed-loop safety. See
+the future-window pipeline. New classifier captures score the initial state and
+the resulting state after **every executed action**, with same-step camera/AP
+alignment; VLA chunk length and replanning cadence are unchanged. A rollout with
+N valid action steps produces N+1 camera-pair requests. The historical classifier
+results used stride 8 and are not per-step measurements. These three development
+scenes do not establish held-out generalization or improved closed-loop safety. See
 [evaluation results](docs/evaluation-results.md) and the [runbook](docs/runbook.md).
 
 The earlier π0.5 + untuned Open-Jev 2B + DeepSeek planner integration executed

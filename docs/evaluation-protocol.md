@@ -18,6 +18,22 @@ exclusion to these frame labels. Yes polarity depends on the question; it does
 not always mean unsafe. Keep this report separate from the forecast protocol
 below. It is a prerequisite diagnostic, not a test of P1 or P2.
 
+New classifier captures require `sample_stride: 1`: classify state 0 once, then
+classify state k immediately after action k-1 and the matching monitor update,
+before executing the next action. Include the final valid state even when the
+episode ends partway through a chunk. Thus N executed valid steps produce N+1
+requests, each batching all applicable predicate questions. This is one check
+per environment/control step, not per physics substep. The VLA still generates
+and executes its configured action chunks; this observer does not intervene.
+Classifier inputs remain current images/questions, not state/action tensors or
+future commands. Invalid monitor/state data are not scored as safe; failed HTTP
+requests remain recorded as failures and subsequent steps are still attempted.
+Current AP conjunctions do not establish arbitrary temporal-constraint support.
+
+Historical stride-8 captures retain their recorded sampling cadence and metrics.
+New captures reject non-unit stride configs; start a new output directory rather
+than resuming or mixing into an old sweep. Report/audit tools read saved cadence.
+
 Retain image/question request hashes, current labels separately from model input,
 raw and frozen-release-calibrated scores, class counts, per-question confusion
 matrices, and request coverage. Report latency for the actual batch size and
