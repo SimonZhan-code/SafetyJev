@@ -564,3 +564,25 @@ Raw replay and diagnostic records are backed up locally under
 `replacement-normalization-diagnostic.json`. The new node retains full logs in
 `artifacts/predictor-fast-validation-20261012/`. Replay agreement on this finite
 set would still not establish equivalence on every future input.
+
+#### Inference-only scope and profile
+
+The user subsequently disabled the Astra evaluation and dedicated the replacement
+node to SafetyJev speed testing. The bootstrap directory now contains an
+`inference-only.json` marker; both deployment entry points reject evaluation
+launch while it exists. The recurring monitor follows DeepSeek and inference
+experiments separately. No Astra trials are authorized under this scope.
+
+An additional warmed profile used one reset and one full-history request, each
+twice, with the reference settings (Torch, batch one, cache off). Full-history
+instrumented wall time was 2.078–2.095 seconds for three constraint queries:
+language-model event spans totaled 1.633–1.636 seconds, including
+0.680 seconds of Gated DeltaNet recurrence. Image-feature spans were
+0.107–0.154 seconds, and CPU input preparation 0.166–0.222 seconds. The event
+spans include launch gaps, and language/recurrence timings are nested; do not
+sum them. Profiling adds overhead, so the uninstrumented replay remains the
+latency reference: 1.639 seconds overall, 1.908 seconds for full history.
+The language model is the main optimization target; neither FLA nor image
+caching is enabled. Results and the profiling script are backed up under
+`artifacts/astra-deployment-20261012/inference-profile.json` and
+`profile-inference.py`.
