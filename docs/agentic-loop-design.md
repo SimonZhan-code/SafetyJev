@@ -440,7 +440,7 @@ repair request returned the requested model, valid instruction JSON in 9.07 seco
 and $0.05918 reported usage cost. This verifies the API adapter, not a simulator
 rollout. Deployment and the first live Astra trial remain pending.
 
-The new GPU is an RTX PRO 6000 Blackwell Max-Q Workstation Edition (96 GB,
+The initial Astra GPU was an RTX PRO 6000 Blackwell Max-Q Workstation Edition (96 GB,
 280 W limit, driver 610.57.04); hardware differs from the DeepSeek node. Use matched
 scene/seed outcomes for comparisons, and report hardware separately for timing.
 Secrets remain in ignored owner-only local configs. Node setup status is recorded
@@ -498,8 +498,9 @@ speedup overall and on full-history requests. Logit differences, cold warmup tim
 peak allocated memory and cache hits are also reported. This finite replay does
 not prove equivalence on all future inputs or establish improved task safety.
 
-At implementation time all 121 CPU tests pass; GPU replay and optimized simulator
-rollout remain pending node installation. The original Astra deployment gate is
+All 121 CPU tests pass locally and in the replacement native environment.
+GPU replay is complete, with no mode passing the deployment gate (results below);
+the optimized simulator rollout remains held. The original Astra deployment gate is
 held. Supervisor `astra-fast-validation` records progress in
 `/workspace/bootstrap-astra/fast-status.json`. The opt-in implementation can be committed and pushed before GPU validation,
 with acceleration disabled by default. After a passing replay, results must be
@@ -517,3 +518,49 @@ build retains package caching, pins source commits, and separates NVIDIA Isaac
 packages from the ordinary package index. GPU replay remains a mandatory gate;
 a successful CPU suite or Git push is not evidence of acceleration or numerical
 agreement.
+
+#### Replacement-node GPU replay, 2026-10-12
+
+Implementation `012810a` was pushed and cloned on the replacement node. Every
+runtime source hash in the replay matches that pushed commit. The fresh native,
+policy and simulator environments passed exact package-version audits; pinned
+weights, assets and all 26 Jar base scenes are installed. Recovery corrected
+unintended CUDA local-version suffixes by requiring exact package versions.
+
+The replay completed all 20 unique requests with three constraint queries each,
+twice per mode (120 binary comparisons per alternative). Mean times include
+input decoding and image-cache hashing, but exclude model loading, warmup,
+HTTP transport, VLA, simulator and System 1 time.
+
+| Mode | Mean seconds/request | Relative speed | Binary disagreements | Maximum absolute logit difference |
+|---|---:|---:|---:|---:|
+| Reference Torch | 1.639 | 1.000× | 0 | 0.0000 |
+| Image cache | 1.722 | 0.952× | 0/120 | 0.0000 |
+| FLA | 1.069 | 1.534× | 4/120 | 1.1106 |
+| FLA + image cache | 1.135 | 1.444× | 4/120 | 1.1106 |
+
+On full-history requests, Torch averaged 1.908 seconds and FLA 1.291 seconds
+(1.478×). Image-cache hits were verified, but their hashing/transfer overhead
+outweighed the measured benefit. These are predictor-only replay timings, not
+end-to-end episode speedups.
+
+Both FLA variants flipped `open_jar_off_support` from Yes to No for two unique
+requests (each repeated twice): task_0003/base, seed 0, step 1992; and
+task_0011/base, seed 2, step 840. All-safe acceptance decisions stayed unchanged
+on these samples, but satisfied-constraint counts changed, which can alter
+fallback rankings. These are disagreements with the reference, not comparisons
+against simulator ground truth.
+
+An isolated follow-up diagnostic preserved the reference Q/K normalization and
+then also tried float32 recurrence inputs. Both variants still disagreed on one
+of the two cases; neither is deployed. No alternative met the zero-disagreement
+and minimum-speedup gates. `fast-status.json` therefore records
+`no_validated_acceleration`; no launch receipt was written and no Astra trial
+was launched. Keep acceleration disabled until a revised implementation passes
+replay. The old Astra launch gates remain stopped; DeepSeek is unchanged.
+
+Raw replay and diagnostic records are backed up locally under
+`artifacts/astra-deployment-20261012/replacement-fast-benchmark.json` and
+`replacement-normalization-diagnostic.json`. The new node retains full logs in
+`artifacts/predictor-fast-validation-20261012/`. Replay agreement on this finite
+set would still not establish equivalence on every future input.
