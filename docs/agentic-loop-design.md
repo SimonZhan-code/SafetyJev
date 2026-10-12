@@ -355,3 +355,14 @@ completed episodes remain valid; keep the prior source plan when migrating a
 stopped queue to this launcher fix. Warm-up time is saved separately; total case
 wall time includes warm-up. This changes startup handling, not task horizons,
 candidate budgets, model weights or safety semantics.
+
+To evaluate only the two predictor-guided methods, pass
+`--methods local system1` to both preparation/check and launch commands. This
+selects 156 episodes (26 scenes × three seeds × two methods). Existing baseline
+captures may remain on disk; they are excluded from active coverage and summary
+rates, with an explicit historical-record count. On October 12 the user removed
+baseline reruns from the active queue. Its previous plan and baseline records
+were preserved, and the active baseline was cancelled. Published ManiGuard
+baseline results are external references, not new paired control episodes under
+this simulator deployment. Changing the selected methods on an existing queue
+requires stopping it and explicitly archiving/migrating the plan first.

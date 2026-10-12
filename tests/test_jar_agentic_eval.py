@@ -20,6 +20,25 @@ class JarEvaluationTests(unittest.TestCase):
             self.assertEqual(len(set(plan)),count)
             self.assertEqual([c[2] for c in plan[:3]],['baseline','local','system1'])
 
+    def test_predictor_only_plan_excludes_all_baselines(self):
+        scenes = [f'task_{i:04d}/base' for i in range(26)]
+        plan = runner.cases(scenes,False,('local','system1'))
+        self.assertEqual(len(plan),156)
+        self.assertEqual(set(c[2] for c in plan),{'local','system1'})
+        self.assertEqual(len(set(plan)),156)
+
+    def test_summary_excludes_preserved_baselines_from_active_coverage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            runner.save(out/'cases/baseline/record.json',{'status':'completed','method':'baseline'})
+            runner.save(out/'cases/cancelled/record.json',{'status':'cancelled','method':'baseline'})
+            report = runner.summarize(out,{'cases':[1]*156,'methods':['local','system1']})
+            self.assertEqual(report['planned'],156)
+            self.assertEqual(report['completed'],0)
+            self.assertEqual(report['failed'],0)
+            self.assertEqual(report['excluded_historical_records'],2)
+            self.assertNotIn('baseline',report['methods'])
+
     def test_local_ablation_disables_repairs_without_changing_original(self):
         config = runner.method_config(DEFAULTS,'system1')
         config['system1']['api_key']='private-test-secret'

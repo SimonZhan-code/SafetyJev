@@ -61,11 +61,11 @@ def method_config(config, method):
     return value
 
 
-def cases(scenes, pilot):
+def cases(scenes, pilot, methods=METHODS):
     # Pair all three methods at each scene/seed. Policy restarts reset the sampler.
     chosen = scenes[:5] if pilot else scenes
     seeds = (0,) if pilot else (0, 1, 2)
-    return [(scene, seed, method) for scene in chosen for seed in seeds for method in METHODS]
+    return [(scene, seed, method) for scene in chosen for seed in seeds for method in methods]
 
 
 def audit(case_dir, method):
@@ -102,9 +102,12 @@ def audit(case_dir, method):
 
 def summarize(out, plan):
     records = [json.loads(p.read_text()) for p in sorted((out/'cases').glob('*/record.json'))]
-    summary = {'planned':len(plan['cases']), 'completed':sum(r['status']=='completed' for r in records),
+    methods = plan.get('methods', METHODS)
+    excluded = [r for r in records if r['method'] not in methods]
+    records = [r for r in records if r['method'] in methods]
+    summary = {'excluded_historical_records':len(excluded), 'planned':len(plan['cases']), 'completed':sum(r['status']=='completed' for r in records),
                'failed':sum(r['status']=='failed' for r in records), 'methods':{}}
-    for method in METHODS:
+    for method in methods:
         good = [r for r in records if r['method']==method and r['status']=='completed']
         per_seed = {}
         for seed in sorted({r['seed'] for r in good}):
@@ -174,14 +177,14 @@ def download(config):
     return scenes
 
 
-def build_plan(config, pilot, scenes):
+def build_plan(config, pilot, scenes, methods=METHODS):
     paths = [*sorted((ROOT/'safetyjev').glob('*.py')), Path(__file__),
              ROOT/'scripts/remote/serve-pi05.sh', ROOT/'scripts/remote/warm-jar-policy.py',
              ROOT/'configs/predictor-semantic-definitions.json',
              ROOT/'configs/jar-isaac51-provenance.json',
              Path('/workspace/ManiGuard/configs/eval/jar_transport_joint.yaml')]
     paths += [p for s in scenes for p in sorted((BENCH/s).glob('*.json*'))]
-    return {'cases':cases(scenes, pilot), 'pilot':pilot, 'max_steps':2000,
+    return {'cases':cases(scenes, pilot, methods), 'methods':list(methods), 'pilot':pilot, 'max_steps':2000,
             'benchmark_revision':BENCH_REV, 'all_scenes':scenes, 'config':public_config(config),
             'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
             'limitations':['Experimental Isaac 5.1 parity; selected released policy step is not independently matched to paper.',
@@ -213,7 +216,7 @@ def run(args, config, out, plan):
     signal.signal(signal.SIGTERM, stop_on_signal)
     try:
         for scene, seed, method in plan['cases']:
-            if build_plan(config, args.pilot, plan['all_scenes'])['source_sha256'] != plan['source_sha256']:
+            if build_plan(config, args.pilot, plan['all_scenes'], plan['methods'])['source_sha256'] != plan['source_sha256']:
                 raise RuntimeError('Runtime files changed during evaluation')
             key = f"{scene.replace('/', '-')}-seed{seed}-{method}"
             case_dir = records/key
@@ -290,6 +293,7 @@ def main():
     parser.add_argument('--config',default=str(ROOT/'configs/agentic-loop.local.json'))
     parser.add_argument('--output',default=str(ROOT/'artifacts/jar-agentic-id'))
     parser.add_argument('--pilot',action='store_true',help='First five sorted scenes, seed 0, all three methods (15 episodes)')
+    parser.add_argument('--methods',nargs='+',choices=METHODS,default=list(METHODS))
     parser.add_argument('--prepare',action='store_true',help='Download only pinned base scene JSON; no GPU execution')
     parser.add_argument('--check',action='store_true',help='Validate and print plan; no GPU execution')
     parser.add_argument('--launch',action='store_true',help='Launch this queue under Supervisor')
@@ -298,6 +302,8 @@ def main():
     parser.add_argument('--min-free-gb',type=int,default=20)
     args = parser.parse_args()
     os.umask(0o077)
+    if len(set(args.methods)) != len(args.methods):
+        parser.error('Select each method at most once')
     if args.min_free_gb < 10 or args.case_timeout <= 0:
         parser.error('Require at least 10 GB reserve and positive timeout')
     config = load_config(args.config)
@@ -312,7 +318,7 @@ def main():
         raise RuntimeError('Missing base scenes; run --prepare first')
     out = Path(args.output).resolve()
     out.mkdir(parents=True,exist_ok=True)
-    plan = json.loads(json.dumps(build_plan(config,args.pilot,scenes)))
+    plan = json.loads(json.dumps(build_plan(config,args.pilot,scenes,args.methods)))
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text()) != plan:
         raise RuntimeError('Plan/source changed; use a new output directory')
     save(out/'plan.json',plan)
@@ -329,6 +335,7 @@ def main():
             raise RuntimeError('Launch paths must not contain spaces or shell metacharacters')
         command = [sys.executable,'-u',str(Path(__file__).resolve()),'--config',str(Path(args.config).resolve()),
                    '--output',str(out),'--case-timeout',str(args.case_timeout),'--min-free-gb',str(args.min_free_gb)]
+        command += ['--methods',*args.methods]
         if args.pilot:command.append('--pilot')
         if args.retry_failed:command.append('--retry-failed')
         Path('/etc/supervisor/conf.d/'+JOB+'.conf').write_text(
