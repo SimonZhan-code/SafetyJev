@@ -421,3 +421,28 @@ was run, and no end-to-end speedup is established. Raw measurements and derived
 grouped timings are saved in `artifacts/constraint-batch-validation-20261012/`
 (`benchmark.json`, `transition.json`, and `timing-analysis.json`). Do not force batch
 3 into the evaluation until its prediction differences are understood and validated.
+
+### Astra System 1 comparison
+
+The October 12 comparison is being prepared on `84.249.79.112:25035` for
+`openai/gpt-6-astra` through the same OpenRouter adapter. The intended run is
+78 Jar base trials (26 scenes × seeds 0/1/2), System 1 only, at predictor batch 1.
+Runtime source hashes and all robot/predictor decision settings are checked against
+the saved DeepSeek plan before launch. Outputs are separate at
+`/workspace/SafetyJev/artifacts/jar-agentic-astra-id`.
+
+Astra rejected `reasoning.enabled=false`. Its private configuration therefore uses
+reasoning enabled, a 4,096-token response cap and 120-second request timeout; the
+provider default reasoning effort applies. Candidate retries, instruction repair
+budgets, history bounds and prompts remain matched. These API-setting differences
+must accompany any model comparison. A live replay of one saved two-camera Jar
+repair request returned the requested model, valid instruction JSON in 9.07 seconds,
+and $0.05918 reported usage cost. This verifies the API adapter, not a simulator
+rollout. Deployment and the first live Astra trial remain pending.
+
+The new GPU is an RTX PRO 6000 Blackwell Max-Q Workstation Edition (96 GB,
+280 W limit, driver 610.57.04); hardware differs from the DeepSeek node. Use matched
+scene/seed outcomes for comparisons, and report hardware separately for timing.
+Secrets remain in ignored owner-only local configs. Node setup status is recorded
+in `/workspace/bootstrap-astra/status.json`; launch requires completed transfers,
+pinned checkpoint downloads, CPU tests and GPU/rendering checks.
