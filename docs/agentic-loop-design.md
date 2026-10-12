@@ -362,7 +362,8 @@ selects 156 episodes (26 scenes × three seeds × two methods). Existing baselin
 captures may remain on disk; they are excluded from active coverage and summary
 rates, with an explicit historical-record count. On October 12 the user removed
 baseline reruns from the active queue. Its previous plan and baseline records
-were preserved, and the active baseline was cancelled. Published ManiGuard
+were preserved; an in-flight predictor startup caught in the stop transition
+was archived and retried. Published ManiGuard
 baseline results are external references, not new paired control episodes under
 this simulator deployment. Changing the selected methods on an existing queue
 requires stopping it and explicitly archiving/migrating the plan first.
