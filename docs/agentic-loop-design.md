@@ -367,3 +367,34 @@ was archived and retried. Published ManiGuard
 baseline results are external references, not new paired control episodes under
 this simulator deployment. Changing the selected methods on an existing queue
 requires stopping it and explicitly archiving/migrating the plan first.
+
+### Constraint batching transition
+
+`predictor.batch_size=3` groups the three Jar semantic questions for **one**
+candidate in a single model forward. It does not batch candidate generation or
+change acceptance, retry budgets, repair budgets, input history, or horizons.
+
+`benchmark-constraint-batch.py` reconstructs exact saved requests (including image
+bytes), verifies their original request hashes, and compares batch sizes 1 and 3
+on 20 candidates spanning five completed episodes. It alternates execution order,
+warms both batch shapes, repeats each twice, and records latency, peak CUDA memory,
+logit differences, and binary disagreements. This is inference replay, not another
+simulator evaluation. The report separates its model-only measurements from HTTP
+checks and the later live rollout timings.
+
+For the October 12 change, `apply-constraint-batch.py` runs as the one-time
+Supervisor job `jar-constraint-batch-transition`. The queue dispatcher is suspended
+while its current simulator child finishes. The helper preserves that completed
+case, shuts down the old services, runs replay with pi0.5 resident, and checks
+additional simulator memory headroom. It enables batch 3 only if sampled binary
+answers agree and mean inference latency improves, followed by HTTP replay checks.
+Otherwise it resumes batch 1 and records the failed validation. No completed
+simulation episodes are repeated. This helper expects the explicitly saved
+`batch-transition-pause.json` boundary record; it is not a general pause command.
+
+The new public config, previous plan, migration record, and pre-switch completed
+case list preserve the phase boundary. Results before/after the change must retain
+their batch size; zero disagreement in these samples does not prove equivalence
+on all inputs. Validation and transition status are under
+`artifacts/constraint-batch-validation-20261012/`. The helper does not schedule
+recurring checks, alter the checkpoint, or stop the rental.
