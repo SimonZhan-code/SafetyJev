@@ -176,7 +176,8 @@ def download(config):
 
 def build_plan(config, pilot, scenes):
     paths = [*sorted((ROOT/'safetyjev').glob('*.py')), Path(__file__),
-             ROOT/'scripts/remote/serve-pi05.sh', ROOT/'configs/predictor-semantic-definitions.json',
+             ROOT/'scripts/remote/serve-pi05.sh', ROOT/'scripts/remote/warm-jar-policy.py',
+             ROOT/'configs/predictor-semantic-definitions.json',
              ROOT/'configs/jar-isaac51-provenance.json',
              Path('/workspace/ManiGuard/configs/eval/jar_transport_joint.yaml')]
     paths += [p for s in scenes for p in sorted((BENCH/s).glob('*.json*'))]
@@ -252,11 +253,10 @@ def run(args, config, out, plan):
                     with socket.create_connection(('127.0.0.1',8000),timeout=3):
                         return True
                 wait_for(policy_ready)
-                probe = ('from openpi_client.websocket_client_policy import WebsocketClientPolicy; '
-                         'm=WebsocketClientPolicy(host="127.0.0.1",port=8000).get_server_metadata(); '
-                         'assert m["serve_config"]=="pi05-base_datagen_v1_jar_joint_2cam_lora"; '
-                         'assert m["checkpoint"]=="/workspace/checkpoints/pi05-jar/7400"')
-                subprocess.run([SIM,'-c',probe],env=ENV,capture_output=True,check=True,timeout=30)
+                with (case_dir/'policy-warmup.json').open('w') as warmup, (case_dir/'warmup.err').open('w') as errors:
+                    subprocess.run([SIM,str(ROOT/'scripts/remote/warm-jar-policy.py'),
+                                    '--scene',str(BENCH/scene)],env=ENV,stdout=warmup,stderr=errors,
+                                   check=True,timeout=360)
                 command = [SIM,'-u','-m','safetyjev.visual_runtime' if method=='baseline' else 'safetyjev.cli',
                            'capture','--maniguard-root','/workspace/ManiGuard','--output',str(case_dir/'episodes'),
                            '--provenance',str(out/'provenance.json')]

@@ -344,3 +344,14 @@ commands are retained in episode records. The known 1/12 replay disagreement,
 experimental simulator parity, and unverified training-group independence remain
 limitations, not resolved by this launcher. Setup/CPU tests do not constitute a
 completed 234-episode evaluation.
+
+The first full queue stopped before the local method executed an action: cold JAX
+compilation exceeded the policy client's WebSocket pong deadline. The launcher
+now runs `warm-jar-policy.py` before capture with a bounded 300-second transport
+window. Its dummy inference uses seed 2^31, outside ManiGuard's 31-bit episode
+seed range; the real episode therefore resets the sampler. No warm-up actions
+enter the simulator or predictor history. This applies to every method. Existing
+completed episodes remain valid; keep the prior source plan when migrating a
+stopped queue to this launcher fix. Warm-up time is saved separately; total case
+wall time includes warm-up. This changes startup handling, not task horizons,
+candidate budgets, model weights or safety semantics.
