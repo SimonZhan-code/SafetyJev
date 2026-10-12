@@ -586,3 +586,24 @@ The language model is the main optimization target; neither FLA nor image
 caching is enabled. Results and the profiling script are backed up under
 `artifacts/astra-deployment-20261012/inference-profile.json` and
 `profile-inference.py`.
+
+#### User-approved FLA enablement
+
+The user explicitly accepted some changed binary answers and requested enabling
+FLA. The replacement node now uses `attention_backend: "fla"`, `batch_size: 1`,
+and `vision_cache: false`; the local ignored Astra config mirrors those settings.
+The historical 4/120 disagreements and failed equivalence gate remain recorded.
+This is an approved performance/answer-consistency tradeoff, not a claim of
+numerical equivalence or improved detection accuracy.
+
+Supervisor `safetyjev-native-server` serves the predictor on `127.0.0.1:8794`.
+The approval record is `/workspace/bootstrap-astra/inference-backend-authorization.json`.
+Astra evaluation remains disabled by the inference-only marker and guarded
+launch scripts. Stop the predictor service before standalone GPU benchmarks
+and restore it afterward; do not load two predictor copies onto the GPU.
+
+The live HTTP service smoke test passed health/provenance validation and matched
+saved FLA labels. Three warmed full-history calls, each checking all three Jar
+constraints, took 1.310–1.481 seconds (mean 1.396 seconds), including local HTTP
+serialization and transport. This small smoke test is not a new paired speedup
+estimate. Its record is `artifacts/astra-deployment-20261012/fla-service-smoke.json`.
