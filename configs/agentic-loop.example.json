@@ -12,7 +12,9 @@
     "timeout": 120,
     "checkpoint_dir": "../checkpoints/unsafe600",
     "hf_token": "",
-    "batch_size": 1
+    "batch_size": 1,
+    "attention_backend": "torch",
+    "vision_cache": false
   },
   "system1": {
     "enabled": true,

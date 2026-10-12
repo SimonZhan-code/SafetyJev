@@ -119,13 +119,26 @@ class NativeService:
         if (metadata['revision'] != BASE_REVISION or metadata['input_contract'] != 'chunk_start_v2'
                 or metadata['state_dim'] != 16 or metadata['history_frames'] != 8 or metadata['max_actions'] != 8):
             raise ValueError('Native checkpoint contract mismatch')
-        self.model = chunk_judge_model.ChunkJudgeModel.load(path, device='cuda:0')
+        from .inference_optimizations import reference_construction, VisionFeatureCache
+        with reference_construction():
+            self.model = chunk_judge_model.ChunkJudgeModel.load(path, device='cuda:0')
+        self.vision_cache = VisionFeatureCache(self.model.backbone)
         self.batch_size = config['predictor']['batch_size']
         self.health = {**IDENTITY, 'status': 'ready', 'device': torch.cuda.get_device_name(),
                        'training_loader_sha256': 'd33dca3d21c7cf6a73432536fc71e7759f7fab0a60557b7c40a446ec5b7ee39d',
                        'loader_note': 'Published NVIDIA loader; unpublished AMD patch not applied',
                        'checkpoint_manifest_sha256': hashlib.sha256((path.parent/'checkpoint.json').read_bytes()).hexdigest(),
                        'batch_size': self.batch_size}
+        self.configure_optimizations(config['predictor'].get('attention_backend', 'torch'),
+                                     config['predictor'].get('vision_cache', False))
+
+    def configure_optimizations(self, attention_backend, vision_cache):
+        from .inference_optimizations import configure_attention, UPSTREAM
+        settings = configure_attention(self.model, attention_backend)
+        self.vision_cache.clear()
+        self.vision_cache.enabled = vision_cache
+        self.health['optimizations'] = {**settings, 'vision_cache': vision_cache,
+            'upstream': UPSTREAM, 'lora_merged': False, 'quantized': False}
 
     def predict(self, body):
         import torch
@@ -139,6 +152,7 @@ class NativeService:
                 len({q['id'] for q in questions}) != len(questions)):
             raise ValueError('Invalid question batch')
         arrays = decode_inputs(body['inputs'])
+        self.vision_cache.clear()
         answers = {}
         torch.cuda.synchronize()
         started = time.perf_counter()
@@ -157,7 +171,8 @@ class NativeService:
                     answers[q['id']] = {'violated': value >= 0, 'logit': value}
         torch.cuda.synchronize()
         return {**self.health, 'request_id': body['request_id'], 'answers': answers,
-                'latency_s': time.perf_counter()-started}
+                'latency_s': time.perf_counter()-started,
+                'vision_cache': {'hits': self.vision_cache.hits, 'misses': self.vision_cache.misses}}
 
 
 def main():

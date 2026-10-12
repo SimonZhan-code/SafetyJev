@@ -19,11 +19,19 @@ class NativePredictor:
     def __init__(self, config):
         self.endpoint = config['endpoint'].rstrip('/')
         self.timeout = config['timeout']
+        self.optimizations = {k: config.get(k, v) for k, v in
+                              (('attention_backend', 'torch'), ('vision_cache', False))}
+
+    def validate_health(self, health):
+        validate_identity(health)
+        observed = health.get('optimizations', {'attention_backend': 'torch', 'vision_cache': False})
+        if any(observed.get(k) != v for k, v in self.optimizations.items()):
+            raise ValueError('Native predictor optimization mismatch')
 
     def health(self):
         with urlopen(self.endpoint+'/health', timeout=self.timeout) as response:
             health = json.load(response)
-        validate_identity(health)
+        self.validate_health(health)
         return health
 
     def score(self, request_id, questions, inputs):
@@ -32,7 +40,7 @@ class NativePredictor:
                           headers={'Content-Type': 'application/json'})
         with urlopen(request, timeout=self.timeout) as response:
             result = json.load(response)
-        validate_identity(result)
+        self.validate_health(result)
         if result.get('request_id') != request_id:
             raise ValueError('Mismatched native prediction ID')
         answers = result.get('answers')

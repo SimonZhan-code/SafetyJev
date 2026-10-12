@@ -17,7 +17,8 @@ DEFAULTS = {
     'score': 'satisfied_constraints', 'acceptance': 'all_no',
     'fallback': 'best_valid', 'tie_break': 'earliest', 'constraint_ids': None,
     'predictor': {'endpoint': 'http://127.0.0.1:8794', 'timeout': 120,
-                  'checkpoint_dir': '../checkpoints/unsafe600', 'hf_token': '', 'batch_size': 1},
+                  'checkpoint_dir': '../checkpoints/unsafe600', 'hf_token': '', 'batch_size': 1,
+                  'attention_backend': 'torch', 'vision_cache': False},
     'system1': {'enabled': True, 'model': 'deepseek/deepseek-v4.1-flash', 'api_key': '',
                 'include_images': True, 'reasoning_enabled': False, 'timeout': 30,
                 'max_tokens': 256, 'max_calls_per_episode': 3, 'history_limit': 8},
@@ -57,6 +58,10 @@ def validate_config(value):
         raise ValueError('Invalid checkpoint directory')
     if type(pred['batch_size']) is not int or not 1 <= pred['batch_size'] <= 8:
         raise ValueError('Invalid predictor batch_size')
+    if pred['attention_backend'] not in ('torch', 'fla'):
+        raise ValueError('Invalid predictor attention_backend')
+    if type(pred['vision_cache']) is not bool:
+        raise ValueError('Invalid predictor vision_cache')
     for section in (pred, planner):
         if type(section['timeout']) not in (int, float) or not math.isfinite(section['timeout']) or section['timeout'] <= 0:
             raise ValueError('Invalid service timeout')

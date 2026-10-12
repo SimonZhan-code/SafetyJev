@@ -451,3 +451,69 @@ removed. Sources, Python packages and simulation assets are downloaded directly
 on the new node. Package versions are checked against the original environment
 inventories; the asset repository revision is recorded separately. The existing
 DeepSeek evaluation continues unchanged.
+
+### Opt-in predictor acceleration for Astra
+
+The requested reference is [open-jev-fast](https://github.com/lyuyiqi/open-jev-fast)
+at `c52b8bb958c1f0d241d4eb7fce4ecd8d885bf1e4`. Its complete CUDA/prefix-tree
+backend targets the text-only Open-Jev decision model and reports about 98 GiB on
+a B300. It does not implement our image history, numeric embeddings and multimodal
+position contract. We therefore use its FLA optimization approach while retaining
+the published `ChunkJudgeModel.load()` and the complete native multimodal path.
+The upstream headline speedup is not a SafetyJev measurement.
+
+Two optional predictor fields default to the existing reference behavior:
+
+| Field | Default | Effect |
+|---|---|---|
+| `attention_backend` | `"torch"` | `"fla"` selects FLA 0.5.2 for chunked Gated DeltaNet recurrence only. |
+| `vision_cache` | `false` | Reuse identical processed image features across constraint queries in one request. |
+
+Reference construction explicitly disables optional fused kernels during loading,
+so installing FLA does not silently change the reference. Norms, convolution,
+LoRA adapters, masks, numeric projections and decision head remain unchanged.
+FLA is opt-in and fails explicitly if its pinned package is unavailable. The
+vision cache hashes actual processed pixel tensors, image grids and options;
+it holds one result and clears at each request, on unsupported inputs and when
+training/gradients are enabled. Cache hashing and device transfers count toward
+measured latency. Service health records the selected settings and the client
+rejects a configuration mismatch. Batch size remains one.
+
+Install additional packages without upgrading the pinned runtime:
+
+```bash
+uv pip install --python /workspace/native-env/bin/python --no-deps \
+  flash-linear-attention==0.5.2 fla-core==0.5.2 einops==0.8.1
+/workspace/native-env/bin/python scripts/remote/benchmark-predictor-fast.py \
+  --config configs/agentic-loop.local.json \
+  --requests /workspace/bootstrap-astra/fast-requests.json.gz \
+  --output artifacts/predictor-fast-validation-20261012/benchmark.json
+```
+
+The replay uses 20 previously saved Jar requests (60 constraint answers), including
+five reset and 15 full-history inputs, with two repeats and alternating mode order.
+It compares Torch, image caching, FLA, and FLA plus caching on the same loaded model.
+A mode qualifies only with zero binary/acceptance disagreements and at least 1.05×
+speedup overall and on full-history requests. Logit differences, cold warmup time,
+peak allocated memory and cache hits are also reported. This finite replay does
+not prove equivalence on all future inputs or establish improved task safety.
+
+At implementation time all 121 CPU tests pass; GPU replay and optimized simulator
+rollout remain pending node installation. The original Astra deployment gate is
+held. Supervisor `astra-fast-validation` records progress in
+`/workspace/bootstrap-astra/fast-status.json`. The opt-in implementation can be committed and pushed before GPU validation,
+with acceleration disabled by default. After a passing replay, results must be
+backed up and reviewed. `fast-implementation-pushed.json` permits launch only when
+the exact tested source is verified against the pushed commit. The receipt includes the Git
+commit and the replay's relative source hashes, verified against the remote files.
+The optimized rollout uses `artifacts/jar-agentic-astra-fast-id`. DeepSeek retains
+its original runtime, so this comparison changes both System 1 and the predictor
+implementation; report those differences when interpreting outcomes or timing.
+
+The replacement Astra deployment uses `154.59.156.39:41170`, an RTX PRO 6000
+Blackwell Server Edition (96 GB, driver 580.95.05). The superseded Max-Q node
+has its validation/launch gate stopped to prevent duplicate trials. The fresh
+build retains package caching, pins source commits, and separates NVIDIA Isaac
+packages from the ordinary package index. GPU replay remains a mandatory gate;
+a successful CPU suite or Git push is not evidence of acceleration or numerical
+agreement.
