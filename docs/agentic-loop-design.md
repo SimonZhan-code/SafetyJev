@@ -398,3 +398,26 @@ their batch size; zero disagreement in these samples does not prove equivalence
 on all inputs. Validation and transition status are under
 `artifacts/constraint-batch-validation-20261012/`. The helper does not schedule
 recurring checks, alter the checkpoint, or stop the rental.
+
+### October 12 batching measurements
+
+GPU replay finished on the RTX PRO 6000 with pi0.5 resident: 20 saved candidates,
+three constraints each, two repeats per batch size. Full-history requests averaged
+2.176 s at batch 1 versus 2.161 s at batch 3 (1.007×, 0.73% less time). Reset
+requests averaged 0.969 s versus 0.466 s (2.08×). The aggregate 1.079× speedup
+oversamples reset requests (five of twenty candidates), so it should not be used
+as an episode speedup estimate. These timings include input decoding but exclude
+HTTP, simulator execution, policy sampling and System 1 calls.
+
+Three of 60 distinct constraint answers changed between batch sizes, consistently
+on both repeats; the raw report counts six repeated disagreements. One candidate
+changed from all constraints passing to rejection. Within each batch size, repeated
+binary answers agreed. Peak predictor allocation increased from 49.25 to 50.45 GiB.
+The cause of batch-dependent outputs remains unresolved.
+
+The validation gate therefore rejected batch 3 and resumed the existing queue at
+batch 1 after preserving 36 completed System 1 episodes. No batched simulator trial
+was run, and no end-to-end speedup is established. Raw measurements and derived
+grouped timings are saved in `artifacts/constraint-batch-validation-20261012/`
+(`benchmark.json`, `transition.json`, and `timing-analysis.json`). Do not force batch
+3 into the evaluation until its prediction differences are understood and validated.
