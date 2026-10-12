@@ -444,5 +444,10 @@ The new GPU is an RTX PRO 6000 Blackwell Max-Q Workstation Edition (96 GB,
 280 W limit, driver 610.57.04); hardware differs from the DeepSeek node. Use matched
 scene/seed outcomes for comparisons, and report hardware separately for timing.
 Secrets remain in ignored owner-only local configs. Node setup status is recorded
-in `/workspace/bootstrap-astra/status.json`; launch requires completed transfers,
-pinned checkpoint downloads, CPU tests and GPU/rendering checks.
+in `/workspace/bootstrap-astra/status.json`; launch requires a completed fresh
+installation, pinned checkpoint downloads, CPU tests and GPU/rendering checks.
+The slow node-to-node runtime copy was stopped and its temporary SSH access
+removed. Sources, Python packages and simulation assets are downloaded directly
+on the new node. Package versions are checked against the original environment
+inventories; the asset repository revision is recorded separately. The existing
+DeepSeek evaluation continues unchanged.
