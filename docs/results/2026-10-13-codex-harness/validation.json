@@ -22,5 +22,11 @@
     "tests/test_codex_harness.py": "525dd6b2262738121831e9175bd782ccd3f26d234f32912b13a2366b9d907e9a",
     "scripts/remote/codex-robot-smoke.py": "c289891c48d5c642bd334b2eeabb73b8bac78b6630ab75378e345374e845db49",
     "scripts/remote/setup-codex-harness.py": "3eea160a37aaa227a9a544505e1b12bc196ca4ea04266b5f04ba0b69768c48fd"
+  },
+  "remote_cpu_tests": {
+    "tests": 156,
+    "status": "passed",
+    "environment": "native-env Python 3.11, isolated branch checkout",
+    "log_sha256": "0444fa6e0349c696797e832c038e8e3faa95e5b61d06563978b49f3ecceab09d"
   }
 }

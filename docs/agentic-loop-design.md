@@ -995,7 +995,9 @@ Diagnostic local direct-tool catalog experiments also left non-robot tools
 exposed and were not adopted. See the compact preflight evidence under
 `docs/results/2026-10-13-codex-harness/`.
 
-The full CPU suite passes **156 tests**, including 21 new harness tests.
+The full CPU suite passes **156 tests locally and on the NVIDIA node**, including
+21 new harness tests. The remote run used controlled CPU boundaries without
+loading a GPU model.
 Tests cover proposal budgets, transforms, duplicate prediction caching,
 partial/malformed answers, exact citations, deadline expiry, stale/mutated
 candidates, earlier/lower/unsafe choices, repeated execution and oracle canaries.
