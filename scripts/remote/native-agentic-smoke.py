@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import threading
@@ -17,15 +18,19 @@ def main():
     parser.add_argument('--config', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--max-steps', type=int, default=256)
+    parser.add_argument('--scene', default='task_0000/base')
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
     if args.max_steps <= 0 or args.max_steps % 8:
         parser.error('max-steps must be a positive multiple of eight')
+    if not re.fullmatch(r'task_[0-9]{4}/base', args.scene) or not 0 <= args.seed < 2**31:
+        parser.error('Require a base Jar scene and a nonnegative 31-bit seed')
     root = Path('/workspace/SafetyJev')
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     config = load_config(args.config)
     write_json(output/'predictor-health.json', NativePredictor(config['predictor']).health())
-    write_json(output/'plan.json', {'scene':'task_0000/base', 'seed':0, 'max_steps':args.max_steps,
+    write_json(output/'plan.json', {'scene':args.scene, 'seed':args.seed, 'max_steps':args.max_steps,
         'config':public_config(config), 'scope':'One bounded Jar integration smoke, not a benchmark or safety-improvement claim'})
     env = dict(os.environ, OMNI_KIT_ACCEPT_EULA='YES', OMNIGIBSON_HEADLESS='1',
         OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets', CUDA_VISIBLE_DEVICES='0',
@@ -49,7 +54,7 @@ def main():
                 '--agentic-config',str(Path(args.config).resolve()), '--',
                 '--config','configs/eval/jar_transport_joint.yaml',
                 '--benchmark-root','/workspace/data/maniguard-bench/jar_transport',
-                '--scenes','task_0000/base','--seed','0','--max-steps',str(args.max_steps),
+                '--scenes',args.scene,'--seed',str(args.seed),'--max-steps',str(args.max_steps),
                 '--tag','safetyjev-native-agentic'],cwd='/workspace/ManiGuard',env=env,
                 stdout=log,stderr=subprocess.STDOUT,timeout=3600)
         episodes = list((output/'episodes').glob('*/complete.json'))
