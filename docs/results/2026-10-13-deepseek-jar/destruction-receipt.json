@@ -1,0 +1,30 @@
+{
+  "instance_id": 55452474,
+  "host": "154.59.156.28",
+  "ssh_port": 33632,
+  "ssh_exit_code": 0,
+  "events": [
+    {
+      "event": "identity_verified",
+      "id": 55452474,
+      "actual_status": "running",
+      "backup_verified": true,
+      "results_commit": "fcdb0a98d21236b6781a4aedff23cc4508bf6f4d"
+    },
+    {
+      "event": "destroy_response",
+      "id": 55452474,
+      "http_status": 200,
+      "success": true,
+      "time_unix": 1791885649.8755982
+    },
+    {
+      "event": "platform_followup",
+      "http_status": 401,
+      "id": 55452474
+    }
+  ],
+  "platform_destroy_success": true,
+  "platform_absence_confirmed": false,
+  "results_commit": "fcdb0a98d21236b6781a4aedff23cc4508bf6f4d"
+}

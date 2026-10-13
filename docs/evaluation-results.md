@@ -46,8 +46,11 @@ checksum/size passed verification: **288,623 files, 15,513,158,055 uncompressed
 bytes**, including 286,738 PNG images and 186 videos. The capture/log archive and
 the separate simulator output archive are both complete. See the tracked
 [backup receipt](results/2026-10-13-deepseek-jar/backup-verification.json).
-Instance `55452474` is ready for the explicitly authorized destruction after
-these results are pushed.
+After results commit `fcdb0a9` was verified on GitHub, Vast returned HTTP 200
+with `success: true` for destruction of instance `55452474`. The subsequent
+instance-scoped status query returned 401; absence was not independently observed.
+The [platform receipt](results/2026-10-13-deepseek-jar/destruction-receipt.json)
+records both responses. No further work should target that retired node.
 
 The Astra recovery sweep remains in progress and must be compared on matched
 scene/seed cases after completion. Model/API settings, recovery logic, predictor

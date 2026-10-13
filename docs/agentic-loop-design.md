@@ -528,6 +528,12 @@ run had 59/78 completed with zero infrastructure failures; the recovery run had
 started its first trial. These are launch-time counts, not final results. Do not
 pull code or edit active hashed runtime files during either run.
 
+The original DeepSeek rental was retired after all 78 trials passed audit and
+the complete off-node backup was verified. Results commit `fcdb0a9` was pushed
+before Vast acknowledged destruction of instance `55452474` with HTTP 200 and
+`success: true`. Its scoped follow-up status query returned 401; the receipt
+records that limitation. The Astra rental remains running.
+
 The user explicitly authorized **destroying only the original DeepSeek rental**
 after it finishes. Before destroying instance `55452474`, audit all 78 planned
 System 1 cases, confirm capture/model jobs have exited, back up raw captures,
