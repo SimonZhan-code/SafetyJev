@@ -1242,3 +1242,16 @@ The original Astra recovery sweep on `154.59.156.39:41170` retains its separate
 completion workflow: audit all 78 trials, verify complete off-node backups, push
 final results, then **stop** Vast instance `55620382`. This shutdown instruction
 does not apply to the Codex node, and does not authorize destroying Astra storage.
+
+Live launch at 18:08 UTC on October 13: the first smoke trial executed 56 actions
+across seven scored selections. The partial audit matched every executed command
+and instruction to its selected candidate, with no harness/tool errors and no
+runtime hash changes. This is a mechanics check in progress, not a completed
+trial outcome. An initial zero-action setup failure was archived after restoring
+`docs/assets` from the unchanged BEHAVIOR revision. Evidence is in
+[`live-launch.json`](results/2026-10-13-codex-harness/live-launch.json).
+Supervisor `codex-jar-sweep-gate` waits for both audited smoke trials and their
+model services to exit, then invokes the full queue's existing admission check.
+Its status is `/workspace/bootstrap-codex-jar-sweep/full-sweep-gate.json`; a smoke
+failure blocks the full sweep. The 30-minute monitor now covers both this queue
+and the separate Astra sweep without changing either experiment's settings.

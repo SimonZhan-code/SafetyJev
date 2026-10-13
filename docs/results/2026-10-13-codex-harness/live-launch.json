@@ -1,0 +1,43 @@
+{
+  "scope": "partial live audit; not terminal trial results",
+  "executed_steps_checked": 56,
+  "selected_chunks": 7,
+  "exact_commands_and_instructions": true,
+  "runtime_ready": true,
+  "failures": [],
+  "optimizations": {
+    "attention_backend": "fla",
+    "fla_version": "0.5.2",
+    "linear_layers": 48,
+    "vision_cache": false,
+    "upstream": {
+      "repo": "https://github.com/lyuyiqi/open-jev-fast",
+      "revision": "c52b8bb958c1f0d241d4eb7fce4ecd8d885bf1e4",
+      "scope": "FLA chunk recurrence; not the upstream text-only CUDA backend"
+    },
+    "lora_merged": false,
+    "quantized": false
+  },
+  "gate": {
+    "status": "waiting_for_smoke",
+    "time": 1791914696.6328354
+  },
+  "checked_at": "2026-10-13T18:08:51Z",
+  "implementation_commit": "863e297",
+  "node": "ssh9.vast.ai:13565",
+  "maniguard_dev_commit": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "smoke_scope": {
+    "scenes": [
+      "task_0000/base",
+      "task_0005/base"
+    ],
+    "seed": 0,
+    "max_steps": 256
+  },
+  "full_sweep": {
+    "planned": 78,
+    "status": "gated_on_smoke",
+    "max_steps": 2000
+  },
+  "archived_setup_failure": "Missing pinned OmniGibson logo in sparse checkout; no actions executed; restored docs/assets from unchanged upstream revision"
+}
