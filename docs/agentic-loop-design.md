@@ -153,8 +153,9 @@ separates stagnation from safety rejection and does not claim grasp/lid success.
 Legacy modes retain their original prompt; planner records include the actual
 system-prompt hash. All 135 CPU tests pass, including persistence/expiry in the pinned ManiGuard
 loop, safe-but-stalled recovery, budgets, cooldown, failure fallback and redaction.
-No new GPU rollout or improvement in task success has been measured for these fixes.
-Use a new output directory and source/config manifest for a future comparison.
+The GPU recovery smoke tests below now verify these paths in live rollouts; they
+do not establish improved task success. Use a new output directory and source/config
+manifest for a future comparison.
 
 ## Checkpoint and input contract
 
@@ -670,3 +671,58 @@ saved FLA labels. Three warmed full-history calls, each checking all three Jar
 constraints, took 1.310–1.481 seconds (mean 1.396 seconds), including local HTTP
 serialization and transport. This small smoke test is not a new paired speedup
 estimate. Its record is `artifacts/astra-deployment-20261012/fla-service-smoke.json`.
+
+
+### Live recovery validation, October 13
+
+Two seed-0 Jar base smoke trials ran on `154.59.156.39:41170`, RTX PRO 6000
+Blackwell Server Edition 96 GB, with the pinned fine-tuned pi0.5 policy, native
+Unsafe600 step-500 predictor (FLA, batch 1, no image cache), and
+`deepseek/deepseek-v4.1-flash`. Persistence, stagnation window and cooldown were
+eight chunks; thresholds and all candidate/call budgets stayed unchanged.
+All 135 CPU tests also passed on the node. No ongoing DeepSeek sweep was changed.
+
+| Scene | Action cap/executed | Candidates | System 1 trigger/calls | Fallback chunks | Integration result |
+|---|---:|---:|---|---:|---|
+| task_0000/base | 256/256 | 49 | Safety rejection / 3 | 4 | Passed |
+| task_0005/base | 512/512 | 68 | Stagnation / 3 | 0 | Passed |
+
+Task 0005 naturally triggered stagnation repairs at steps 160, 392 and 456.
+Each installed a selected all-No repaired instruction. Execution retained those
+instructions across 20 subsequent chunks; the first two expired at steps 224
+and 456, exactly 64 executed actions after activation. The final instruction
+was still within its lifetime when the bounded episode ended at step 512.
+The audit verified consecutive executed history, binary-score counts, unchanged
+original goals in planner context, selected command/instruction alignment, and
+earliest-best fallback ranking. Both trials had zero invalid candidates, zero
+API failures and no runtime infrastructure failure. Task 0000 did not activate
+persistence or stagnation, which motivated the second targeted trial.
+
+Neither task completed its goal or recorded a grasp within these shortened caps.
+Both recorded a raw ManiGuard LTL violation (first at steps 3 and 115 respectively)
+and no engagement-gated counted violation. These are separate monitor outcomes,
+not native semantic accuracy labels. This validates mechanics, not safety or
+success improvement; a matched full-horizon comparison remains necessary.
+
+Mean nonduplicate predictor-call latency was 1.302 and 1.328 seconds respectively,
+including input assembly. Mean selection latency was 2.144 and 1.464 seconds.
+Capture wall times were 281.96 and 193.12 seconds, including scene startup but
+excluding model loading/policy warmup. Peak sampled GPU use was 66,658 and 66,734
+MiB. These unpaired integration measurements do not establish a speedup.
+
+The first launch executed zero actions because the sparse BEHAVIOR checkout
+omitted `docs/assets/OmniGibson_logo.png`. It was restored from the pinned simulator
+commit `d89aae4e0e9a1de3cf8285cb9669c11d8c8bb864`; the failed startup record is
+preserved. Successful trial manifests match pushed commits `2e9be91` and
+`1979122`; only the latter's smoke-runner scene/seed CLI changed between trials.
+The runner now accepts `--scene task_0005/base --seed 0 --max-steps 512`, retaining
+its original task-0000/seed-0/256-action defaults. Services must be healthy before
+calling `scripts/remote/native-agentic-smoke.py`; the archived Supervisor wrapper
+handles startup, warmup, exclusive execution and cleanup.
+
+Raw captures, images, candidate/repair/execution logs, manifests, audits and the
+wrapper are backed up under `artifacts/recovery-validation-20261013/` in a
+SHA-256-verified archive. Both model services stopped after testing, and the GPU
+had no remaining compute processes. The rental is left running. The prior FLA
+binary disagreements, experimental Isaac 5.1 parity and unverified training/eval
+independence remain limitations. No Astra sweep was launched.
