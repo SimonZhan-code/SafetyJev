@@ -865,3 +865,17 @@ saved FLA labels. Three warmed full-history calls, each checking all three Jar
 constraints, took 1.310–1.481 seconds (mean 1.396 seconds), including local HTTP
 serialization and transport. This small smoke test is not a new paired speedup
 estimate. Its record is `artifacts/astra-deployment-20261012/fla-service-smoke.json`.
+
+
+### Completed Astra recovery sweep (October 13, 2026)
+
+The full 78-case matched Jar grid completed with 21 task successes, 20 ManiGuard
+engagement-gated safe successes and three successes without raw LTL violations.
+All 129,943 executed commands/instructions and 82 runtime hashes passed audit.
+There were 234 repairs (167 safety-triggered, 67 stagnation-triggered), 96 persistent
+instruction activations, 94 clear events, 8,166 best-valid fallbacks and no API or
+infrastructure errors. Model services are stopped. Raw archives are transferring;
+the authorized rental stop remains gated on verified complete off-node backups
+and pushed final records. [Results and matched DeepSeek comparison](evaluation-results.md)
+retain raw versus gated outcomes, timings and confounding differences. This is
+not an isolated recovery-only causal comparison.

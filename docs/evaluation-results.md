@@ -1,5 +1,59 @@
 # Evaluation results
 
+## 2026-10-13: completed GPT-6 Astra recovery Jar sweep
+
+All **78/78** matched Jar base trials completed with zero infrastructure or API
+errors. The final audit verified exact scene/seed coverage, 82 runtime hashes,
+scored-command alignment, the documented fallback/earliest-selection rule and
+**129,943 executed commands and instructions**. The interrupted outage attempt
+was archived; its replacement alone contributes to the final scene/seed results.
+
+| Outcome | Original DeepSeek | Astra recovery |
+|---|---:|---:|
+| Task success | 23/78 (29.49%) | 21/78 (26.92%) |
+| ManiGuard engagement-gated safe success | 22/78 (28.21%) | 20/78 (25.64%) |
+| Success without any raw LTL violation | 2/78 (2.56%) | 3/78 (3.85%) |
+| Ever contacted | 75/78 | 75/78 |
+| Ever grasped | 28/78 | 25/78 |
+| Raw LTL violation | 68/78 | 66/78 |
+| Engagement-gated counted violation | 8/78 | 6/78 |
+
+On matched scene/seed pairs, 10 tasks succeeded in both conditions, 13 only in
+DeepSeek, 11 only in Astra and 44 in neither. Gated-safe success was shared by
+10 cases, DeepSeek-only in 12, Astra-only in 10 and absent in 46. Both raw-free
+DeepSeek successes were also raw-free Astra successes; Astra added one. These
+counts are descriptive, not evidence of an isolated causal effect.
+
+Astra issued 234 repairs: 167 after safety rejection and 67 after stagnation.
+It activated 96 persistent instructions and logged 94 instruction-clear events;
+terminal instructions need not emit a clear event. It recorded 8,166 best-valid
+fallback selections and no repair API errors. Instruction lifetime and stagnation
+window/cooldown were eight chunks, with two local retries, one repair per decision
+and three calls per episode. Mean predictor latency was 1.285 seconds; mean
+selection latency 2.894 seconds; mean System 1 request latency 7.796 seconds.
+Summed recorded episode wall time was 65,047.72 seconds (18.07 hours), compared
+with 102,477.29 seconds (28.47 hours) for DeepSeek. These are sums of case wall
+times, not uninterrupted rental uptime or a controlled backend speed benchmark.
+
+[Final audit](results/2026-10-13-astra-jar/final-audit.json),
+[summary](results/2026-10-13-astra-jar/summary.json) and
+[matched comparison](results/2026-10-13-astra-jar/matched-comparison.json)
+retain per-case evidence. Model services are stopped. Complete raw-capture and
+separate simulator-output archives are transferring to local storage; rental
+retirement remains pending full off-node checksum/coverage verification and
+secured documentation. Do not interpret the completed audit as a completed backup.
+
+This comparison changes System 1 model/API settings, recovery logic, predictor
+backend and hardware together. Astra uses GPT-6 Astra via OpenRouter with reasoning
+enabled, 4,096 output-token limit and 120-second API timeout; the original run used
+DeepSeek V4.1 Flash. Both use the same pinned pi0.5/Unsafe600 models and historical
+ManiGuard/experimental Isaac 5.1 setup. Astra's FLA 0.5.2 batch-one/cache-off backend
+has 4/120 reference binary disagreements against Torch. Native semantic targets
+and ManiGuard temporal predicates differ, simulator parity is experimental, and
+training/evaluation independence is unverified. The newer Codex harness uses a
+separately pinned ManiGuard dev revision and is a distinct arm.
+
+
 ## 2026-10-13: completed DeepSeek Jar predictor + System 1 sweep
 
 All **78/78** planned Jar base trials (26 scenes × seeds 0/1/2) completed with
@@ -52,8 +106,7 @@ instance-scoped status query returned 401; absence was not independently observe
 The [platform receipt](results/2026-10-13-deepseek-jar/destruction-receipt.json)
 records both responses. No further work should target that retired node.
 
-The Astra recovery sweep remains in progress and must be compared on matched
-scene/seed cases after completion. Model/API settings, recovery logic, predictor
+The completed Astra recovery sweep is compared on matched scene/seed cases above. Model/API settings, recovery logic, predictor
 backend and GPU host differ, so this is not an isolated causal comparison of any
 one change. Experimental Isaac 5.1 parity, differences between predictor semantic
 targets and ManiGuard temporal predicates, and unverified training/evaluation
