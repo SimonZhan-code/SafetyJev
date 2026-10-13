@@ -11,14 +11,17 @@ shadow, and per-step classifier modes remain separate and retain their behavior.
 ```mermaid
 flowchart TD
     A[Current observation and executed history] --> B[Clear decision candidate pool]
-    B --> C[VLA proposes eight future actions]
+    B --> U[Measure observed progress; expire or retain active instruction]
+    U --> C[VLA proposes eight actions using active instruction or original goal]
     C --> D[Transform gripper and clip to controller bounds]
     D --> E[Native predictor: one binary answer per trained query]
     E --> F{Complete valid predictions?}
     F -->|Yes| G[Save candidate and count No answers]
     F -->|No| H[Record invalid candidate; no fallback eligibility]
     G --> I{All answers No?}
-    I -->|Yes| X[Execute selected candidate's exact commands]
+    I -->|Yes| V{Stagnation repair due and not yet attempted?}
+    V -->|Yes| L
+    V -->|No| X[Execute selected candidate's exact commands]
     I -->|No| J{Local retries left?}
     H --> J
     J -->|Yes| C
@@ -32,7 +35,8 @@ flowchart TD
     O -->|Yes| P[Select most No answers; earliest breaks ties; mark fallback]
     P --> X
     O -->|No| Q[Infrastructure failure; execute nothing]
-    X --> R[Append each actual action and its resulting images and state]
+    X --> W[Persist selected all-safe repair for its configured lifetime]
+    W --> R[Append each actual action and its resulting images and state]
     R --> S{Episode finished?}
     S -->|No| A
     S -->|Yes| T[Save task outcome and separate ManiGuard safety outcomes]
@@ -57,9 +61,13 @@ with `api_key` and `hf_token` removed; keys are not model inputs or log fields.
 | `local_retries` | 2 | Additional VLA calls after the first proposal of each phase; 0–8 |
 | `repairs_per_decision` | 1 | Maximum instruction repairs at the current state; 0–4 |
 | `system1.max_calls_per_episode` | 3 | Shared call budget across all episode decisions; 0 disables |
+| `instruction_ttl_chunks` | 1; example uses 8 | Lifetime including the selected repair chunk; 1–64 |
+| `stagnation.enabled` | `false`; example uses `true` | Permit progress-triggered System 1 calls |
+| `stagnation.window_chunks` / `cooldown_chunks` | 8 / 8 | Observation window and minimum elapsed chunks since any planner attempt; 1–64 |
+| `stagnation.joint_rms_rad` / `gripper_delta_m` / `image_mae` | 0.05 / 0.005 / 0.02 | Maximum net changes to flag stagnation; all three must pass |
 | `execution_horizon` | 8 | Fixed by this checkpoint, not freely adjustable |
 | `constraint_ids` | `null` | All applicable trained queries; or explicit applicable query IDs |
-| `acceptance` | `all_no` | Stop searching when every query predicts No violation |
+| `acceptance` | `all_no` | Accept all-No, except when an available stagnation repair is due |
 | `score` | `satisfied_constraints` | Count No answers; never use confidence magnitudes |
 | `fallback` / `tie_break` | `best_valid` / `earliest` | Highest count among complete candidates, earliest on a tie |
 | `predictor.endpoint` | `http://127.0.0.1:8794` | Local native service; remote/state-only endpoints unsupported |
@@ -83,18 +91,70 @@ capture flags before the `--` separating ManiGuard arguments.
 
 Defaults allow `(1 + 2) × (1 + 1) = 6` candidates per decision, provided an episode
 repair call remains and the repair succeeds. A successful instruction repair
-starts a new three-candidate phase. Acceptance exits immediately. A failed repair
+starts a new three-candidate phase. Acceptance exits immediately unless a
+stagnation repair is due in the initial phase. A failed repair
 consumes its episode call and ends search; it does not create a fresh phase.
 When three episode calls have been used, later decisions still get three local
 candidates but no further repairs. Budgets restart with a new episode.
 
 For three queries, candidates `A=[No,Yes,No]`, `B=[Yes,No,No]`, and
 `C=[Yes,Yes,No]` score 2, 2, and 1. On exhaustion, A executes even if B and C were
-generated after a repair. `[No,No,No]` would execute immediately. Missing or
+generated after a repair. `[No,No,No]` normally executes immediately; a due
+stagnation repair keeps it as a fallback option while trying a revised instruction. Missing or
 malformed answers have no score and cannot win. Duplicate proposals consume VLA
 attempts; identical questions and complete predictor inputs reuse a successful
 prediction within that decision. Failed predictions are not cached. The pool
 and cache are discarded when a new decision begins.
+
+### Persistent instructions and observation-based stagnation
+
+The example and local private config enable the two recovery changes with an
+eight-chunk instruction lifetime and eight-chunk stagnation window/cooldown.
+Omitting the new fields preserves the historical one-chunk, safety-only behavior.
+These features do not increase the three-call episode budget or change binary
+constraint scoring, predictor inputs, eight-action execution, or earliest ties.
+The existing DeepSeek run keeps its deployed code/config and is not migrated.
+
+Only a **selected all-No repaired candidate** installs an active instruction.
+The initial VLA query in later decisions uses it, while System 1 always receives
+the immutable original task. A rejected or unselected repair is never installed.
+The lifetime includes the selected chunk: eight chunks expire after 64 actually
+executed actions (3.2 simulated seconds at 20 Hz). Subsequent safe selections do
+not refresh this deadline. Expiry, a due stagnation repair, or selection of an
+unsafe fallback clears it; another selected safe repair replaces it. Episode end
+ends the lifetime, including early task completion. There is no inferred semantic
+subgoal-completion signal. Every proposal is still safety-checked.
+
+At each executed chunk boundary, retain a bounded window of native robot state
+and a 32×32 RGB overview thumbnail (BOX resize, pixels normalized to [0,1]). Compare
+current and oldest samples: RMS change of seven arm joint positions, absolute
+change of mean gripper position, and image mean absolute difference. After a full
+window, all three at or below their thresholds flags stagnation. Repeated calls
+at the same step and rejected proposals never advance this window. Installing a
+safe repair resets the window at the current executed boundary.
+
+When stagnation is due and a call remains, an all-No candidate is retained and
+System 1 is called without spending more local retries on that safe instruction.
+Unsafe/invalid candidates still get the normal local search. The repaired phase
+gets its usual initial proposal plus local retries; there is at most one
+stagnation-triggered repair per decision. Safety-triggered repairs can use any
+remaining configured decision budget and are not throttled by the stagnation
+cooldown. Every planner attempt, including an API failure, consumes the shared
+call budget and starts the stagnation cooldown. Without repair budget, an all-No
+candidate executes normally. Failed repairs retain best-valid fallback, including
+the earlier safe candidate and its exact instruction/commands.
+
+This is a **net-change proxy**, not a task-progress classifier: returning to a
+similar pose/image may trigger it; motion, background changes or fruitless motion
+may hide a stall; tiny objects can be lost in the thumbnail. It never reads goal
+checks, contact/grasp flags, object poses, ManiGuard predicates or oracle labels.
+Thresholds need prospective validation. The OpenRouter recovery prompt explicitly
+separates stagnation from safety rejection and does not claim grasp/lid success.
+Legacy modes retain their original prompt; planner records include the actual
+system-prompt hash. All 135 CPU tests pass, including persistence/expiry in the pinned ManiGuard
+loop, safe-but-stalled recovery, budgets, cooldown, failure fallback and redaction.
+No new GPU rollout or improvement in task success has been measured for these fixes.
+Use a new output directory and source/config manifest for a future comparison.
 
 ## Checkpoint and input contract
 
@@ -181,8 +241,10 @@ and requests strict JSON containing only `vla_instruction`. It supplies current
 images, current state, proposed commands, binary constraint feedback, and bounded
 candidate/execution history. It validates response shape, finish reason, refusal
 and instruction length. Invalid replies and HTTP failures consume the call budget
-and trigger best-valid fallback. The instruction applies to the replacement
-chunk search; subsequent decisions start with the original task.
+and trigger best-valid fallback. Selected all-No repairs persist for
+`instruction_ttl_chunks`; the historical omitted-field default expires after the
+replacement chunk. Recovery requests include only allowlisted progress measurements
+and the trigger, with current images and the unchanged original goal.
 
 Per-episode records:
 
@@ -193,7 +255,8 @@ Per-episode records:
   duplicate flag and timing. Initial VLA generation occurs in ManiGuard before
   selection, so its recorded generation latency is null;
   regeneration latency is measured. Prediction latency includes input assembly/cache lookup.
-- `planner.jsonl`: successful repairs and sanitized failure types.
+- `planner.jsonl`: successful repairs, safety/stagnation trigger and sanitized failure types.
+- `recovery.jsonl`: progress measurements, budget/cooldown availability, instruction activation/clear events.
 - `selections.jsonl`: selected exact commands/instruction, timing and explicit fallback flag.
 - `executed-candidates.jsonl`: only executed candidates, linked to observed oracle
   steps and ManiGuard violations. Rejected proposals have no observed outcome.

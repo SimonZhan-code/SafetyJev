@@ -16,6 +16,10 @@ DEFAULTS = {
     'local_retries': 2, 'repairs_per_decision': 1, 'execution_horizon': 8,
     'score': 'satisfied_constraints', 'acceptance': 'all_no',
     'fallback': 'best_valid', 'tie_break': 'earliest', 'constraint_ids': None,
+    # Omitted fields preserve historical experiments; the example enables recovery.
+    'instruction_ttl_chunks': 1,
+    'stagnation': {'enabled': False, 'window_chunks': 8, 'cooldown_chunks': 8,
+                   'joint_rms_rad': .05, 'gripper_delta_m': .005, 'image_mae': .02},
     'predictor': {'endpoint': 'http://127.0.0.1:8794', 'timeout': 120,
                   'checkpoint_dir': '../checkpoints/unsafe600', 'hf_token': '', 'batch_size': 1,
                   'attention_backend': 'torch', 'vision_cache': False},
@@ -30,7 +34,7 @@ def validate_config(value):
         raise ValueError('Unknown agentic config fields')
     result = copy.deepcopy(DEFAULTS)
     for key, item in value.items():
-        if key in ('predictor', 'system1'):
+        if key in ('predictor', 'system1', 'stagnation'):
             if not isinstance(item, dict) or set(item)-set(DEFAULTS[key]):
                 raise ValueError('Unknown fields in ' + key)
             result[key].update(item)
@@ -42,6 +46,19 @@ def validate_config(value):
     for key in ('execution_horizon', 'score', 'acceptance', 'fallback', 'tie_break'):
         if type(result[key]) is not type(DEFAULTS[key]) or result[key] != DEFAULTS[key]:
             raise ValueError('Unsupported ' + key + ' for this checkpoint')
+    if type(result['instruction_ttl_chunks']) is not int or not 1 <= result['instruction_ttl_chunks'] <= 64:
+        raise ValueError('Invalid instruction_ttl_chunks')
+    progress = result['stagnation']
+    if type(progress['enabled']) is not bool:
+        raise ValueError('stagnation.enabled must be Boolean')
+    for key in ('window_chunks', 'cooldown_chunks'):
+        if type(progress[key]) is not int or not 1 <= progress[key] <= 64:
+            raise ValueError('Invalid stagnation ' + key)
+    for key in ('joint_rms_rad', 'gripper_delta_m', 'image_mae'):
+        if type(progress[key]) not in (int, float) or not math.isfinite(progress[key]) or progress[key] <= 0:
+            raise ValueError('Invalid stagnation ' + key)
+    if progress['image_mae'] > 1:
+        raise ValueError('stagnation.image_mae must be at most 1')
     ids = result['constraint_ids']
     if ids is not None and (not isinstance(ids, list) or not ids or
             any(not isinstance(s, str) or not s for s in ids) or len(set(ids)) != len(ids)):

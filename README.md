@@ -7,6 +7,8 @@ safety-centric fine-tuned Jev model at runtime.
 
 `capture --agentic-config configs/agentic-loop.local.json` uses the pinned Unsafe600
 step-500 predictor with configurable VLA retries and OpenRouter instruction repairs.
+The example config enables persistent repair instructions and observation-based
+stagnation recovery; older configs retain one-chunk safety-only repairs.
 It accepts all-No predictions or, after budget exhaustion, executes the valid
 candidate satisfying the most trained queries. See the [design and launch guide](docs/agentic-loop-design.md)
 and [credential-free config](configs/agentic-loop.example.json). A [single-task NVIDIA smoke test](docs/evaluation-results.md#native-predictor-agentic-smoke-october-11)

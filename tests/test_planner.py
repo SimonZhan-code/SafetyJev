@@ -63,6 +63,24 @@ class PlannerAPITests(unittest.TestCase):
         self.assertEqual(body["response_format"]["type"], "json_schema")
         self.assertTrue(body["provider"]["require_parameters"])
 
+    def test_recovery_prompt_and_progress_are_explicit_and_allowlisted(self):
+        import hashlib
+        from safetyjev.planner import SYSTEM_PROMPT, RECOVERY_PROMPT
+        old_body, _ = self.planner.request_body(context(), '/unused')
+        self.assertEqual(old_body['messages'][0]['content'], SYSTEM_PROMPT)
+        c = context()
+        c.update(repair_trigger='stagnation', instruction_ttl_chunks=8,
+                 progress={'ready': True, 'stalled': True, 'image_mae': 0.001,
+                           'oracle': 'FORBIDDEN', 'api_key': 'TEST_SECRET_KEY'})
+        body, audit = self.planner.request_body(c, '/unused')
+        self.assertEqual(body['messages'][0]['content'], RECOVERY_PROMPT)
+        self.assertEqual(audit['system_prompt_sha256'], hashlib.sha256(RECOVERY_PROMPT.encode()).hexdigest())
+        self.assertEqual(audit['context']['repair_trigger'], 'stagnation')
+        self.assertEqual(audit['context']['instruction_ttl_chunks'], 8)
+        self.assertNotIn('FORBIDDEN', json.dumps(body))
+        self.assertNotIn('TEST_SECRET_KEY', json.dumps(body))
+        self.assertEqual(set(body['response_format']['json_schema']['schema']['properties']), {'vla_instruction'})
+
     def test_http_request_response_and_no_secret_in_artifact(self):
         with patch("safetyjev.planner.urlopen", return_value=response()) as send:
             plan = self.planner.plan(context(), "/unused")

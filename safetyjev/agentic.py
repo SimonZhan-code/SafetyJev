@@ -5,6 +5,7 @@ import numpy as np
 from .agentic_config import public_config, validate_config
 from .agentic_inputs import ChunkHistory, bind_queries, controller_commands, robot_state
 from .agentic_predictor import NativePredictor, request_digest
+from .agentic_progress import ProgressWindow
 from .capture import ShadowEpisode
 from .io import append_jsonl, write_json
 from .planner import OpenRouterPlanner
@@ -38,6 +39,7 @@ class AgenticEpisode(ShadowEpisode):
         self._selected = None
         self.planner_calls = self.fallbacks = self.decisions = self.candidate_attempts = 0
         self.failure_reason = None
+        self._initialize_recovery(observation)
         super().__init__(scene, cfg, monitor, observation, episode_seed)
         self.queries = bind_queries(scene, monitor._resolver,
                                    {ap for m in self.machines.values() for ap in m.ap_list}, self.config['constraint_ids'])
@@ -55,6 +57,52 @@ class AgenticEpisode(ShadowEpisode):
         self._observe(0, observation)
         self.ready = True
 
+    def _initialize_recovery(self, observation):
+        self.original_instruction = copy.deepcopy(observation['task_descriptions'])
+        self.active_instruction = None
+        self.progress_window = ProgressWindow(self.config['stagnation'])
+        self.progress_report = {'ready': False, 'stalled': False}
+        self.last_planner_step = None
+        self._prepared_step = None
+        self._stagnation_due = False
+
+    def _repair_available(self):
+        return (self.config['system1']['enabled'] and self.planner is not None and
+                self.config['repairs_per_decision'] > 0 and
+                self.planner_calls < self.config['system1']['max_calls_per_episode'])
+
+    def _clear_instruction(self, step, reason):
+        if self.active_instruction is not None:
+            append_jsonl(self.directory/'recovery.jsonl',
+                         {'step': step, 'event': 'instruction_cleared', 'reason': reason,
+                          'active_instruction': self.active_instruction})
+            self.active_instruction = None
+
+    def policy_observation(self, step, observation):
+        """Prepare the initial VLA prompt once per executed chunk boundary."""
+        if self.native_history.rows[-1]['step'] != step:
+            raise AgenticInfrastructureError('Recovery history does not match decision state')
+        if self._prepared_step != step:
+            self._prepared_step = step
+            if self.active_instruction and step >= self.active_instruction['expires_step']:
+                self._clear_instruction(step, 'ttl_expired')
+            self._stagnation_due = False
+            if self.config['stagnation']['enabled']:
+                self.progress_report = self.progress_window.observe(
+                    step, self.native_history.rows[-1]['state'], observation['overview_image'])
+                cooldown = self.config['stagnation']['cooldown_chunks'] * 8
+                cooled = self.last_planner_step is None or step - self.last_planner_step >= cooldown
+                self._stagnation_due = self.progress_report['stalled'] and cooled and self._repair_available()
+                append_jsonl(self.directory/'recovery.jsonl', {'step': step, 'event': 'progress',
+                    **self.progress_report, 'repair_due': self._stagnation_due,
+                    'cooldown_ready': cooled, 'repair_available': self._repair_available()})
+                if self._stagnation_due:
+                    self._clear_instruction(step, 'stagnation')
+        result = copy.deepcopy(observation)
+        result['task_descriptions'] = (self.active_instruction['instruction'] if self.active_instruction
+                                       else copy.deepcopy(self.original_instruction))
+        return result
+
     def _observe(self, step, observation, command=None):
         images = {}
         for camera, key in [('overview','overview_image'),('wrist','wrist_images')]:
@@ -69,9 +117,9 @@ class AgenticEpisode(ShadowEpisode):
     def before_action(self, *args):
         pass
 
-    def _context(self, step, observation, candidate_history, commands):
+    def _context(self, step, candidate_history, commands, trigger):
         current = self.native_history.rows[-1]
-        return {'original_task': observation['task_descriptions'],
+        context = {'original_task': self.original_instruction,
             'current_instruction': candidate_history[-1]['policy_instruction'], 'start_step':step,
             'robot_state':current['state'], 'remaining_actions':commands,
             'action_convention':'absolute joint radians(7) + binary gripper(1), clipped to controller bounds',
@@ -80,6 +128,11 @@ class AgenticEpisode(ShadowEpisode):
             'guard_feedback':candidate_history[-1]['guard_feedback'],
             'candidate_history':copy.deepcopy(candidate_history), 'executed_history':copy.deepcopy(self.executed_history),
             'images':{'overview_image':current['images']['overview'],'wrist_images':current['images']['wrist']}}
+
+        if self.config['instruction_ttl_chunks'] > 1 or self.config['stagnation']['enabled']:
+            context.update(repair_trigger=trigger, instruction_ttl_chunks=self.config['instruction_ttl_chunks'],
+                           progress=copy.deepcopy(self.progress_report))
+        return context
 
     def select_chunk(self, step, observation, initial_chunk, regenerate, action_space, horizon):
         if horizon != 8:
@@ -90,7 +143,8 @@ class AgenticEpisode(ShadowEpisode):
         self.decisions += 1
         started = time.monotonic()
         pool, cache, candidate_history = [], {}, []
-        candidate_obs = copy.deepcopy(observation)
+        candidate_obs = self.policy_observation(step, observation)
+        stagnation_due = self._stagnation_due
         chunk, attempt, last_commands = initial_chunk, 0, []
         reason = 'repair_budget_exhausted'
         for repair in range(self.config['repairs_per_decision']+1):
@@ -148,20 +202,25 @@ class AgenticEpisode(ShadowEpisode):
                     candidate = {**entry,'commands':commands.tolist(),'start_step':step}
                     pool.append(candidate)
                     if accepted:
+                        if stagnation_due and repair == 0:
+                            # Retain this safe option while trying an instruction that may make progress.
+                            break
                         return self._select(candidate, False, 'all_constraints_pass', started)
             if repair == self.config['repairs_per_decision']:
                 break
-            if self.planner is None or self.planner_calls >= self.config['system1']['max_calls_per_episode']:
+            if not self._repair_available():
                 reason = 'planner_disabled_or_episode_budget_exhausted'
                 break
+            trigger = 'stagnation' if stagnation_due and repair == 0 else 'safety_rejection'
             self.planner_calls += 1
+            self.last_planner_step = step
             planner_started = time.monotonic()
             try:
-                plan = self.planner.plan(self._context(step, observation, candidate_history, last_commands), self.directory)
-                append_jsonl(self.directory/'planner.jsonl', {'step':step,'repair_round':repair+1,**plan})
+                plan = self.planner.plan(self._context(step, candidate_history, last_commands, trigger), self.directory)
+                append_jsonl(self.directory/'planner.jsonl', {'step':step,'repair_round':repair+1,'trigger':trigger,**plan})
                 candidate_obs['task_descriptions'] = plan['vla_instruction']
             except Exception as exc:
-                append_jsonl(self.directory/'planner.jsonl', {'step':step,'repair_round':repair+1,
+                append_jsonl(self.directory/'planner.jsonl', {'step':step,'repair_round':repair+1,'trigger':trigger,
                     'error':type(exc).__name__, 'latency_s':time.monotonic()-planner_started})
                 reason = 'planner_error'
                 break
@@ -173,10 +232,22 @@ class AgenticEpisode(ShadowEpisode):
         return self._select(max(pool, key=lambda c:c['satisfied_constraints']), True, reason, started)
 
     def _select(self, candidate, fallback, reason, started):
+        step = candidate['start_step']
+        if candidate['satisfied_constraints'] < len(self.questions):
+            self._clear_instruction(step, 'selected_unsafe_fallback')
+        elif candidate['repair_round'] > 0:
+            self.active_instruction = {'instruction': candidate['policy_instruction'],
+                'candidate_id': candidate['candidate_id'], 'start_step': step,
+                'expires_step': step + 8 * self.config['instruction_ttl_chunks']}
+            self.progress_window.reset()
+            append_jsonl(self.directory/'recovery.jsonl', {'step': step, 'event': 'instruction_activated',
+                         'active_instruction': self.active_instruction})
         self._selected = copy.deepcopy(candidate)
         self.fallbacks += int(fallback)
         append_jsonl(self.directory/'selections.jsonl', {**candidate,'fallback':fallback,
-                     'reason':reason,'selection_latency_s':time.monotonic()-started})
+                     'reason':reason,'selection_latency_s':time.monotonic()-started,
+                     'stagnation_repair_due':self._stagnation_due,
+                     'active_instruction':copy.deepcopy(self.active_instruction)})
         return np.asarray(candidate['commands'],dtype=np.float32)
 
     def after_step(self, step, monitor, observation):

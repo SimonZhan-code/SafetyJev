@@ -26,5 +26,14 @@
     "max_tokens": 256,
     "max_calls_per_episode": 3,
     "history_limit": 8
+  },
+  "instruction_ttl_chunks": 8,
+  "stagnation": {
+    "enabled": true,
+    "window_chunks": 8,
+    "cooldown_chunks": 8,
+    "joint_rms_rad": 0.05,
+    "gripper_delta_m": 0.005,
+    "image_mae": 0.02
   }
 }

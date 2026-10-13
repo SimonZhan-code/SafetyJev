@@ -53,6 +53,7 @@ class AgenticTests(unittest.TestCase):
         self.obs = {'states':np.zeros(8), 'task_descriptions':'Move the jar', 'episode_seed':123,
                     'overview_image':np.zeros((16,16,3),dtype=np.uint8),
                     'wrist_images':np.zeros((16,16,3),dtype=np.uint8)}
+        g._initialize_recovery(self.obs)
         self.bounds = SimpleNamespace(low=np.full(8,-1),high=np.full(8,1),shape=(8,))
         self.sequence = iter([self.chunk(v) for v in (.2,.3,.4,.5,.6,.7,.8)])
         self.regenerate = Mock(side_effect=lambda obs:next(self.sequence))
@@ -138,6 +139,170 @@ class AgenticTests(unittest.TestCase):
         self.assertEqual(self.g.native_predictor.score.call_count,1)
         self.assertFalse(self.rows('candidate-decisions.jsonl')[0]['valid'])
 
+    def configure_recovery(self, **overrides):
+        self.g.config = validate_config({'local_retries': 0, 'instruction_ttl_chunks': 8,
+            'stagnation': {'enabled': True, 'window_chunks': 2, 'cooldown_chunks': 2}, **overrides})
+        self.g._initialize_recovery(self.obs)
+        self.g.policy_observation(0, self.obs)
+
+    def advance_boundary(self, step, state=None):
+        for current in range(self.g.native_history.rows[-1]['step'] + 1, step + 1):
+            self.g.native_history.append(current, state or [0.] * 16, self.images, [0.] * 8)
+        return self.g.policy_observation(step, self.obs)
+
+    def test_repair_persists_without_extending_ttl_and_preserves_original_goal(self):
+        self.configure_recovery(instruction_ttl_chunks=2, stagnation={'enabled': False})
+        self.run_selection([{'a': True, 'b': False}, {'a': False, 'b': False}])
+        repaired = self.g._selected['policy_instruction']
+        self.assertEqual(self.advance_boundary(8)['task_descriptions'], repaired)
+        self.g.native_predictor.score.side_effect = [{'a': False, 'b': False}]
+        self.g.select_chunk(8, self.obs, self.chunk(.4), self.regenerate, self.bounds, 8)
+        self.assertEqual(self.g._selected['policy_instruction'], repaired)
+        self.assertEqual(self.g.active_instruction['expires_step'], 16)
+        self.assertEqual(self.advance_boundary(16)['task_descriptions'], 'Move the jar')
+        self.assertIsNone(self.g.active_instruction)
+        self.assertEqual(self.g.original_instruction, 'Move the jar')
+        self.assertEqual(self.obs['task_descriptions'], 'Move the jar')
+
+    def test_unselected_repair_does_not_persist(self):
+        self.configure_recovery()
+        self.run_selection([{'a': True, 'b': False}, {'a': True, 'b': True}])
+        self.assertIsNone(self.g.active_instruction)
+        self.assertEqual(self.advance_boundary(8)['task_descriptions'], 'Move the jar')
+
+    def test_selected_unsafe_fallback_cancels_active_instruction(self):
+        self.configure_recovery(stagnation={'enabled': False})
+        self.run_selection([{'a': True, 'b': False}, {'a': False, 'b': False}])
+        self.advance_boundary(8)
+        self.g.planner_calls = 3
+        self.g.native_predictor.score.side_effect = [{'a': True, 'b': False}]
+        self.g.select_chunk(8, self.obs, self.chunk(.4), self.regenerate, self.bounds, 8)
+        self.assertIsNone(self.g.active_instruction)
+        self.assertEqual(self.rows('recovery.jsonl')[-1]['reason'], 'selected_unsafe_fallback')
+
+    def test_stagnation_repairs_safe_candidate_and_uses_shared_budget(self):
+        self.configure_recovery()
+        self.advance_boundary(8)
+        self.assertFalse(self.g._stagnation_due)
+        self.advance_boundary(16)
+        self.g.native_predictor.score.side_effect = [{'a': False, 'b': False}] * 2
+        self.g.select_chunk(16, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+        self.assertEqual(self.g.candidate_attempts, 2)
+        self.assertEqual(self.g.planner_calls, 1)
+        self.assertEqual(self.g._selected['repair_round'], 1)
+        context = self.g.planner.plan.call_args.args[0]
+        self.assertEqual(context['repair_trigger'], 'stagnation')
+        self.assertTrue(context['progress']['stalled'])
+        self.assertEqual(context['original_task'], 'Move the jar')
+        self.assertEqual(self.rows('planner.jsonl')[0]['trigger'], 'stagnation')
+        self.assertFalse(self.rows('selections.jsonl')[0]['fallback'])
+        self.assertFalse(self.advance_boundary(24)['task_descriptions'] == 'Move the jar')
+        self.assertFalse(self.g.progress_report['ready'])
+
+    def test_stagnation_cancels_active_repair_and_new_repair_keeps_original_goal(self):
+        self.configure_recovery()
+        self.run_selection([{'a': True, 'b': False}, {'a': False, 'b': False}])
+        self.assertIsNotNone(self.g.active_instruction)
+        self.advance_boundary(8)
+        self.assertEqual(self.advance_boundary(16)['task_descriptions'], 'Move the jar')
+        self.assertIsNone(self.g.active_instruction)
+        self.g.native_predictor.score.side_effect = [{'a': False, 'b': False}] * 2
+        self.g.planner.plan.return_value = {'vla_instruction': 'Approach the jar handle.'}
+        self.g.select_chunk(16, self.obs, self.chunk(.4), self.regenerate, self.bounds, 8)
+        self.assertEqual(self.g.planner.plan.call_args.args[0]['original_task'], 'Move the jar')
+        self.assertEqual(self.g.active_instruction['instruction'], 'Approach the jar handle.')
+        cleared = [r for r in self.rows('recovery.jsonl') if r['event'] == 'instruction_cleared']
+        self.assertEqual(cleared[0]['reason'], 'stagnation')
+        self.assertEqual(self.g.planner_calls, 2)
+
+    def test_stagnation_failure_keeps_safe_candidate_and_obeys_cooldown(self):
+        self.configure_recovery(stagnation={'enabled': True, 'window_chunks': 1, 'cooldown_chunks': 2})
+        self.advance_boundary(8)
+        self.g.planner.plan.side_effect = PlannerError('offline')
+        self.g.native_predictor.score.return_value = {'a': False, 'b': False}
+        chosen = self.g.select_chunk(8, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+        self.assertAlmostEqual(chosen[0, 0], .1)
+        self.assertTrue(self.rows('selections.jsonl')[0]['fallback'])
+        self.assertEqual(self.g.planner_calls, 1)
+        self.assertIsNone(self.g.active_instruction)
+        self.advance_boundary(16)
+        self.assertFalse(self.g._stagnation_due)
+        self.g.select_chunk(16, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+        self.assertEqual(self.g.planner_calls, 1)
+        self.advance_boundary(24)
+        self.assertTrue(self.g._stagnation_due)
+
+    def test_stagnation_cannot_bypass_episode_or_decision_budget(self):
+        for overrides in ({'system1': {'max_calls_per_episode': 0}}, {'repairs_per_decision': 0},
+                          {'system1': {'enabled': False}}):
+            self.configure_recovery(**overrides)
+            self.advance_boundary(8); self.advance_boundary(16)
+            self.assertTrue(self.g.progress_report['stalled'])
+            self.assertFalse(self.g._stagnation_due)
+            self.g.native_predictor.score.return_value = {'a': False, 'b': False}
+            self.g.select_chunk(16, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+            self.g.planner.plan.assert_not_called()
+            # Reinitialize the controlled episode between subcases.
+            self.g.native_history = ChunkHistory()
+            self.g.native_history.append(0, [0.] * 16, self.images)
+
+    def test_stagnation_failed_repair_preserves_earliest_safe_fallback(self):
+        self.configure_recovery()
+        self.advance_boundary(8); self.advance_boundary(16)
+        self.g.native_predictor.score.side_effect = [{'a': False, 'b': False}, {'a': True, 'b': False}]
+        chosen = self.g.select_chunk(16, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+        self.assertAlmostEqual(chosen[0, 0], .1)
+        self.assertEqual(self.g._selected['policy_instruction'], 'Move the jar')
+        self.assertTrue(self.rows('selections.jsonl')[0]['fallback'])
+        self.assertIsNone(self.g.active_instruction)
+
+    def test_safety_repair_is_not_throttled_by_stagnation_cooldown(self):
+        self.configure_recovery()
+        self.g.last_planner_step = 0
+        self.advance_boundary(8)
+        self.g.native_predictor.score.side_effect = [{'a': True, 'b': False}, {'a': False, 'b': False}]
+        self.g.select_chunk(8, self.obs, self.chunk(), self.regenerate, self.bounds, 8)
+        self.assertEqual(self.g.planner_calls, 1)
+        self.assertEqual(self.g.planner.plan.call_args.args[0]['repair_trigger'], 'safety_rejection')
+
+    def test_progress_uses_native_state_and_image_not_oracle_or_vla_state(self):
+        from safetyjev.agentic_progress import ProgressWindow
+        cfg = validate_config({'stagnation': {'window_chunks': 1}})['stagnation']
+        for index in (0, 14, None):
+            window = ProgressWindow(cfg)
+            window.observe(0, [0.] * 16, self.obs['overview_image'])
+            state = [0.] * 16
+            pixels = self.obs['overview_image'].copy()
+            if index is None:
+                pixels[:] = 255
+            else:
+                state[index] = 1.
+            report = window.observe(8, state, pixels)
+            self.assertTrue(report['ready']); self.assertFalse(report['stalled'])
+        self.configure_recovery()
+        self.obs['states'][:] = 100
+        self.obs['oracle'] = 'FORBIDDEN'
+        self.advance_boundary(8); self.advance_boundary(16)
+        self.assertTrue(self.g.progress_report['stalled'])
+        for _ in range(5):
+            self.g.policy_observation(16, self.obs)
+        self.assertEqual(len(self.g.progress_window.rows), 3)
+        self.assertNotIn('FORBIDDEN', (self.root/'recovery.jsonl').read_text())
+        self.g._initialize_recovery(self.obs)
+        self.assertEqual(len(self.g.progress_window.rows), 0)
+        self.assertIsNone(self.g.active_instruction)
+
+    def test_recovery_config_validation_and_legacy_defaults(self):
+        self.assertEqual(validate_config({})['instruction_ttl_chunks'], 1)
+        self.assertFalse(validate_config({})['stagnation']['enabled'])
+        bad = [{'instruction_ttl_chunks': x} for x in (0, True, 65, 1.5)]
+        bad += [{'stagnation': {key: value}} for key, value in (
+            ('enabled', 1), ('window_chunks', 0), ('cooldown_chunks', True),
+            ('joint_rms_rad', float('nan')), ('gripper_delta_m', -1), ('image_mae', 2), ('extra', 1))]
+        for config in bad:
+            with self.subTest(config=config), self.assertRaises(ValueError):
+                validate_config(config)
+
     def test_history_masks_and_native_state_schema(self):
         h=self.g.native_history
         inputs=h.inputs(self.chunk(),.05,self.root)
@@ -201,8 +366,7 @@ class AgenticTests(unittest.TestCase):
         with patch('safetyjev.agentic_predictor.urlopen',return_value=io.StringIO(json.dumps(result))),self.assertRaises(ValueError):
             client.score('id',self.g.questions,{})
 
-    @unittest.skipUnless(os.environ.get('SAFETYJEV_MANIGUARD_ROOT'),'Pinned ManiGuard source required')
-    def test_native_fallback_executes_in_actual_runner_and_records_selected_instruction(self):
+    def run_actual_loop(self, max_steps, answers):
         import test_planner
         root=Path(os.environ['SAFETYJEV_MANIGUARD_ROOT']);verify_sources(root)
         tree=ast.parse(instrument((root/'maniguard/eval/benchmark.py').read_text(),'agentic_native'))
@@ -210,17 +374,17 @@ class AgenticTests(unittest.TestCase):
         code=compile(ast.fix_missing_locations(ast.Module(body=[loop],type_ignores=[])),'agentic-loop','exec')
         self.g.config['local_retries']=0
         self.g.planner=OpenRouterPlanner({'model':'provider/test','api_key':'CONFIG_SECRET','include_images':True})
-        self.g.native_predictor.score.side_effect=[{'a':True,'b':False},{'a':True,'b':True}]
+        self.g.native_predictor.score.side_effect=answers
         self.g.ready=True; self.g.invalid=False; self.g.violated={'a':False}
         self.g.robot=SimpleNamespace(default_arm='0',arm_control_idx={'0':np.arange(7)},
             gripper_control_idx={'0':np.array([7,8])},get_joint_positions=lambda:np.zeros(9),get_joint_velocities=lambda:np.zeros(9))
         self.g.imageio=SimpleNamespace(imwrite=lambda path,pixels:Image.fromarray(pixels).save(path))
         executed=[]
         def env_step(action):executed.append(action.copy());return None,0.,None,None,None
-        cfg=SimpleNamespace(execute_horizon=8,max_steps=8,gripper_binarize=True,ik_eef_to_joint=False,save_video=False)
+        cfg=SimpleNamespace(execute_horizon=8,max_steps=max_steps,gripper_binarize=True,ik_eef_to_joint=False,save_video=False)
         prompts=[]
         def policy(*args):
-            prompts.append(args[1]['task_descriptions']);return self.chunk(.1 if len(prompts)==1 else .2)
+            prompts.append(args[1]['task_descriptions']);return self.chunk(len(prompts)/10)
         scope={'cfg':cfg,'step_idx':0,'done':False,'success':False,'query_policy':policy,'policy':None,'client_type':'fixture',
             'obs':self.obs.copy(),'os':SimpleNamespace(environ={}), 'sj_shadow':self.g,'np':np,'action_space':self.bounds,
             'env':SimpleNamespace(step=env_step),'torch':SimpleNamespace(from_numpy=lambda a:SimpleNamespace(unsqueeze=lambda axis:a)),
@@ -228,6 +392,11 @@ class AgenticTests(unittest.TestCase):
             'total_reward':0.,'ever_contacted':False,'_task_objs':[],'_target_obj':None,'monitor':None,'goal_checker':None,'goal_detail':{}}
         with patch.object(ShadowEpisode,'after_step'),patch('safetyjev.planner.urlopen',return_value=test_planner.response()) as http,patch('sys.stdout',new=io.StringIO()):
             exec(code,scope)
+        return executed, prompts, http
+
+    @unittest.skipUnless(os.environ.get('SAFETYJEV_MANIGUARD_ROOT'),'Pinned ManiGuard source required')
+    def test_native_fallback_executes_in_actual_runner_and_records_selected_instruction(self):
+        executed, prompts, http = self.run_actual_loop(8, [{'a':True,'b':False},{'a':True,'b':True}])
         self.assertEqual(len(executed),8)
         self.assertTrue(all(abs(a[0]-.1)<1e-6 for a in executed))
         self.assertEqual(prompts,['Move the jar','Close the jar lid before lifting.'])
@@ -240,6 +409,32 @@ class AgenticTests(unittest.TestCase):
         self.assertEqual(self.g.native_history.rows[-1]['step'],8)
         self.assertTrue(self.rows('selections.jsonl')[0]['fallback'])
 
+
+    @unittest.skipUnless(os.environ.get('SAFETYJEV_MANIGUARD_ROOT'),'Pinned ManiGuard source required')
+    def test_persistent_repair_reaches_initial_policy_query_in_actual_runner(self):
+        self.configure_recovery(instruction_ttl_chunks=2, stagnation={'enabled': False})
+        executed, prompts, http = self.run_actual_loop(24, [
+            {'a':True,'b':False}, {'a':False,'b':False},
+            {'a':False,'b':False}, {'a':False,'b':False}])
+        self.assertEqual(prompts, ['Move the jar', 'Close the jar lid before lifting.',
+                                  'Close the jar lid before lifting.', 'Move the jar'])
+        self.assertEqual(len(executed), 24)
+        np.testing.assert_allclose([a[0] for a in executed], [.2]*8 + [.3]*8 + [.4]*8)
+        records = self.rows('executed-candidates.jsonl')
+        self.assertEqual([r['policy_instruction'] for r in records],
+                         ['Close the jar lid before lifting.']*16 + ['Move the jar']*8)
+        self.assertEqual(http.call_count, 1)
+
+    @unittest.skipUnless(os.environ.get('SAFETYJEV_MANIGUARD_ROOT'),'Pinned ManiGuard source required')
+    def test_safe_stagnation_triggers_system1_in_actual_runner(self):
+        self.configure_recovery()
+        executed, prompts, http = self.run_actual_loop(24, [{'a':False,'b':False}] * 4)
+        self.assertEqual(prompts, ['Move the jar']*3 + ['Close the jar lid before lifting.'])
+        np.testing.assert_allclose([a[0] for a in executed], [.1]*8 + [.2]*8 + [.4]*8)
+        self.assertEqual(http.call_count, 1)
+        self.assertEqual(self.rows('planner.jsonl')[0]['trigger'], 'stagnation')
+        self.assertEqual(self.g.native_history.rows[-1]['step'], 24)
+        self.assertFalse(self.rows('selections.jsonl')[-1]['fallback'])
 
     def test_successful_repair_stops_at_first_safe_candidate(self):
         self.run_selection([{'a':True,'b':False}]*3+[{'a':False,'b':False}])

@@ -57,7 +57,11 @@ def instrument(source, execution_mode="shadow"):
         edits[1] = (old, new.replace("obs, episode_seed)", "obs, episode_seed, robot)"))
     if execution_mode in ("guard_regenerate", "agentic_native"):
         anchor = "                chunk = query_policy(policy, obs, client_type, cfg)\n"
-        edits.insert(2, (anchor, anchor +
+        proposal = anchor
+        if execution_mode == "agentic_native":
+            proposal = ("                policy_obs = sj_shadow.policy_observation(step_idx, obs)\n"
+                        "                chunk = query_policy(policy, policy_obs, client_type, cfg)\n")
+        edits.insert(2, (anchor, proposal +
             "                chunk = sj_shadow.select_chunk(\n"
             "                    step_idx, obs, chunk,\n"
             "                    lambda current_obs: query_policy(policy, current_obs, client_type, cfg),\n"
