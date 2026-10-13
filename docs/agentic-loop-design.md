@@ -1328,3 +1328,15 @@ new trials, and the original completed trial stays a separate condition rather
 than being reported as an optimized result. The two optimized smoke trials must
 pass their own source/config and execution audits before that queue can start.
 The Astra recovery sweep is unaffected.
+
+Deployment `801a43b` passed 173 CPU tests and the remote authentication/tool
+isolation preflight. The original full-run backup was verified file by file:
+5,387 files and 306,437,832 bytes, including separate simulator outputs and the
+interrupted attempt. Evidence is in
+[`fast-deployment.json`](results/2026-10-13-codex-harness/fast-deployment.json).
+The optimized live smoke is running. Its deployment gate requires both smoke
+audits, every decision within 30 seconds, and at least 1.1x lower mean decision
+latency relative to the two original matched smoke cases before launching the
+remaining sweep. A failing latency gate holds the queue for diagnosis; it does
+not silently relax the deadline or change the experiment. No speedup is yet
+validated.

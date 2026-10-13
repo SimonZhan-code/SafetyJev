@@ -1,0 +1,229 @@
+{
+  "implementation_commit": "801a43b",
+  "cpu_tests_passed": 173,
+  "configuration": {
+    "model": "gpt-6-astra",
+    "reasoning_effort": "low",
+    "decision_timeout_s": 30,
+    "tool_sequence": "paired",
+    "proposal_limit": 3,
+    "execution_horizon": 8,
+    "predictor_backend": "fla",
+    "predictor_batch_size": 1,
+    "vision_cache": false
+  },
+  "preflight": {
+    "status": "passed",
+    "chatgpt_authenticated": true,
+    "attestation": {
+      "sdk_version": "0.162.1",
+      "runtime_version": "0.162.1",
+      "model": "gpt-6-astra",
+      "mcp_tools": [
+        "judge",
+        "propose_actions",
+        "execute",
+        "observe",
+        "propose_pi05"
+      ],
+      "disabled_features": [
+        "shell_tool",
+        "unified_exec",
+        "shell_snapshot",
+        "apps",
+        "browser_use",
+        "browser_use_external",
+        "computer_use",
+        "in_app_browser",
+        "multi_agent",
+        "multi_agent_v2",
+        "memories",
+        "hooks",
+        "goals",
+        "image_generation",
+        "artifact",
+        "workspace_dependencies",
+        "tool_suggest",
+        "view_image",
+        "plugins",
+        "remote_plugin",
+        "sleep_tool",
+        "skill_search",
+        "skill_mcp_dependency_install",
+        "code_mode_only",
+        "default_mode_request_user_input",
+        "send_message_to_user_async"
+      ],
+      "native_inventory": [
+        "functions.exec",
+        "functions.wait"
+      ],
+      "isolation": {
+        "status": "passed",
+        "checks": {
+          "only_dispatch_wrappers": true,
+          "only_robot_nested_tools": true,
+          "host_globals_absent": true,
+          "nested_forbidden_calls_rejected": true,
+          "all_robot_methods_dispatched": true,
+          "canary_unchanged": true,
+          "direct_calls_within_policy": true
+        },
+        "sdk_version": "0.162.1",
+        "runtime_version": "0.162.1",
+        "model": "gpt-6-astra",
+        "allow_empty_resources": true,
+        "scope": "CPU-only mock-provider audit; no ChatGPT tokens, model inference or simulator",
+        "native_inventory": [
+          "functions.exec",
+          "functions.wait"
+        ],
+        "nested_audit": {
+          "audit_nested": true,
+          "names": [
+            "mcp__robot__execute",
+            "mcp__robot__judge",
+            "mcp__robot__observe",
+            "mcp__robot__propose_actions",
+            "mcp__robot__propose_pi05"
+          ],
+          "keys": [
+            "mcp__robot__execute",
+            "mcp__robot__judge",
+            "mcp__robot__observe",
+            "mcp__robot__propose_actions",
+            "mcp__robot__propose_pi05"
+          ],
+          "globals": {
+            "process": "undefined",
+            "require": "undefined",
+            "fetch": "undefined",
+            "Deno": "undefined",
+            "WebSocket": "undefined",
+            "XMLHttpRequest": "undefined"
+          },
+          "denied": {
+            "node_fs": true,
+            "node_shell": true,
+            "node_network": true,
+            "network_fetch": true,
+            "process_constructor": true,
+            "file_patch": true,
+            "shell": true,
+            "file_read": true,
+            "mcp_resources": true,
+            "mcp_read": true,
+            "config": true,
+            "simulator": true,
+            "subagent": true
+          }
+        },
+        "direct_attempts": [
+          {
+            "tool": "list_mcp_resources",
+            "rejected": false,
+            "result": "{\"resources\":[]}"
+          },
+          {
+            "tool": "list_mcp_resource_templates",
+            "rejected": false,
+            "result": "{\"resourceTemplates\":[]}"
+          },
+          {
+            "tool": "read_mcp_resource",
+            "rejected": true,
+            "result": "resources/read failed: resources/read failed for `robot` (audit://private): Mcp error: -32601: Method not found"
+          },
+          {
+            "tool": "exec_command",
+            "rejected": true,
+            "result": "unsupported call: exec_command"
+          },
+          {
+            "tool": "view_image",
+            "rejected": true,
+            "result": "unsupported call: view_image"
+          },
+          {
+            "tool": "read_file",
+            "rejected": true,
+            "result": "unsupported call: read_file"
+          },
+          {
+            "tool": "config",
+            "rejected": true,
+            "result": "unsupported call: config"
+          },
+          {
+            "tool": "simulator",
+            "rejected": true,
+            "result": "unsupported call: simulator"
+          },
+          {
+            "tool": "apply_patch",
+            "rejected": true,
+            "result": "patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings"
+          }
+        ],
+        "robot_stub_calls": [
+          "observe",
+          "propose_pi05",
+          "propose_actions",
+          "judge",
+          "execute"
+        ],
+        "mcp_servers": [
+          {
+            "name": "robot",
+            "tools": [
+              "execute",
+              "judge",
+              "observe",
+              "propose_actions",
+              "propose_pi05"
+            ],
+            "resource_count": 0,
+            "resource_template_count": 0
+          }
+        ],
+        "catalog_source": "stock runtime bundled catalog",
+        "catalog_changes": {
+          "gpt-6-astra.experimental_supported_tools": []
+        },
+        "original_catalog_sha256": "69af12f94a39dabd1a1ded8f5257b4884d2118902ea2b5b9cffbf4a1925dfa65",
+        "diagnostic_catalog_sha256": "1678bcd86327d0b06ab6dbe0b7180f27c5f93530c76b8c10b24b16ab53835572"
+      }
+    },
+    "source_sha256": {
+      "__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+      "codex_worker.py": "4d1d0d2de0b93b1a772f60df5b55f8c17e84ff2e8613fd7d2f246637bb5c46fc",
+      "codex_tools.py": "d1080d3f90bf78c5c823f5c1d9f2105a1b4f3e3a587d24c3b2b4b13a9114753b",
+      "codex_bridge.py": "5b484145b272b04970b9006f0a7287847c09acbb498c816705614351f76ab624",
+      "codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263",
+      "codex_dispatch_audit.py": "b777f813c40d65dd44786d5499a97dfa83a464f79eb774deb6a07316a7787688"
+    },
+    "sdk_version": "0.162.1",
+    "runtime_version": "0.162.1",
+    "scope": "CPU/auth/tool inventory only; no robot or GPU inference",
+    "exit_code": 0
+  },
+  "original_run_backup": {
+    "status": "verified",
+    "archive_sha256": "90e13cac5e21ce0322858bff18595c35119464ffe65efab348574a33602001d9",
+    "files_verified": 5387,
+    "bytes_verified": 306437832,
+    "coverage": "Original full-sweep tree with one completed and one interrupted trial, plus their simulator outputs",
+    "scope": "Original condition only; optimized run not included"
+  },
+  "live_validation": {
+    "status": "running",
+    "output": "artifacts/codex-harness-fast-smoke",
+    "sweep_launch_gate": "Both smoke audits pass, maximum decision <=30s, mean speedup >=1.1 over two original matched smoke cases",
+    "speedup_verified": false
+  },
+  "limitations": [
+    "Paired dispatch is a model instruction, not enforcement of a fixed number of round trips.",
+    "Deadline expiry ends the attempt as an infrastructure failure; no uncommitted candidate executes.",
+    "Original completed case remains a separate condition; 77 remaining full trials are planned for the optimized condition."
+  ]
+}
