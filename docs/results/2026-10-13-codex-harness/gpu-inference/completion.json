@@ -1,0 +1,10 @@
+{
+  "files": {
+    "deployment.json": "b22254ca58db13d16404c0df40cbcedf4a37fa2c8aac20c6f9421110da5ce42b",
+    "predictor.json": "14d24165b8dec709ae4377ff88659eeaad49f3aff3510ca5527fddafad9f2e97",
+    "policy-server.log": "3defc7647fabd27db30e47e9decee1bd9cd282930dfdc45b05b01f1beba3cf49",
+    "policy.json": "a9b5d57dd07b54c07a47e588efe9658e1fad3ef8483a83ba3a0465067ba56dd1"
+  },
+  "gpu_processes": "",
+  "supervisor": "safetyjev-gpu-test               EXITED    Oct 13 05:23 PM"
+}

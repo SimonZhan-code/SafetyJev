@@ -1,0 +1,14 @@
+{
+  "scope": "GPU task-input inference only; no simulator or Codex control",
+  "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+  "policy_maniguard_dev_revision": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "safetyjev_commit": "a6db37e40b65f2205bb9890b1703fdcc5b17dd91",
+  "policy_revision": "1d84eda070313a202a595e449fcf41a1a1e8a546",
+  "policy_subdirectory": "7400",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition, 580.159.03, 97887 MiB",
+  "sources": {
+    "scripts/remote/benchmark-policy-replay.py": "2f2994c4eb9bf85b8266b5b3291fc9f4098679f958f0a10388a59d63261d40f5",
+    "scripts/remote/benchmark-predictor-fast.py": "38d809629106e709905e2f8a7857010865cd7293ac8675be6d54abd92f3298b5"
+  },
+  "requests_sha256": "9aade60f30221416238ea0a1cbe745a6b959ad0d6a311ca301e90673c8a460dc"
+}

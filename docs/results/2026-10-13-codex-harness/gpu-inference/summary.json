@@ -1,0 +1,140 @@
+{
+  "status": "completed",
+  "scope": "GPU inference on recorded task inputs; no simulator or Codex rollout",
+  "unique_observation_windows": 8,
+  "unique_constraint_answers": 24,
+  "paired_binary_comparisons": 48,
+  "binary_disagreements": 0,
+  "acceptance_disagreements": 0,
+  "max_abs_logit_difference": 0.8998007774353027,
+  "predictor_summary": {
+    "torch": {
+      "cache_verified": true,
+      "paired_requests": 16,
+      "binary_disagreements": 0,
+      "acceptance_disagreements": 0,
+      "max_abs_logit_delta": 0.0,
+      "mean_wall_s": 1.6411337878671475,
+      "median_wall_s": 1.848909373395145,
+      "speedup": 1.0,
+      "peak_allocated_gib": 49.25299549102783,
+      "passed": false
+    },
+    "fla": {
+      "cache_verified": true,
+      "paired_requests": 16,
+      "binary_disagreements": 0,
+      "acceptance_disagreements": 0,
+      "max_abs_logit_delta": 0.8998007774353027,
+      "mean_wall_s": 1.0230436068377458,
+      "median_wall_s": 1.2218017340637743,
+      "speedup": 1.6041679718227597,
+      "peak_allocated_gib": 49.06541204452515,
+      "passed": true
+    }
+  },
+  "predictor_by_history": {
+    "full": {
+      "torch": {
+        "cache_verified": true,
+        "paired_requests": 12,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.0,
+        "mean_wall_s": 1.8530749656104792,
+        "median_wall_s": 1.853770005516708,
+        "speedup": 1.0,
+        "peak_allocated_gib": 49.25299549102783,
+        "passed": false
+      },
+      "fla": {
+        "cache_verified": true,
+        "paired_requests": 12,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.8998007774353027,
+        "mean_wall_s": 1.2277555296507974,
+        "median_wall_s": 1.2278019357472658,
+        "speedup": 1.5093191770331813,
+        "peak_allocated_gib": 49.06541204452515,
+        "passed": true
+      }
+    },
+    "reset_or_partial": {
+      "torch": {
+        "cache_verified": true,
+        "paired_requests": 4,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.0,
+        "mean_wall_s": 1.005310254637152,
+        "median_wall_s": 1.0048837256617844,
+        "speedup": 1.0,
+        "peak_allocated_gib": 48.84892225265503,
+        "passed": false
+      },
+      "fla": {
+        "cache_verified": true,
+        "paired_requests": 4,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.35452890396118164,
+        "mean_wall_s": 0.4089078383985907,
+        "median_wall_s": 0.4089174107648432,
+        "speedup": 2.4585252720374773,
+        "peak_allocated_gib": 48.78383159637451,
+        "passed": true
+      }
+    }
+  },
+  "warmup_s": {
+    "policy_first_inference": 18.543032720685005,
+    "torch": 5.1661999598145485,
+    "fla": 40.47564005386084
+  },
+  "policy_mean_s": 0.0788056287759294,
+  "policy_measured_requests": 24,
+  "policy_all_finite": true,
+  "per_task": [
+    {
+      "scene": "task_0000/base",
+      "seed": 0,
+      "observation_steps": [
+        0,
+        8,
+        64,
+        128
+      ],
+      "torch_mean_s": 1.6363599083852023,
+      "fla_mean_s": 1.0180347089190036,
+      "speedup": 1.6073714324757797,
+      "policy_mean_s": 0.08025607117451727
+    },
+    {
+      "scene": "task_0005/base",
+      "seed": 0,
+      "observation_steps": [
+        0,
+        8,
+        64,
+        128
+      ],
+      "torch_mean_s": 1.6459076673490927,
+      "fla_mean_s": 1.028052504756488,
+      "speedup": 1.6009957270995168,
+      "policy_mean_s": 0.07735518637734155
+    }
+  ],
+  "cpu_tests": {
+    "run": 166,
+    "passed": 166,
+    "skipped": 0
+  },
+  "limits": [
+    "Independent sequential model benchmarks, not end-to-end controller latency.",
+    "Historical captures at ManiGuard be97624; current policy serving uses dev ff84435b. No new simulator-dev rollout.",
+    "Zero flips on this small replay does not supersede historical FLA 4/120 flips; logits differ.",
+    "No safety accuracy, task success, or Codex-generated-action reliability measurement.",
+    "Codex live control remains blocked by the failed tool-only isolation audit."
+  ]
+}

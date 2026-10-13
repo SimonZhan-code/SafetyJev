@@ -1,0 +1,1086 @@
+{
+  "status": "completed",
+  "samples": [
+    {
+      "metadata": {
+        "scene": "task_0000/base",
+        "seed": 0,
+        "episode_id": "139fd7ac2fe646e398b19eb72b2fc9f1",
+        "candidate_id": "139fd7ac2fe646e398b19eb72b2fc9f1:0:candidate-0",
+        "step": 0,
+        "request_sha256": "3738cbab644f0563d3c18cb570420fc884b0ea6ae55181f6d6fafd639fb4b42a",
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 1528289969,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.0053798453882337,
+          "model_region_s": 1.0004336098209023,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7714214324951172
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -1.8849458694458008
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.0079336166381836
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.84892225265503
+        },
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 0.409226325340569,
+          "model_region_s": 0.40441152825951576,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7779500484466553
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -1.6452209949493408
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.3624625205993652
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.78383159637451
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 0.40857020672410727,
+          "model_region_s": 0.40379357896745205,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7779500484466553
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -1.6452209949493408
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.3624625205993652
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.78383159637451
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.0039582448080182,
+          "model_region_s": 0.999154519289732,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7714214324951172
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -1.8849458694458008
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.0079336166381836
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.84892225265503
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0000/base",
+        "seed": 0,
+        "episode_id": "139fd7ac2fe646e398b19eb72b2fc9f1",
+        "candidate_id": "139fd7ac2fe646e398b19eb72b2fc9f1:8:candidate-0",
+        "step": 8,
+        "request_sha256": "ecea840c57a1b2980d4febdb348918028910c3d557d94320af7d0a3e79ccbbbb",
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 1528289969,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.2216148497536778,
+          "model_region_s": 1.1890888614580035,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -3.050194025039673
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.55707311630249
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -4.65224027633667
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.8489886382594705,
+          "model_region_s": 1.8162636514753103,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.8919496536254883
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.426393508911133
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -4.432170391082764
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.850020787678659,
+          "model_region_s": 1.8172789197415113,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.8919496536254883
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.426393508911133
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -4.432170391082764
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.2243164479732513,
+          "model_region_s": 1.1916636191308498,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -3.050194025039673
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.55707311630249
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -4.65224027633667
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0000/base",
+        "seed": 0,
+        "episode_id": "139fd7ac2fe646e398b19eb72b2fc9f1",
+        "candidate_id": "139fd7ac2fe646e398b19eb72b2fc9f1:64:candidate-0",
+        "step": 64,
+        "request_sha256": "557967268c94103ebd283b6fb4bc2e2c7a3a77c579ee4f41f407adeb34212536",
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 1528289969,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.8442245908081532,
+          "model_region_s": 1.8162531796842813,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.696851372718811
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.7533721923828125
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.1495542526245117
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.2186889527365565,
+          "model_region_s": 1.190765380859375,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.012272834777832
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.182776689529419
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.897892475128174
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.220549919642508,
+          "model_region_s": 1.192598419263959,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.012272834777832
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.182776689529419
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.897892475128174
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.8442521104589105,
+          "model_region_s": 1.8162339609116316,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.696851372718811
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.7533721923828125
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.1495542526245117
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0000/base",
+        "seed": 0,
+        "episode_id": "139fd7ac2fe646e398b19eb72b2fc9f1",
+        "candidate_id": "139fd7ac2fe646e398b19eb72b2fc9f1:128:candidate-0",
+        "step": 128,
+        "request_sha256": "02eca7ba9a6ac742e431d4c0f9864a9a04dfdc7bfb96a094ea4f7fa4388dcfb0",
+        "task_instruction": "Close the lid of the hinged jar holding the can of beans, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 1528289969,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.219322350807488,
+          "model_region_s": 1.1906059896573424,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.5889312028884888
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.2369256019592285
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.3694311380386353
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.8488301085308194,
+          "model_region_s": 1.8200656082481146,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.7096998691558838
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -3.7689950466156006
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.0885252952575684
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.845224941149354,
+          "model_region_s": 1.8164512803778052,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.7096998691558838
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -3.7689950466156006
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.0885252952575684
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.2219886183738708,
+          "model_region_s": 1.1930295089259744,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.5889312028884888
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.2369256019592285
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.3694311380386353
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0005/base",
+        "seed": 0,
+        "episode_id": "a59909be44fa47149f63648b724bad6c",
+        "candidate_id": "a59909be44fa47149f63648b724bad6c:0:candidate-0",
+        "step": 0,
+        "request_sha256": "e4b7175ec3449db6eb059b7bdc6a4620eb7247dd9b8fc672fc5175d4589e8694",
+        "task_instruction": "Close the lid of the hinged jar holding the pepper shaker, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 198855426,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.0043876059353352,
+          "model_region_s": 0.9981281096115708,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.1192731857299805
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.409453868865967
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.61716365814209
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.84892225265503
+        },
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 0.4091520858928561,
+          "model_region_s": 0.40294448006898165,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.2718710899353027
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.405081272125244
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.8312532901763916
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.78383159637451
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 0.40868273563683033,
+          "model_region_s": 0.4024754799902439,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.2718710899353027
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.405081272125244
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.8312532901763916
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.78383159637451
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.0075153224170208,
+          "model_region_s": 1.001226327382028,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.1192731857299805
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -2.409453868865967
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -2.61716365814209
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 48.84892225265503
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0005/base",
+        "seed": 0,
+        "episode_id": "a59909be44fa47149f63648b724bad6c",
+        "candidate_id": "a59909be44fa47149f63648b724bad6c:8:candidate-0",
+        "step": 8,
+        "request_sha256": "79fc6a980f6768d5bd68ebf959dc421ed8c60c706f9ae0025a9ac632b3613b1a",
+        "task_instruction": "Close the lid of the hinged jar holding the pepper shaker, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 198855426,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.234628620557487,
+          "model_region_s": 1.1910298401489854,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.860783576965332
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -6.065313339233398
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.6512229442596436
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.8617783300578594,
+          "model_region_s": 1.8182013994082808,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.8404221534729004
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -5.8869733810424805
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.0244264602661133
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.8613922400400043,
+          "model_region_s": 1.8177217189222574,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.8404221534729004
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -5.8869733810424805
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.0244264602661133
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.2393786273896694,
+          "model_region_s": 1.195643687620759,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -2.860783576965332
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -6.065313339233398
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -3.6512229442596436
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0005/base",
+        "seed": 0,
+        "episode_id": "a59909be44fa47149f63648b724bad6c",
+        "candidate_id": "a59909be44fa47149f63648b724bad6c:64:candidate-0",
+        "step": 64,
+        "request_sha256": "ee0724c0a740335407ec7f8211a2f1dfc00cf5716f536253e84ad78a52e1e152",
+        "task_instruction": "Close the lid of the hinged jar holding the pepper shaker, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 198855426,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.8577199233695865,
+          "model_region_s": 1.8179588187485933,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.5468364953994751
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -3.961658239364624
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.8408827781677246
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.233362321741879,
+          "model_region_s": 1.1934555983170867,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.7120175957679749
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.088780879974365
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.7603206634521484
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.2344264211133122,
+          "model_region_s": 1.1946705477312207,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.7120175957679749
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.088780879974365
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.7603206634521484
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.8592215310782194,
+          "model_region_s": 1.8193269185721874,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -0.5468364953994751
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -3.961658239364624
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.8408827781677246
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "scene": "task_0005/base",
+        "seed": 0,
+        "episode_id": "a59909be44fa47149f63648b724bad6c",
+        "candidate_id": "a59909be44fa47149f63648b724bad6c:128:candidate-0",
+        "step": 128,
+        "request_sha256": "aad9fa087a8123ec9136e90294dd6c41c9b56ada92a022d76f3e4e882f22f35d",
+        "task_instruction": "Close the lid of the hinged jar holding the pepper shaker, then carry the closed jar into the green goal sphere on the table.",
+        "episode_seed": 198855426,
+        "recording_maniguard_revision": "be97624e0acbec6b6f9260a08891b04168eb8e6c",
+        "recording_source": "completed Astra recovery capture; historical simulator revision; no new rollout"
+      },
+      "measurements": [
+        {
+          "mode": "fla",
+          "repeat": 0,
+          "wall_s": 1.2335018021985888,
+          "model_region_s": 1.1957221161574125,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7180883884429932
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.952597141265869
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -0.9089603424072266
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        },
+        {
+          "mode": "torch",
+          "repeat": 0,
+          "wall_s": 1.857727162539959,
+          "model_region_s": 1.8198259873315692,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.3000422716140747
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.052796363830566
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.087040662765503
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "torch",
+          "repeat": 1,
+          "wall_s": 1.8575192233547568,
+          "model_region_s": 1.819239248521626,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.3000422716140747
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.052796363830566
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -1.087040662765503
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.25299549102783
+        },
+        {
+          "mode": "fla",
+          "repeat": 1,
+          "wall_s": 1.2312874235212803,
+          "model_region_s": 1.1934208581224084,
+          "answers": {
+            "excessive_tilt:jar_upright": {
+              "violated": false,
+              "logit": -1.7180883884429932
+            },
+            "falling_off_support:jar_dropped": {
+              "violated": false,
+              "logit": -4.952597141265869
+            },
+            "open_jar_off_support": {
+              "violated": false,
+              "logit": -0.9089603424072266
+            }
+          },
+          "vision_cache": {
+            "hits": 0,
+            "misses": 0
+          },
+          "peak_allocated_gib": 49.06541204452515
+        }
+      ]
+    }
+  ],
+  "mode_errors": {},
+  "warmup_s": {
+    "torch": 5.1661999598145485,
+    "fla": 40.47564005386084
+  },
+  "identity": {
+    "checkpoint_repo": "IDEAS-Lab-Northwestern/SafetyJev-Checkpoints",
+    "checkpoint_revision": "7c1c0fc46227eca60473577a4450b86f93403603",
+    "checkpoint_subdirectory": "predictor-judge-27b-unsafe600/step-00000500/model",
+    "base_model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "input_contract": "chunk_start_v2",
+    "loader_sha256": "013c4c1c62a657472ddf680d7db7993df511351a333b8d6e6fc66f7b9707ce1f",
+    "status": "ready",
+    "device": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "training_loader_sha256": "d33dca3d21c7cf6a73432536fc71e7759f7fab0a60557b7c40a446ec5b7ee39d",
+    "loader_note": "Published NVIDIA loader; unpublished AMD patch not applied",
+    "checkpoint_manifest_sha256": "bb9bd1577697cbccd237cd71a7be7bf88104b302807b9a5ab0d89a4af7d8cbf0",
+    "batch_size": 1,
+    "optimizations": {
+      "attention_backend": "torch",
+      "fla_version": null,
+      "linear_layers": 48,
+      "vision_cache": false,
+      "upstream": {
+        "repo": "https://github.com/lyuyiqi/open-jev-fast",
+        "revision": "c52b8bb958c1f0d241d4eb7fce4ecd8d885bf1e4",
+        "scope": "FLA chunk recurrence; not the upstream text-only CUDA backend"
+      },
+      "lora_merged": false,
+      "quantized": false
+    }
+  },
+  "repeats": 2,
+  "request_file_sha256": "9aade60f30221416238ea0a1cbe745a6b959ad0d6a311ca301e90673c8a460dc",
+  "source_sha256": {
+    "scripts/remote/benchmark-predictor-fast.py": "38d809629106e709905e2f8a7857010865cd7293ac8675be6d54abd92f3298b5",
+    "safetyjev/__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+    "safetyjev/agentic.py": "9c2d3193ded384517db98c4f0ea7268b8eff275e48c7fe24f250cdaf94b1825c",
+    "safetyjev/agentic_config.py": "9b01bd487c7bd6ab5eedec86ed52fe76a5b0ad35da9c4c117ff35ed5d85fdd0d",
+    "safetyjev/agentic_inputs.py": "1cde6e81f46e40ab9b7e34a42a5c04e5880c8f8b3864edd72f18e3a72630440a",
+    "safetyjev/agentic_predictor.py": "43c1fee2a8b5e608f6a8883054d4447d02f0ba8b39ba29a03b77aaf79124900b",
+    "safetyjev/agentic_progress.py": "2468df601d8f71dd915933a0e6dc4be1244a84dc43064c4d9df7e26e7902881e",
+    "safetyjev/agentic_replay.py": "8881138165a2f0b3728d116e280ac22afd8617f80c7d89a3d9aa2bb690a3a60b",
+    "safetyjev/agentic_server.py": "d350202f7980692f13848a92ff2e356b85b753b3486193549751af14049dc444",
+    "safetyjev/capture.py": "649b949e52c131c15f51c59f0eb194c791395631187ff87288dac8bec896fcc9",
+    "safetyjev/chunk_judge.py": "53a8ca0d6b6c38104c9367848226fb100aae3d4c31fe6bffe3f845cfca25da7e",
+    "safetyjev/chunk_judge_model.py": "013c4c1c62a657472ddf680d7db7993df511351a333b8d6e6fc66f7b9707ce1f",
+    "safetyjev/cli.py": "39eebb38cc01668bc24f33f613b7cb7537b3e0cc98949de4fac81f4661108ced",
+    "safetyjev/codex_audit.py": "96db25a78f97b96092e6c0529e0c1d0a961d9ec624b144a18e55d6d7935e9dca",
+    "safetyjev/codex_bridge.py": "5b484145b272b04970b9006f0a7287847c09acbb498c816705614351f76ab624",
+    "safetyjev/codex_config.py": "0f1594ea8bce38bf27d3b8a686ba322b7743ab81820b15a0aefab362ac96faad",
+    "safetyjev/codex_dispatch_audit.py": "2bc518812b6fd7a7d9bf26913ec4a08832ee55414fa4186571c28ad39a0901ee",
+    "safetyjev/codex_episode.py": "93099199e877b4210ce6645f91576742b3d9b6fb7cfe365acf3fe5d14b9f1a9b",
+    "safetyjev/codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263",
+    "safetyjev/codex_registry.py": "9f194dd65ae6de0eae3c34f2645b5edb9b6056132a1e865b251aa0c6240691d7",
+    "safetyjev/codex_setup.py": "627ca6e9fa6648f91f75cdf83cc8b244196d0ac11b3985ea717d4e115ba1c2bc",
+    "safetyjev/codex_tools.py": "d1080d3f90bf78c5c823f5c1d9f2105a1b4f3e3a587d24c3b2b4b13a9114753b",
+    "safetyjev/codex_worker.py": "3d2a0c8f5e19938e8da3810b5695394bba4872573b4eb30cd0e3f1cb65a87219",
+    "safetyjev/guard.py": "04207d94669caf5198b4cbc3d8de6c6d496b629727fa39c73aaf8a4e0cc33008",
+    "safetyjev/inference_optimizations.py": "e672a90f39c83a8978875b020d3aa5e39213c18260c46f32a354056385ae8506",
+    "safetyjev/io.py": "e5d160fa67acdb204a82e9c51b3e9ea4ff597bc86bcfbbbdd15c028ce8444f88",
+    "safetyjev/labels.py": "a00df56512798cfb19d357ab60945584fe1d6250a043ff9833c14c196e697201",
+    "safetyjev/maniguard.py": "25f6faa7f4e25eb8b6d37895aef9654e1268b26b4f0c08c1d8c8b3a07f8a7d8c",
+    "safetyjev/metrics.py": "3d77595d44af7f1e1fabf0f94c10b31b092859159f696a2077cfa065a8f88169",
+    "safetyjev/planner.py": "68911d914972f5af5cf6572516f549f1ada1fdd389e29b1a7ae3ab703ee492ee",
+    "safetyjev/predictor_judge_schema.py": "d8c8e22b1b742659c7885f4fb24a9195ccf43ea00eef3989f5fd1a9a919b6fde",
+    "safetyjev/predictors.py": "361e417a9a790ac6e561b44db597ea035b89a2004e54aecc1e456f70fd2b4779",
+    "safetyjev/semantic_labels.py": "c02c61f7cba493714159fea59e64733946e0cef7c09c5023404a20c4b772ca27",
+    "safetyjev/visual_runtime.py": "5b6f95f9cf108a6e9d2e7b8becfd0f4177d16d85ddff43d10de8e54e95ed4fb7",
+    "safetyjev/visual_server.py": "9c7af3a3777e1921e09bf557505544670693e226178558beeb999e75a883b31a"
+  },
+  "scope": "Same loaded checkpoint, batch 1, unchanged masks and LoRA. No simulation or OpenRouter. Timings include input decode and cache hashing; compilation warmup reported separately.",
+  "summary": {
+    "torch": {
+      "cache_verified": true,
+      "paired_requests": 16,
+      "binary_disagreements": 0,
+      "acceptance_disagreements": 0,
+      "max_abs_logit_delta": 0.0,
+      "mean_wall_s": 1.6411337878671475,
+      "median_wall_s": 1.848909373395145,
+      "speedup": 1.0,
+      "peak_allocated_gib": 49.25299549102783,
+      "passed": false
+    },
+    "fla": {
+      "cache_verified": true,
+      "paired_requests": 16,
+      "binary_disagreements": 0,
+      "acceptance_disagreements": 0,
+      "max_abs_logit_delta": 0.8998007774353027,
+      "mean_wall_s": 1.0230436068377458,
+      "median_wall_s": 1.2218017340637743,
+      "speedup": 1.6041679718227597,
+      "peak_allocated_gib": 49.06541204452515,
+      "passed": true
+    }
+  },
+  "by_history": {
+    "full": {
+      "torch": {
+        "cache_verified": true,
+        "paired_requests": 12,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.0,
+        "mean_wall_s": 1.8530749656104792,
+        "median_wall_s": 1.853770005516708,
+        "speedup": 1.0,
+        "peak_allocated_gib": 49.25299549102783,
+        "passed": false
+      },
+      "fla": {
+        "cache_verified": true,
+        "paired_requests": 12,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.8998007774353027,
+        "mean_wall_s": 1.2277555296507974,
+        "median_wall_s": 1.2278019357472658,
+        "speedup": 1.5093191770331813,
+        "peak_allocated_gib": 49.06541204452515,
+        "passed": true
+      }
+    },
+    "reset_or_partial": {
+      "torch": {
+        "cache_verified": true,
+        "paired_requests": 4,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.0,
+        "mean_wall_s": 1.005310254637152,
+        "median_wall_s": 1.0048837256617844,
+        "speedup": 1.0,
+        "peak_allocated_gib": 48.84892225265503,
+        "passed": false
+      },
+      "fla": {
+        "cache_verified": true,
+        "paired_requests": 4,
+        "binary_disagreements": 0,
+        "acceptance_disagreements": 0,
+        "max_abs_logit_delta": 0.35452890396118164,
+        "mean_wall_s": 0.4089078383985907,
+        "median_wall_s": 0.4089174107648432,
+        "speedup": 2.4585252720374773,
+        "peak_allocated_gib": 48.78383159637451,
+        "passed": true
+      }
+    }
+  },
+  "selected_mode": "fla"
+}

@@ -1066,6 +1066,75 @@ and audit logic, not the trained checkpoint or the two live Jar trials. The new
 node has no running model/simulator jobs. Its SDK environment uses readable
 system Python; trusted source preparation defaults to owner-only permissions.
 
+### GPU task-input inference on the Codex node (October 13)
+
+The user separately authorized GPU model checks while live Codex control remains
+blocked. On `ssh9.vast.ai:13565` (RTX PRO 6000 Blackwell Server Edition, driver
+580.159.03), both pinned models loaded and completed inference. This is a replay
+of **eight recorded observation windows**, not the two 256-action simulator
+trials: Jar `task_0000/base` and `task_0005/base`, seed 0, steps 0/8/64/128.
+Native request hashes verify the images, history, masks, questions and commands.
+
+| Task | π0.5 proposal | SafetyJev Torch, 3 questions | SafetyJev FLA, 3 questions | Predictor speedup |
+|---|---:|---:|---:|---:|
+| task_0000 | 80 ms | 1.636 s | 1.018 s | 1.61× |
+| task_0005 | 77 ms | 1.646 s | 1.028 s | 1.60× |
+| Combined | 79 ms | 1.641 s | 1.023 s | 1.60× |
+
+Times exclude warmup. π0.5 was measured over 24 WebSocket requests, producing
+finite `(16, 8)` action arrays every time; the controller would use eight actions.
+Its first inference took 18.54 s. The predictor scored the same eight-action
+recorded candidates in both backends, two repeats per window, batch size 1 and
+vision cache off. Whole `predict()` timing includes image decoding and all three
+questions; it excludes HTTP and Codex overhead. Full eight-slot history averaged
+1.853 s with Torch and 1.228 s with FLA (1.51×); reset inputs averaged 1.005 s and
+0.409 s. Predictor peak allocated memory was 49.25/49.07 GiB for Torch/FLA.
+Two-shape warmup took 5.17 s for Torch and 40.48 s for FLA, including fresh-kernel
+compilation. Models were benchmarked sequentially, so these are not measurements
+of simultaneous service or complete-loop latency.
+
+FLA had **0/48 binary disagreements**, representing 24 unique constraint answers
+repeated twice, and no all-No acceptance changes. Maximum absolute logit difference
+was **0.900**. This does not establish numerical equivalence and does not override
+the earlier **4/120** disagreements on the larger replay. No ground-truth safety
+accuracy or task success is measured here.
+
+Current policy serving uses the latest checked ManiGuard `dev` revision
+`ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107`. The input recordings retain their
+historical `be97624e0acbec6b6f9260a08891b04168eb8e6c` simulator provenance;
+there was no new simulator rollout. π0.5 receives the original task instruction,
+current two images and native state indices `[0,1,2,3,4,5,6,14]` (seven joint
+positions and mean finger position), matching the dev joint-state adapter.
+These are fresh stochastic proposals, not reproduction of the recorded policy
+sampling sequence or repaired prompts. SafetyJev preserves the pinned Unsafe600
+step-500 checkpoint, published NVIDIA loader, saved processor/normalization and
+FLA 0.5.2. No ChatGPT or OpenRouter calls occur in these tests.
+
+Reproduce after provisioning pinned environments and copying the verified replay
+archive (kept with the local artifact backup; not in Git):
+
+```bash
+# GPU must be free; this loads and releases the native predictor.
+/workspace/native-env/bin/python scripts/remote/benchmark-predictor-fast.py \
+  --config configs/agentic-loop.local.json --requests /path/to/jar-requests.json.gz \
+  --output /path/to/fresh-predictor.json --modes torch fla --repeats 2
+
+# Then start serve-pi05.sh with SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev.
+# Use a fresh output; stop the policy service after this check.
+/workspace/openpi/.venv/bin/python scripts/remote/benchmark-policy-replay.py \
+  --requests /path/to/jar-requests.json.gz --output /path/to/fresh-policy.json \
+  --repeats 3
+```
+
+All **166 CPU tests pass** with the pinned dev and historical fixture sources;
+replay input checks verify actual two-camera images and the policy state mapping.
+The test worker and policy service exited, leaving no GPU compute process.
+Live Codex/simulator acceptance remains blocked by the dispatch-isolation audit
+above. Evidence: [GPU summary](results/2026-10-13-codex-harness/gpu-inference/summary.json),
+[paired predictor measurements](results/2026-10-13-codex-harness/gpu-inference/predictor.json),
+[policy measurements](results/2026-10-13-codex-harness/gpu-inference/policy.json).
+
+
 
 ### ManiGuard dev migration (October 13)
 
