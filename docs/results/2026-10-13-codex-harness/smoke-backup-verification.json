@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "efeb330ebc857f94b41fb2b637bfa5219ae0d75d5b09d6b3f2f8b3c7b048d4cf",
+  "files_verified": 1079,
+  "bytes_verified": 70017501,
+  "coverage": "Entire completed smoke tree including archived setup failure, and three corresponding simulator output trees",
+  "scope": "Smoke only; ongoing full sweep not included"
+}
