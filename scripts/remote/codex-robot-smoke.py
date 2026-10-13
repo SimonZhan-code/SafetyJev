@@ -131,7 +131,13 @@ def main():
     jar.verify_sources(jar.MANIGUARD)
     if not (out/'plan.json').exists():jar.verify_latest_dev()
     paths=[*sorted((ROOT/'safetyjev').glob('*.py')),Path(__file__),args.config,
+           ROOT/'scripts/remote/jar-agentic-eval.py',ROOT/'scripts/remote/serve-pi05.sh',
+           ROOT/'scripts/remote/warm-jar-policy.py',Path(jar.MANIGUARD)/'configs/eval/jar_transport_joint.yaml',
            ROOT/'configs/jar-isaac51-provenance.json',ROOT/'configs/predictor-semantic-definitions.json']
+    for scene,_ in case_grid('jar-base')[::3]:
+        if not list((jar.BENCH/scene).glob('scene*.json')):
+            raise RuntimeError('Missing pinned Jar scene')
+        paths.extend(sorted((jar.BENCH/scene).glob('*.json*')))
     plan={'maniguard':jar.source_provenance(),'suite':args.suite,'cases':[[s,n] for s,n in grid],'max_steps':cap,'mode':'codex_harness','config':config,
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
     if args.suite=='jar-base':verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config)
