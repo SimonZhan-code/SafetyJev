@@ -32,8 +32,11 @@ mechanics results do not establish safety improvement.
 and the [design discussion](agentic-loop-design.md#completed-prepared-candidate-timing-trial)
 retain configuration and interpretation limits. Model services are stopped.
 Full off-node backup is verified across 4,030 files and 219,087,836 bytes,
-including archive/per-file checksums and exact coverage. The authorized rental
-stop follows securing these records; no further sweep is launched.
+including archive/per-file checksums and exact coverage. The authorized stop of
+instance 55768662 was platform-acknowledged with HTTP 200 `success:true`; the
+follow-up status query returned 429, so terminal stopped state was not independently
+observed. [Stop receipt](results/2026-10-13-codex-harness/prepared-timing-stop-receipt.json).
+No further sweep is launched.
 
 ## 2026-10-13: completed DeepSeek Jar predictor + System 1 sweep
 

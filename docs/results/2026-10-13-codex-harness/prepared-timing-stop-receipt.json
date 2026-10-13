@@ -1,0 +1,30 @@
+{
+  "instance_id": 55768662,
+  "operation": "stop",
+  "not_destroyed": true,
+  "backup_verified": true,
+  "results_pushed_commit": "e9a1c10",
+  "platform_acknowledged": true,
+  "records": [
+    {
+      "event": "pre_stop_identity",
+      "instance_id": 55768662,
+      "actual_status": "running",
+      "services_idle": true,
+      "gpu_compute_empty": true
+    },
+    {
+      "event": "stop_response",
+      "instance_id": 55768662,
+      "http_status": 200,
+      "success": true,
+      "utc": "2026-10-13T22:51:51.006615+00:00"
+    },
+    {
+      "event": "followup_status",
+      "http_status": 429,
+      "instance_id": 55768662
+    }
+  ],
+  "ssh_exit_code": 255
+}

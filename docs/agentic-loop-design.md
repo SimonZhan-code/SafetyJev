@@ -1493,5 +1493,8 @@ contains the distributions and counts. Both model services are stopped and GPU
 memory is empty. The full trial and separate simulator-output backup is verified locally across
 4,030 files and 219,087,836 bytes, with matching archive and per-file SHA256 and
 exact manifest coverage. [Backup receipt](results/2026-10-13-codex-harness/prepared-timing-backup-verification.json).
-The authorized rental stop follows securing these records. Do not launch another trial or
+The authorized stop for exact instance **55768662** returned HTTP 200
+`success:true` at 22:51:51 UTC, after results and verification receipt were pushed
+in `e9a1c10`. The immediate follow-up GET returned HTTP 429; terminal stopped state
+was not independently observed. [Platform receipt](results/2026-10-13-codex-harness/prepared-timing-stop-receipt.json). Do not launch another trial or
 full sweep from this result.

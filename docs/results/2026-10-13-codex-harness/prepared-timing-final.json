@@ -80,5 +80,5 @@
     "vision_cache": false
   },
   "backup_status": "Verified locally: 4,030 files, 219,087,836 bytes; see prepared-timing-backup-verification.json.",
-  "rental_status": "Model services stopped; authorized rental stop next after this receipt is pushed."
+  "rental_status": "Stop for exact instance 55768662 acknowledged HTTP 200 success:true at 22:51:51 UTC; follow-up GET returned 429, so terminal stopped state was not independently observed."
 }
