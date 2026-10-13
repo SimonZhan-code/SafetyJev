@@ -1385,3 +1385,64 @@ The queue starts at task_0000/base seed1 and contains 77 cases with 2,000-action
 caps. The previously completed task_0000/base seed0 remains in its original
 condition; its interrupted seed1 attempt is preserved and starts fresh here.
 Do not interpret the combined coverage as 78 trials under one configuration.
+
+### Prepared-candidate timing experiment (October 13, 2026)
+
+The 30-second v2 full run ended on its first new case, task_0000/base seed1,
+after 416 actions and 52 committed chunks. The next decision timed out before
+any proposal was requested. No new full case completed. Its complete off-node
+backup was verified across 861 files and 48,718,839 bytes; archive SHA256
+`683b8efbed0b825737084ce58c221a74e85f40d49017f92b2a3d2dc95dc986d5`.
+The failed attempt remains separate and is not resumed.
+
+The user approved a prepared-candidate loop and one fresh full-length timing
+trial. With `tool_sequence: prepared`, the trusted runner generates and judges
+one pi0.5 candidate before returning `observe`. It starts with the task instruction
+and subsequently uses the instruction of the last actually executed pi0.5
+candidate. Executed Codex-written actions leave that instruction unchanged.
+The prepared candidate consumes the first of **two total proposal attempts**.
+Codex may request one adaptive alternative, either a revised pi0.5 instruction
+or eight self-written commands, and must judge it before selection. Both
+candidates remain selectable, including earlier, lower-scoring or predicted-unsafe
+ones. There is no automatic selection, fallback or all-No veto.
+
+The common path is one model selection followed by paired `execute`/`observe`.
+The optional retry pairs proposal/judgment in one dispatch. Preparation is
+sequential on the existing FLA 0.5.2, batch-one, cache-off service; this is not
+GPU batching. Each state still executes only eight scored commands before a
+new observation. All candidate evidence uses nested explicit field allowlists;
+the offline audit checks it against trusted proposal and judgment logs.
+
+The hard watchdog is **120 seconds**, including preparation and tool work.
+**30 seconds is a soft reporting target**, not an execution cutoff. Preparation,
+predictor and total decision times are recorded separately. Every selection
+still requires complete predictions and a matching citation. Model startup,
+service failures and hard timeout remain explicit failures without hidden actions.
+The existing individual and paired modes retain their previous behavior.
+
+CPU validation passes 177 tests, including both proposal sources, prepared
+candidate immutability, one-retry accounting, no hidden choice, soft/hard deadline
+behavior, partial prediction rejection, selected instruction persistence,
+actual-command/history alignment, early termination, and privileged-field
+injection into public prepared evidence. GPU timings are pending.
+
+Launch only the single authorized timing trial (task_0000/base seed1, 2,000-action
+cap) after refreshing the restricted runtime and passing authenticated isolation
+preflight:
+
+```sh
+/workspace/native-env/bin/python scripts/remote/setup-codex-harness.py \
+  --output /workspace/bootstrap-codex-harness/prepared-preflight.json
+SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev \
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
+  --suite timing --config configs/codex-harness-prepared-timing.example.json \
+  --output artifacts/codex-harness-prepared-timing --launch
+```
+
+This uses the dedicated `safetyjev-codex-timing` Supervisor job. It does not
+launch a full sweep. Preserve previous trials, pin the current ManiGuard dev
+revision at admission, audit and back up the resulting trial, and report measured
+trial wall time and decision distributions before recommending a larger run.
+FLA's historical 4/120 reference disagreements and unvalidated predictor behavior
+on Codex-written commands remain limitations; a timing test establishes neither
+safety improvement nor equivalence of experiment conditions.

@@ -1,0 +1,17 @@
+{
+  "model": "gpt-6-astra",
+  "reasoning_effort": "low",
+  "proposal_limit": 2,
+  "decision_timeout_s": 120,
+  "execution_horizon": 8,
+  "max_steps": 2000,
+  "predictor": {
+    "endpoint": "http://127.0.0.1:8794",
+    "timeout": 120,
+    "attention_backend": "fla",
+    "vision_cache": false,
+    "batch_size": 1
+  },
+  "tool_sequence": "prepared",
+  "decision_target_s": 30
+}

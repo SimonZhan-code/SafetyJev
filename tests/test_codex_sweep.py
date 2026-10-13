@@ -11,6 +11,7 @@ queue=importlib.util.module_from_spec(spec);spec.loader.exec_module(queue)
 
 class CodexSweepTests(unittest.TestCase):
     def test_grid_is_exact_and_smoke_is_separate(self):
+        self.assertEqual(queue.case_grid('timing'),[('task_0000/base',1)])
         grid=queue.case_grid('jar-base')
         self.assertEqual(len(grid),78)
         self.assertEqual(set(grid),{(f'task_{i:04d}/base',s) for i in range(26) for s in range(3)})

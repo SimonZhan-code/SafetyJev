@@ -9,7 +9,7 @@ from .agentic_config import validate_config as validate_native
 DEFAULTS = {
     'model': 'gpt-6-astra', 'reasoning_effort': 'medium',
     'proposal_limit': 3, 'decision_timeout_s': 120, 'execution_horizon': 8,
-    'max_steps': 256, 'tool_sequence': 'individual',
+    'max_steps': 256, 'tool_sequence': 'individual', 'decision_target_s': None,
     'runtime_python': '/workspace/codex-harness-env/bin/python',
     'runtime_root': '/opt/safetyjev-codex',
     'runtime_user': 'safetyjev-codex',
@@ -33,7 +33,7 @@ def validate_config(value):
             result[k] = v
     if result['model'] != 'gpt-6-astra' or result['reasoning_effort'] not in ('low', 'medium', 'high'):
         raise ValueError('Unsupported Codex model or reasoning effort')
-    if result['tool_sequence'] not in ('individual', 'paired'):
+    if result['tool_sequence'] not in ('individual', 'paired', 'prepared'):
         raise ValueError('Unknown tool sequence')
     if type(result['proposal_limit']) is not int or not 1 <= result['proposal_limit'] <= 10:
         raise ValueError('Invalid proposal limit')
@@ -44,6 +44,11 @@ def validate_config(value):
     t = result['decision_timeout_s']
     if type(t) not in (int, float) or not math.isfinite(t) or t <= 0:
         raise ValueError('Invalid decision deadline')
+    target = result['decision_target_s']
+    if target is not None and (type(target) not in (int, float) or not math.isfinite(target) or not 0 < target <= t):
+        raise ValueError('Invalid soft decision target')
+    if result['tool_sequence'] == 'prepared' and result['proposal_limit'] != 2:
+        raise ValueError('Prepared mode requires one initial proposal plus one retry')
     for k in ('runtime_python', 'runtime_root', 'runtime_home', 'socket_root'):
         if not isinstance(result[k], str) or not Path(result[k]).is_absolute():
             raise ValueError('Runtime paths must be absolute')

@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "683b8efbed0b825737084ce58c221a74e85f40d49017f92b2a3d2dc95dc986d5",
+  "files_verified": 861,
+  "bytes_verified": 48718839,
+  "coverage": "Failed optimized full trial captures and separate simulator outputs",
+  "scope": "First new full-sweep case failed at416actions; no completed new full trials"
+}

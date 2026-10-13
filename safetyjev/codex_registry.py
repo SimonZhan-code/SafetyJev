@@ -24,8 +24,11 @@ def digest(value):
 class Decision:
     def __init__(self, *, step, task, state, images, history, questions, bounds,
                  propose, make_inputs, score, log, proposal_limit=3, timeout=120,
-                 clock=time.monotonic, report_budget=False):
+                 clock=time.monotonic, report_budget=False, soft_target=None):
         self.report_budget = report_budget
+        self.soft_target = soft_target
+        self.prepared_candidate = None
+        self.preparation_started = False
         self.id = uuid.uuid4().hex
         self.step, self.clock = step, clock
         self.started = clock()
@@ -65,11 +68,26 @@ class Decision:
             self.closed = True
             raise HarnessError('decision_timeout')
 
+    def prepare(self, instruction):
+        # Trusted runner only; never exposed as an MCP tool. One attempt per state.
+        self.check()
+        if self.preparation_started:
+            raise HarnessError('already_prepared')
+        self.preparation_started = True
+        started = self.clock()
+        proposal = self.proposal(self.id, source='pi05', instruction=instruction)
+        prediction = self.judge(proposal['candidate_id'])
+        self.prepared_candidate = {'proposal': proposal, 'prediction': prediction}
+        self.log('preparation', {'candidate_id': proposal['candidate_id'],
+                               'latency_s': self.clock()-started})
+
     def observe(self):
         self.check()
         return {**copy.deepcopy(self.observation), 'decision_id': self.id,
                 'step': self.step, 'proposals_remaining': self.limit-self.attempts,
-                'seconds_remaining': self.remaining()}
+                'seconds_remaining': self.remaining(),
+                **({'prepared_candidate': {k: {**copy.deepcopy(v), **self.budget()}
+                    for k, v in self.prepared_candidate.items()}} if self.prepared_candidate else {})}
 
     def proposal(self, decision_id, *, source, instruction=None, actions=None):
         self.check()
@@ -161,6 +179,8 @@ class Decision:
                       higher_score_available=any(x.get('satisfied_constraints', -1) > c['satisfied_constraints']
                                                  for x in self.pool.values()),
                       rationale=copy.deepcopy(rationale), selection_latency_s=self.clock()-self.started)
+        if self.soft_target is not None:
+            chosen['soft_target_exceeded'] = chosen['selection_latency_s'] > self.soft_target
         receipt = {'status': 'committed', 'candidate_id': cid, 'execution_id': cid,
                    'decision_id': self.id, 'commands_sha256': c['commands_sha256'], 'planned_actions': 8}
         # Persist before committing. A failed log write never authorizes execution.

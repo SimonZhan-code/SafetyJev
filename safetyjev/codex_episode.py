@@ -45,6 +45,7 @@ class CodexEpisode(AgenticEpisode):
         self.native_predictor.validate_health(self.provenance['native_predictor'])
         self.bridge = self.worker = None
         self.receipts = {}
+        self.codex_instruction = self.original_instruction
         self.current_decision = None
         self.harness_ready = False
         self.log_lock = threading.Lock()
@@ -75,7 +76,10 @@ class CodexEpisode(AgenticEpisode):
                'LANG': 'C.UTF-8'}
         cmd = [c['runtime_python'], '-m', 'safetyjev.codex_worker', '--socket', str(path),
                '--model', c['model'], '--reasoning-effort', c['reasoning_effort'],
-               '--tool-sequence', c['tool_sequence'], '--decision-timeout', str(c['decision_timeout_s'])]
+               '--tool-sequence', c['tool_sequence'], '--decision-timeout', str(c['decision_timeout_s']),
+               '--proposal-limit', str(c['proposal_limit'])]
+        if c['decision_target_s'] is not None:
+            cmd.extend(['--decision-target', str(c['decision_target_s'])])
         # No root environment, model credentials, supervisor access, or inherited descriptors.
         self.worker = subprocess.Popen(cmd, env=env, cwd=c['runtime_home']+'/work',
             user=account.pw_uid, group=account.pw_gid, extra_groups=[],
@@ -116,7 +120,7 @@ class CodexEpisode(AgenticEpisode):
             questions=self.questions, bounds=action_space, propose=propose,
             make_inputs=lambda commands: self.native_history.inputs(commands, 1/self.cfg.action_frequency, self.directory),
             score=score, log=self._log, proposal_limit=c['proposal_limit'], timeout=c['decision_timeout_s'],
-            report_budget=c['tool_sequence']=='paired')
+            report_budget=c['tool_sequence'] in ('paired', 'prepared'), soft_target=c['decision_target_s'])
         self.decisions += 1
         old_handler = signal.getsignal(signal.SIGALRM)
         def timeout(*_):
@@ -127,6 +131,8 @@ class CodexEpisode(AgenticEpisode):
         try:
             if self.worker is None:
                 self._start_worker()
+            if c['tool_sequence'] == 'prepared':
+                d.prepare(getattr(self, 'codex_instruction', self.original_instruction))
             while d.selected is None:
                 d.check()
                 if self.worker.poll() is not None:
@@ -195,6 +201,8 @@ class CodexEpisode(AgenticEpisode):
         # AgenticEpisode uses the existing exact-command, post-action-history contract.
         super().after_step(step, monitor, observation)
         if self.ready and self._selected:
+            if self._selected['source'] == 'pi05':
+                self.codex_instruction = self._selected['policy_instruction']
             receipt = self.receipts[self._selected['candidate_id']]
             receipt.update(executed_actions=step-self._selected['start_step'], status='executed')
 

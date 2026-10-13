@@ -31,6 +31,8 @@ CASES=('task_0000/base','task_0005/base')
 def case_grid(suite):
     if suite == 'smoke':
         return [(scene, 0) for scene in CASES]
+    if suite == 'timing':
+        return [('task_0000/base', 1)]
     if suite == 'jar-base':
         return [(f'task_{i:04d}/base', seed) for i in range(26) for seed in range(3)]
     raise ValueError('Unknown Codex suite')
@@ -132,7 +134,7 @@ def create_services(out):
 def main():
     global JOB
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--suite',choices=('smoke','jar-base'),default='smoke')
+    p.add_argument('--suite',choices=('smoke','jar-base','timing'),default='smoke')
     p.add_argument('--smoke-evidence',type=Path)
     p.add_argument('--exclude-completed-from',type=Path)
     p.add_argument('--config',type=Path,default=ROOT/'configs/codex-harness.example.json')
@@ -150,7 +152,8 @@ def main():
     excluded_keys={(r['scene'],r['seed']) for r in excluded}
     grid=[c for c in case_grid(args.suite) if c not in excluded_keys]
     if not grid:raise ValueError('No remaining cases')
-    JOB='safetyjev-codex-smoke' if args.suite=='smoke' else 'safetyjev-codex-jar-eval'
+    JOB={'smoke':'safetyjev-codex-smoke', 'jar-base':'safetyjev-codex-jar-eval',
+         'timing':'safetyjev-codex-timing'}[args.suite]
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True);out.chmod(0o700)
     # This check is CPU-only and can run while the existing sweep uses the GPU.
     try:checked=preflight(config)

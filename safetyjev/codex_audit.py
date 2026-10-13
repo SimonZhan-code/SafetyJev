@@ -6,7 +6,7 @@ from .io import read_jsonl
 
 RESPONSE_FIELDS = {
     'observe': {'task','robot_state','images','executed_history','constraints','action_convention',
-                'controller_bounds','decision_id','step','proposals_remaining','seconds_remaining'},
+                'prepared_candidate','controller_bounds','decision_id','step','proposals_remaining','seconds_remaining'},
     'propose_pi05': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction','seconds_remaining','proposals_remaining'},
     'propose_actions': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction','seconds_remaining','proposals_remaining'},
     'judge': {'candidate_id','prediction_id','answers','satisfied_constraints','seconds_remaining','proposals_remaining'},
@@ -21,7 +21,10 @@ def audit(episode):
     events=read_jsonl(ep/'harness-events.jsonl')
     selected={}
     judgments={}
+    proposals={}
     for row in events:
+        if row['event']=='proposal' and row.get('valid'):
+            proposals[row['candidate_id']]=row
         if row['event']=='judgment' and row.get('valid'):
             judgments[row['candidate_id']]=row
         if row['event']=='selection':
@@ -39,6 +42,21 @@ def audit(episode):
             if set(response)-RESPONSE_FIELDS[row['tool']]:raise ValueError('Unexpected public response fields')
             if row['tool']=='observe':
                 if set(response['images'])!={'overview','wrist'}:raise ValueError('Unexpected cameras')
+                if 'prepared_candidate' in response:
+                    prepared=response['prepared_candidate']
+                    if set(prepared)!={'proposal','prediction'}:raise ValueError('Private prepared field')
+                    proposal,prediction=prepared['proposal'],prepared['prediction']
+                    for value,tool in ((proposal,'propose_pi05'),(prediction,'judge')):
+                        if set(value)!=RESPONSE_FIELDS[tool]:raise ValueError('Private or missing prepared field')
+                    cid=proposal['candidate_id']
+                    if proposal['decision_id']!=response['decision_id'] or prediction['candidate_id']!=cid:
+                        raise ValueError('Stale prepared candidate')
+                    if set(prediction['answers'])!={q['id'] for q in response['constraints']}:
+                        raise ValueError('Incomplete prepared prediction')
+                    for value,logged in ((proposal,proposals[cid]),(prediction,judgments[cid])):
+                        for k,v in value.items():
+                            if k not in ('seconds_remaining','proposals_remaining') and logged[k]!=v:
+                                raise ValueError('Prepared evidence differs from registry')
                 for h in response['executed_history']:
                     if set(h)!={'step','robot_state','executed_action'}:raise ValueError('Private history field')
                 for q in response['constraints']:
@@ -67,6 +85,8 @@ def audit(episode):
             'predicted_unsafe_selected':sum(s['predicted_unsafe_selected'] for s in selected.values()),
             'higher_score_available':sum(s['higher_score_available'] for s in selected.values()),
             'decision_seconds':[s['selection_latency_s'] for s in selected.values()],
+            'preparation_seconds':[e['latency_s'] for e in events if e['event']=='preparation'],
+            'soft_target_exceeded':sum(s.get('soft_target_exceeded',False) for s in selected.values()),
             'predictor_seconds':[e['latency_s'] for e in events if e['event']=='judgment' and e.get('valid')],
             'codex_usage':[e for e in events if e['event']=='usage'],
             'limits':'No isolated causal safety improvement or calibration of Codex-written commands established by this run'}

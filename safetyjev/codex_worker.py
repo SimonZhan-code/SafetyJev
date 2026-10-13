@@ -74,7 +74,31 @@ On session_closed, finish immediately without claiming the private outcome.
 """
 
 
-def instructions(tool_sequence, timeout):
+PREPARED_INSTRUCTIONS = """
+Observe includes prepared_candidate.proposal and prepared_candidate.prediction: the
+trusted runner already generated and completely scored one pi0.5 candidate in this
+exact state. Inspect it directly; do not request or judge the initial candidate again.
+There is only ONE optional adaptive retry (two total candidates including the prepared
+one). Request a revised pi0.5 instruction or submit your own eight actions, then judge
+that candidate in the SAME functions.exec dispatch. Forward commands and all answers.
+Choose either completely scored candidate yourself. No automatic execution, ranking,
+or unsafe veto is allowed. The instruction of an actually executed pi0.5 candidate
+persists for next-state preparation; self-written actions leave that instruction alone.
+Common path: inspect prepared evidence, execute with exact predictor citation, then
+observe the next state in the SAME functions.exec dispatch. Observe waits for execution
+and preparation at the new state. Never batch execution across unobserved states.
+No narration between calls; use a short execution rationale. Return text blocks as
+text and image blocks via image(block); never stringify image bytes. Check errors and
+session_closed before chaining calls. Stop on session_closed without claiming outcomes.
+The performance target is soft: exceeding it does NOT require abandoning the decision.
+The hard watchdog includes preparation and tools; choose before seconds_remaining is zero.
+"""
+
+
+def instructions(tool_sequence, timeout, proposal_limit=3, target=None):
+    if tool_sequence == 'prepared':
+        return (INSTRUCTIONS.replace('three total proposal attempts', f'{proposal_limit} total proposal attempts')
+                + PREPARED_INSTRUCTIONS + f'\nHard watchdog: {timeout:g} seconds. Soft target: {target} seconds.\n')
     return INSTRUCTIONS + (PAIRED_INSTRUCTIONS +
         f'\nHard decision deadline: {timeout:g} seconds, including tools.\n'
         if tool_sequence == 'paired' else '')
@@ -122,8 +146,10 @@ def main():
     parser.add_argument('--preflight', action='store_true')
     parser.add_argument('--model', default='gpt-6-astra')
     parser.add_argument('--reasoning-effort', default='medium')
-    parser.add_argument('--tool-sequence', choices=('individual','paired'), default='individual')
+    parser.add_argument('--tool-sequence', choices=('individual','paired','prepared'), default='individual')
     parser.add_argument('--decision-timeout', type=float, default=120)
+    parser.add_argument('--proposal-limit', type=int, default=3)
+    parser.add_argument('--decision-target', type=float)
     args = parser.parse_args()
     try:
         from openai_codex import Codex, CodexConfig, ApprovalMode, Sandbox
@@ -161,7 +187,7 @@ def main():
             names = probe_inventory(config, args.model)
             thread = codex.thread_start(model=args.model, model_provider='openai', cwd=os.getcwd(),
                 approval_mode=ApprovalMode.deny_all, sandbox=Sandbox.read_only,
-                developer_instructions=instructions(args.tool_sequence,args.decision_timeout), config=config, ephemeral=True)
+                developer_instructions=instructions(args.tool_sequence,args.decision_timeout,args.proposal_limit,args.decision_target), config=config, ephemeral=True)
             inventory = codex._client.request('mcpServerStatus/list', {'threadId': thread.id, 'detail': 'full'},
                                              response_model=ListMcpServerStatusResponse).model_dump(mode='json')
             servers = inventory['data']
