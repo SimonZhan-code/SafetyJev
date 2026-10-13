@@ -1039,7 +1039,7 @@ Some exact-name scopes can therefore fail its monitor initialization. We preserv
 that explicit failure rather than modifying dev or treating missing objects as
 safe. No new Clutter evaluation has been executed under this version.
 
-Validation: **163 CPU tests passed** with dev, including the actual instrumented
+Validation: **163 CPU tests passed locally and remotely** with dev, including the actual instrumented
 action loop in controlled simulator/model boundaries, current-state classifier
 cadence, both Codex proposal sources, exact execution/history, early termination,
 all six hook modes, changed-source rejection and invalid initial safety states.
@@ -1051,6 +1051,14 @@ Codex smoke remains blocked by the stock runtime's tool-inventory admission gate
 
 Completed results and the in-progress 78-case Astra recovery sweep retain
 `be97624...`; they are not relabeled as dev results. At the migration check Astra
-had 54 completed cases and no infrastructure failures. Its active checkout and
+had 55 completed cases; all 82 active runtime hashes still matched. Its active checkout and
 services were left unchanged to avoid mixing evaluation protocols. Final backup,
 audit and rental-stop instructions still apply to that historical sweep.
+
+The prepared node has private source checkouts at
+`/workspace/SafetyJev-codex-harness-dev` and `/workspace/ManiGuard-dev`.
+Run the launch procedure above from the former directory after the stock Codex
+inventory gate is resolved and the existing sweep releases the GPU. The harness
+account cannot read the new ManiGuard source. Preparation started no model or
+simulator jobs. Compact evidence is in
+`docs/results/2026-10-13-codex-harness/maniguard-dev-validation.json`.

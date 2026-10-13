@@ -13,5 +13,17 @@
   "codex_live_smoke": "blocked_tool_inventory",
   "active_astra_run": "Unmodified historical be97624 source; last observed 54/78 completed, zero failures",
   "policy_and_dataset_pins": "unchanged",
-  "upstream_dev_at_preparation": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107"
+  "upstream_dev_at_preparation": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "remote": {
+    "host": "154.59.156.39",
+    "ssh_port": 41170,
+    "code_commit": "f4f8eb5",
+    "code_root": "/workspace/SafetyJev-codex-harness-dev",
+    "maniguard_root": "/workspace/ManiGuard-dev",
+    "cpu_passed": 163,
+    "gpu_simulator_tested": false,
+    "harness_account_can_read_dev_source": false,
+    "historical_active_source_hashes_verified": 82,
+    "historical_completed_at_check": 55
+  }
 }

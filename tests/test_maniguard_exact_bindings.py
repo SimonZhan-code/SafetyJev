@@ -1,6 +1,7 @@
 """Exercise the actual ManiGuard resolver without importing the GPU simulator."""
 import ast
 import fnmatch
+import hashlib
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,7 +11,9 @@ import unittest
 SOURCE=Path(os.environ.get('MANIGUARD_SAFETY_MONITOR_SOURCE',str(Path(os.environ.get('SAFETYJEV_MANIGUARD_ROOT','/workspace/ManiGuard'))/'maniguard/utils/safety_monitor.py')))
 
 
-@unittest.skipUnless(SOURCE.exists(),'ManiGuard source required')
+@unittest.skipUnless(SOURCE.exists() and hashlib.sha256(SOURCE.read_bytes()).hexdigest() ==
+                     'e03bb12b39c7e3b27155d760bd72ecb7c3f492f22199393f131a7b19a8653b1f',
+                     'Historical clutter-exact-v1 fixture required; dev validation has separate tests')
 class ExactObjectBindingsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
