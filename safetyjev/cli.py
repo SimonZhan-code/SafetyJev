@@ -63,13 +63,13 @@ def main(argv=None):
         from .maniguard import COMMIT, instrument, verify_sources
         verify_sources(args.maniguard_root)
         path = Path(args.maniguard_root) / "maniguard/eval/benchmark.py"
-        for mode in ("shadow", "guard_regenerate", "agentic_native", "codex_harness"):
+        for mode in ("shadow", "guard_regenerate", "visual_classification", "oracle_only", "agentic_native", "codex_harness"):
             instrument(path.read_text(), mode)
         print(json.dumps({"status": "source_hooks_verified", "maniguard_commit": COMMIT,
-                          "execution_modes": ["shadow", "guard_regenerate", "agentic_native", "codex_harness"],
+                          "execution_modes": ["shadow", "guard_regenerate", "visual_classification", "oracle_only", "agentic_native", "codex_harness"],
                           "gpu_simulator_tested": False}))
     elif args.command == "capture":
-        from .maniguard import COMMIT, launch
+        from .maniguard import COMMIT, launch, source_provenance
         if args.recheck_every < 0:
             raise ValueError("recheck-every cannot be negative")
         agentic_config = None
@@ -124,12 +124,7 @@ def main(argv=None):
             value = provenance.get(field)
             if not isinstance(value, str) or not value.strip() or value in ("REQUIRED", "main", "latest"):
                 raise ValueError(f"Pin {field} in provenance before capturing")
-        provenance["maniguard_reference_commit"] = COMMIT
-        provenance["source_hashes"] = {
-            name: hashlib.sha256((Path(args.maniguard_root) / name).read_bytes()).hexdigest()
-            for name in ("maniguard/eval/benchmark.py", "maniguard/utils/ltl_utils.py",
-                         "maniguard/utils/safety_monitor.py")
-        }
+        provenance.update(source_provenance())
         options = {"output": str(Path(args.output).resolve()), "provenance": provenance,
                    "recheck_every": args.recheck_every, "execution_mode": args.execution_mode,
                    "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}

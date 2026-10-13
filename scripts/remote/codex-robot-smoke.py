@@ -46,6 +46,9 @@ def create_services(out):
         if not parser.has_section(section):raise RuntimeError('Prepared model service missing')
         values=dict(parser[section]);values.update(autostart='false',autorestart='false',
             stdout_logfile=str(out/(target+'.log')),stderr_logfile=str(out/(target+'.err')))
+        if target == SERVICES[1]:
+            values['command'] = '/bin/bash '+str(ROOT/'scripts/remote/serve-pi05.sh')
+            values['environment'] = 'SAFETYJEV_MANIGUARD_ROOT="'+jar.MANIGUARD+'"'
         target_config=configparser.RawConfigParser();target_config['program:'+target]=values
         with (Path('/etc/supervisor/conf.d')/(target+'.conf')).open('w') as stream:target_config.write(stream)
     subprocess.run(['supervisorctl','reread'],check=True,capture_output=True)
@@ -69,10 +72,11 @@ def main():
         write_json(out/'progress.json',{'status':'blocked_preflight','trials_started':0})
         raise
     write_json(out/'preflight.json',checked)
-    jar.verify_sources('/workspace/ManiGuard')
+    jar.verify_sources(jar.MANIGUARD)
+    if not (out/'plan.json').exists():jar.verify_latest_dev()
     paths=[*sorted((ROOT/'safetyjev').glob('*.py')),Path(__file__),args.config,
            ROOT/'configs/jar-isaac51-provenance.json',ROOT/'configs/predictor-semantic-definitions.json']
-    plan={'cases':list(CASES),'seed':0,'max_steps':256,'mode':'codex_harness','config':config,
+    plan={'maniguard':jar.source_provenance(),'cases':list(CASES),'seed':0,'max_steps':256,'mode':'codex_harness','config':config,
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text())!=plan:
         raise RuntimeError('Plan changed; use a new output directory')
@@ -90,7 +94,7 @@ def main():
     lock=Path('/workspace/safetyjev-jar-agentic.lock').open('a')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     no_overlap();create_services(out)
-    env=dict(jar.ENV,PYTHONPATH=str(ROOT)+':/workspace/ManiGuard')
+    env=dict(jar.ENV,PYTHONPATH=str(ROOT)+':'+jar.MANIGUARD)
     active=set()
     try:
         for scene in CASES:
@@ -117,12 +121,12 @@ def main():
                 jar.wait_for(ready)
                 with (case/'warmup.json').open('w') as log:
                     subprocess.run([jar.SIM,str(ROOT/'scripts/remote/warm-jar-policy.py'),'--scene',str(jar.BENCH/scene)],env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=360)
-                command=[jar.SIM,'-u','-m','safetyjev.cli','capture','--maniguard-root','/workspace/ManiGuard',
+                command=[jar.SIM,'-u','-m','safetyjev.cli','capture','--maniguard-root',jar.MANIGUARD,
                     '--output',str(case/'episodes'),'--provenance',str(ROOT/'configs/jar-isaac51-provenance.json'),
                     '--codex-harness-config',str(args.config.resolve()),'--','--config','configs/eval/jar_transport_joint.yaml',
                     '--benchmark-root',str(jar.BENCH),'--scenes',scene,'--seed','0','--max-steps','256','--tag','codex-harness-'+case.name]
                 with (case/'capture.log').open('w') as log:
-                    subprocess.run(command,cwd='/workspace/ManiGuard',env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=5400)
+                    subprocess.run(command,cwd=jar.MANIGUARD,env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=5400)
                 eps=list((case/'episodes').glob('*/complete.json'))
                 if len(eps)!=1:raise RuntimeError('Expected one terminal episode')
                 report=audit(eps[0].parent);report.update(scene=scene,seed=0,wall_seconds=time.monotonic()-started)

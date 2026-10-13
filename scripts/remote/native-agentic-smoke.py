@@ -2,6 +2,8 @@
 import argparse
 import json
 import os
+
+MANIGUARD = os.environ.get('SAFETYJEV_MANIGUARD_ROOT', '/workspace/ManiGuard-dev')
 import re
 from pathlib import Path
 import subprocess
@@ -25,7 +27,7 @@ def main():
         parser.error('max-steps must be a positive multiple of eight')
     if not re.fullmatch(r'task_[0-9]{4}/base', args.scene) or not 0 <= args.seed < 2**31:
         parser.error('Require a base Jar scene and a nonnegative 31-bit seed')
-    root = Path('/workspace/SafetyJev')
+    root = Path(__file__).resolve().parents[2]
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     config = load_config(args.config)
@@ -35,7 +37,7 @@ def main():
     env = dict(os.environ, OMNI_KIT_ACCEPT_EULA='YES', OMNIGIBSON_HEADLESS='1',
         OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets', CUDA_VISIBLE_DEVICES='0',
         VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json', PYTHONNOUSERSITE='1',
-        PYTHONPATH=str(root)+':/workspace/ManiGuard')
+        PYTHONPATH=str(root)+':'+MANIGUARD)
     stopped = threading.Event()
     def sample_gpu():
         with (output/'gpu.csv').open('w') as stream:
@@ -49,13 +51,13 @@ def main():
     try:
         with (output/'capture.log').open('w') as log:
             run = subprocess.run(['/workspace/conda/behavior51/bin/python','-u','-m','safetyjev.cli','capture',
-                '--maniguard-root','/workspace/ManiGuard','--output',str(output/'episodes'),
+                '--maniguard-root',MANIGUARD,'--output',str(output/'episodes'),
                 '--provenance',str(root/'configs/jar-isaac51-provenance.json'),
                 '--agentic-config',str(Path(args.config).resolve()), '--',
                 '--config','configs/eval/jar_transport_joint.yaml',
                 '--benchmark-root','/workspace/data/maniguard-bench/jar_transport',
                 '--scenes',args.scene,'--seed',str(args.seed),'--max-steps',str(args.max_steps),
-                '--tag','safetyjev-native-agentic'],cwd='/workspace/ManiGuard',env=env,
+                '--tag','safetyjev-native-agentic'],cwd=MANIGUARD,env=env,
                 stdout=log,stderr=subprocess.STDOUT,timeout=3600)
         episodes = list((output/'episodes').glob('*/complete.json'))
         if run.returncode or len(episodes) != 1:

@@ -1,5 +1,7 @@
 """Version-checked in-memory instrumentation. No edits to the upstream checkout."""
 import hashlib
+import json
+import subprocess
 import os
 import sys
 from pathlib import Path
@@ -13,19 +15,46 @@ SOURCE_HASHES = {
 }
 
 
-SOURCE_PROFILE = os.environ.get("SAFETYJEV_MANIGUARD_PROFILE", "pinned")
-if SOURCE_PROFILE not in ("pinned", "clutter-exact-v1"):
+SOURCE_PROFILE = os.environ.get("SAFETYJEV_MANIGUARD_PROFILE", "dev")
+if SOURCE_PROFILE not in ("dev", "pinned", "clutter-exact-v1"):
     raise ValueError("Unsupported ManiGuard source profile: " + SOURCE_PROFILE)
 if SOURCE_PROFILE == "clutter-exact-v1":
     # Explicit, version-checked correction for vacuous exact-name Clutter scopes.
     SOURCE_HASHES["maniguard/utils/safety_monitor.py"] = "e03bb12b39c7e3b27155d760bd72ecb7c3f492f22199393f131a7b19a8653b1f"
 
 
+DEV_MANIFEST = json.loads(Path(__file__).with_name("maniguard-dev.json").read_text())
+if SOURCE_PROFILE == "dev":
+    COMMIT = DEV_MANIFEST["commit"]
+    SOURCE_HASHES = DEV_MANIFEST["source_hashes"]
+    RUNNER_SHA256 = SOURCE_HASHES["maniguard/eval/benchmark.py"]
+
+
+def source_provenance():
+    return {"maniguard_reference_commit": COMMIT, "maniguard_source_profile": SOURCE_PROFILE,
+            "maniguard_source_branch": "dev" if SOURCE_PROFILE == "dev" else "historical",
+            "source_hashes": dict(SOURCE_HASHES)}
+
+
 def verify_sources(repo):
+    if SOURCE_PROFILE == "dev":
+        actual = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+        if actual != COMMIT:
+            raise ValueError("ManiGuard dev revision differs; prepare the validated commit " + COMMIT)
     for name, expected in SOURCE_HASHES.items():
         actual = hashlib.sha256((Path(repo) / name).read_bytes()).hexdigest()
         if actual != expected:
             raise ValueError("Unsupported source " + name + "; use commit " + COMMIT)
+
+
+def verify_latest_dev():
+    if SOURCE_PROFILE != "dev":
+        return
+    latest = subprocess.check_output(
+        ["git", "ls-remote", DEV_MANIFEST["repository"], "refs/heads/dev"],
+        text=True, timeout=60).split()[0]
+    if latest != COMMIT:
+        raise ValueError("Upstream dev advanced to " + latest + "; validate the new adapter before starting another run")
 
 
 def instrument(source, execution_mode="shadow"):
@@ -54,6 +83,12 @@ def instrument(source, execution_mode="shadow"):
         ("        all_results.append(result)\n        _ltl_str",
          "        sj_shadow.finish(result)\n        all_results.append(result)\n        _ltl_str"),
     ]
+    if SOURCE_PROFILE == "dev":
+        edits[1] = ('            eef2target_min_dist = float("inf")\n',
+                    '            eef2target_min_dist = float("inf")\n'
+                    "            sj_shadow = ShadowEpisode(scene_info, cfg, monitor, obs, episode_seed)\n")
+        edits[-1] = ("        all_results.append(result)\n        if recorder is not None:",
+                     "        sj_shadow.finish(result)\n        all_results.append(result)\n        if recorder is not None:")
     if execution_mode in ("agentic_native", "codex_harness"):
         old, new = edits[1]
         edits[1] = (old, new.replace("obs, episode_seed)", "obs, episode_seed, robot)"))

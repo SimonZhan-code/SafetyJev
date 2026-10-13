@@ -18,9 +18,30 @@ examples; substitute the actual directories.
 
 ## 1. Pin code and resources
 
-Use a separate ManiGuard checkout at commit
-`be97624e0acbec6b6f9260a08891b04168eb8e6c`. The adapter checks hashes of the runner
-and monitor implementation. It instruments a copy in memory, not files on disk.
+New evaluations use a separate checkout of ManiGuard **dev**, validated on October
+13 at `ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107`. Run preparation before a new
+experiment: it resolves upstream dev, refuses an unvalidated newer commit, and
+verifies 228 source/config hashes. It never pulls or resets an existing checkout.
+The adapter instruments a copy of the runner in memory.
+
+```bash
+python scripts/remote/prepare-maniguard-dev.py --destination /workspace/ManiGuard-dev
+export SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev
+```
+
+Remote evaluation launchers default to `/workspace/ManiGuard-dev`; direct capture
+still takes an explicit `--maniguard-root`. Asset data can remain under the old
+`/workspace/ManiGuard/behavior-1k/datasets`; that is a data path, not the source
+checkout. Use a fresh output directory. Do not replace the active sweep's source
+or combine historical and dev cases in one aggregate. Jar and Codex queues check
+upstream dev when creating a new plan, then freeze the validated commit throughout
+that run, including resumption.
+
+Historical reproduction requires explicit `SAFETYJEV_MANIGUARD_PROFILE=pinned`
+(or `clutter-exact-v1` for the documented old correction), plus an explicit
+`SAFETYJEV_MANIGUARD_ROOT` pointing at the original `be97624...` source. These
+profiles are not the defaults for new evaluations. The Hugging Face dataset and
+trained policy revisions below remain separately pinned.
 
 ```bash
 python -m safetyjev.cli verify-integration --maniguard-root /path/to/ManiGuard

@@ -3,6 +3,10 @@
 An agentic robotics system that enhances safety through an in-the-loop,
 safety-centric fine-tuned Jev model at runtime.
 
+New evaluations require the validated ManiGuard **dev** snapshot. See the
+[source preparation procedure](docs/runbook.md#1-pin-code-and-resources); completed
+results and the already-running Astra sweep retain their historical source pin.
+
 ## Native predictor-guided loop
 
 `capture --agentic-config configs/agentic-loop.local.json` uses the pinned Unsafe600
@@ -128,7 +132,7 @@ See [the runbook](docs/runbook.md) for capture and model comparison commands and
 
 ## Supported scope
 
-- Pinned ManiGuard commit `be97624e0acbec6b6f9260a08891b04168eb8e6c`.
+- New evaluations use ManiGuard `dev`, validated at `ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107`; historical results retain their original source pin.
 - Absolute joint `(H, 8)` actions, matching the released jar configuration;
   camera and robot-state snapshots captured before execution.
 - Chunk-start predictions; optional remaining-action rechecks in shadow mode.

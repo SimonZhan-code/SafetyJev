@@ -350,11 +350,11 @@ evaluation YAML and pinned policy provenance. Example (paths are deployment-spec
 
 ```bash
 python -m safetyjev.cli capture \
-  --maniguard-root /workspace/ManiGuard \
+  --maniguard-root /workspace/ManiGuard-dev \
   --output artifacts/native-jar-smoke \
   --provenance configs/jar-isaac51-provenance.json \
   --agentic-config configs/agentic-loop.local.json \
-  -- --config /workspace/ManiGuard/configs/eval/jar_transport_joint.yaml --max-steps 256
+  -- --config /workspace/ManiGuard-dev/configs/eval/jar_transport_joint.yaml --max-steps 256
 ```
 
 Confirm the YAML selects horizon 8, joint mode and the intended trained policy.
@@ -382,7 +382,7 @@ or safety equivalence. Probabilities here are for numerical comparison only.
 CPU verification:
 
 ```bash
-SAFETYJEV_MANIGUARD_ROOT=/path/to/pinned/ManiGuard \
+SAFETYJEV_MANIGUARD_ROOT=/path/to/ManiGuard-dev \
 MANIGUARD_SAFETY_MONITOR_SOURCE=/path/to/verified/clutter/safety_monitor.py \
 python -m unittest discover -s tests -v
 ```
@@ -969,7 +969,7 @@ SafetyJev services, occupied GPU memory/processes, changed source manifests and
 failed tool/authentication preflight. It runs only Jar `task_0000/base` and
 `task_0005/base`, seed 0, 256 actions. Existing completed smoke cases are audited
 and skipped. Outputs are private under `artifacts/codex-harness-smoke`, separate
-from previous sweeps. Back up this tree **and** `/workspace/ManiGuard/outputs`,
+from previous sweeps. Back up this tree **and** `/workspace/ManiGuard-dev/outputs`,
 verify checksums and command audits, then commit compact result records before
 stopping the rental. Do not merge this branch or launch a sweep.
 
@@ -1013,3 +1013,44 @@ Reports retain task success, ManiGuard engagement-gated safe success, raw
 violations, proposal sources, invalid attempts, unsafe/lower-score selections,
 latencies and available token usage. Simulator parity and training/evaluation
 independence remain unverified, as in the earlier experiments.
+
+
+### ManiGuard dev migration (October 13)
+
+All newly launched modes (shadow, legacy guard, per-step classifier, oracle-only,
+native predictor and Codex harness) default to upstream **dev**, validated at
+`ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107`. The packaged
+`safetyjev/maniguard-dev.json` records the source identity and 228 runtime/config
+hashes; each capture verifies them and records its profile, branch and commit.
+The checkpoint and HF benchmark revisions remain unchanged. Prepare a separate
+checkout using the [runbook](runbook.md#1-pin-code-and-resources), and use a new
+output directory. A newer dev head requires renewed compatibility review before
+another run; a started run retains one immutable revision.
+
+The instrumented dev runner preserves upstream initial-safety validation,
+per-action finite checks, passive recording hooks and failure statuses. Initial
+safety rejection or monitor failure is an infrastructure/evaluation failure with
+unavailable verdicts, not a safe robot outcome. Per-step classifier timing and
+exact native/Codex candidate command execution remain unchanged. Oracle records
+stay private; passive recorder hooks do not add any harness-visible fields.
+
+The dev resolver does not include our historical `clutter-exact-v1` correction.
+Some exact-name scopes can therefore fail its monitor initialization. We preserve
+that explicit failure rather than modifying dev or treating missing objects as
+safe. No new Clutter evaluation has been executed under this version.
+
+Validation: **163 CPU tests passed** with dev, including the actual instrumented
+action loop in controlled simulator/model boundaries, current-state classifier
+cadence, both Codex proposal sources, exact execution/history, early termination,
+all six hook modes, changed-source rejection and invalid initial safety states.
+The three old Clutter-correction tests explicitly use their historical corrected
+fixture; the new dev monitor has its own unresolved-scope rejection test.
+Historical compatibility remains **158 passed, five dev-only tests skipped**.
+These are CPU integration tests, not GPU/simulator parity validation. The new
+Codex smoke remains blocked by the stock runtime's tool-inventory admission gate.
+
+Completed results and the in-progress 78-case Astra recovery sweep retain
+`be97624...`; they are not relabeled as dev results. At the migration check Astra
+had 54 completed cases and no infrastructure failures. Its active checkout and
+services were left unchanged to avoid mixing evaluation protocols. Final backup,
+audit and rental-stop instructions still apply to that historical sweep.

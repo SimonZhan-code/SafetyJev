@@ -173,6 +173,8 @@ class PerStepTests(unittest.TestCase):
                         'ever_contacted': False, '_task_objs': [], '_target_obj': None,
                         'monitor': monitor, 'goal_checker': goal, 'goal_detail': {},
                         'success_first_step': None, 'consec_success': 0}
+                    from runner_fixture import prepare_scope
+                    prepare_scope(scope)
                     with patch('sys.stdout', new=io.StringIO()):
                         exec(code, scope)
                     final = stop_at or max_steps

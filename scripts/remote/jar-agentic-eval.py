@@ -21,8 +21,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from safetyjev.agentic_config import load_config, public_config
 from safetyjev.agentic_predictor import NativePredictor
-from safetyjev.maniguard import verify_sources
+from safetyjev.maniguard import verify_sources, source_provenance, SOURCE_PROFILE, verify_latest_dev
 
+MANIGUARD = os.environ.get('SAFETYJEV_MANIGUARD_ROOT', '/workspace/ManiGuard-dev' if SOURCE_PROFILE == 'dev' else '/workspace/ManiGuard')
 BENCH_REV = '2ea32a1451669fb736ae78ffce9cc82aad4cceac'
 BENCH = Path('/workspace/data/maniguard-bench/jar_transport')
 SIM = '/workspace/conda/behavior51/bin/python'
@@ -32,7 +33,7 @@ JOB = 'safetyjev-jar-agentic-eval'
 ENV = dict(os.environ, OMNI_KIT_ACCEPT_EULA='YES', OMNIGIBSON_HEADLESS='1',
            OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',
            CUDA_VISIBLE_DEVICES='0', VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json',
-           PYTHONNOUSERSITE='1', PYTHONPATH=str(ROOT)+':/workspace/ManiGuard')
+           PYTHONNOUSERSITE='1', PYTHONPATH=str(ROOT)+':'+MANIGUARD)
 
 
 def save(path, value, private=False):
@@ -152,7 +153,7 @@ def wait_for(test, seconds=600):
 
 
 def preflight(config):
-    verify_sources('/workspace/ManiGuard')
+    verify_sources(MANIGUARD)
     for path in (SIM, '/workspace/openpi/.venv/bin/python', '/workspace/checkpoints/pi05-jar/7400',
                  config['predictor']['checkpoint_dir']):
         if not Path(path).exists():
@@ -182,10 +183,10 @@ def build_plan(config, pilot, scenes, methods=METHODS):
              ROOT/'scripts/remote/serve-pi05.sh', ROOT/'scripts/remote/warm-jar-policy.py',
              ROOT/'configs/predictor-semantic-definitions.json',
              ROOT/'configs/jar-isaac51-provenance.json',
-             Path('/workspace/ManiGuard/configs/eval/jar_transport_joint.yaml')]
+             Path(MANIGUARD)/'configs/eval/jar_transport_joint.yaml']
     paths += [p for s in scenes for p in sorted((BENCH/s).glob('*.json*'))]
     return {'cases':cases(scenes, pilot, methods), 'methods':list(methods), 'pilot':pilot, 'max_steps':2000,
-            'benchmark_revision':BENCH_REV, 'all_scenes':scenes, 'config':public_config(config),
+            'maniguard':source_provenance(), 'benchmark_revision':BENCH_REV, 'all_scenes':scenes, 'config':public_config(config),
             'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
             'limitations':['Experimental Isaac 5.1 parity; selected released policy step is not independently matched to paper.',
                           'Native NVIDIA replay: 1/12 binary disagreements; numerical parity unresolved.',
@@ -261,13 +262,13 @@ def run(args, config, out, plan):
                                     '--scene',str(BENCH/scene)],env=ENV,stdout=warmup,stderr=errors,
                                    check=True,timeout=360)
                 command = [SIM,'-u','-m','safetyjev.visual_runtime' if method=='baseline' else 'safetyjev.cli',
-                           'capture','--maniguard-root','/workspace/ManiGuard','--output',str(case_dir/'episodes'),
+                           'capture','--maniguard-root',MANIGUARD,'--output',str(case_dir/'episodes'),
                            '--provenance',str(out/'provenance.json')]
                 command += ['--oracle-only'] if method=='baseline' else ['--agentic-config',str(configs[method])]
                 command += ['--','--config','configs/eval/jar_transport_joint.yaml','--benchmark-root',str(BENCH),
                             '--scenes',scene,'--seed',str(seed),'--max-steps','2000','--tag',key]
                 with (case_dir/'capture.log').open('w') as log:
-                    subprocess.run(command,cwd='/workspace/ManiGuard',env=ENV,stdout=log,
+                    subprocess.run(command,cwd=MANIGUARD,env=ENV,stdout=log,
                                    stderr=subprocess.STDOUT,check=True,timeout=args.case_timeout)
                 record = {**identity, **audit(case_dir,method), 'wall_seconds':time.monotonic()-started}
             except Exception as exc:
@@ -318,6 +319,7 @@ def main():
         raise RuntimeError('Missing base scenes; run --prepare first')
     out = Path(args.output).resolve()
     out.mkdir(parents=True,exist_ok=True)
+    if not (out/'plan.json').exists():verify_latest_dev()
     plan = json.loads(json.dumps(build_plan(config,args.pilot,scenes,args.methods)))
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text()) != plan:
         raise RuntimeError('Plan/source changed; use a new output directory')

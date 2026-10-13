@@ -223,6 +223,8 @@ class PinnedLoopTests(unittest.TestCase):
                     'total_reward':0.,'ever_contacted':False,'_task_objs':[],'_target_obj':None,'monitor':None,
                     'goal_checker':SimpleNamespace(check=lambda env:(len(executed)>=stop,{})) if stop else None,
                     'goal_detail':{},'success_first_step':None,'consec_success':0}
+                from runner_fixture import prepare_scope
+                prepare_scope(scope)
                 with patch.object(ShadowEpisode,'after_step'),patch('sys.stdout',new=io.StringIO()):exec(code,scope)
                 driver.join(timeout=5)
                 self.assertFalse(driver.is_alive());self.assertEqual(errors,[])

@@ -5,21 +5,23 @@ not a held-out accuracy benchmark. Each follow-up rollout has a 64-step limit.
 """
 import json
 import os
+
+MANIGUARD = os.environ.get('SAFETYJEV_MANIGUARD_ROOT', '/workspace/ManiGuard-dev')
 from pathlib import Path
 import subprocess
 import time
 from urllib.request import urlopen
 
-ROOT=Path('/workspace/SafetyJev')
+ROOT=Path(__file__).resolve().parents[2]
 ART=ROOT/'artifacts'
 PYTHON='/workspace/conda/behavior51/bin/python'
 BASE=ART/'jar-580-2b-isaac51'
 VARIANTS=[('4b-base','Qwen/Qwen3.5-4B','851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a'),('9b','Qwen/Qwen3.5-9B','47e966881e489511c0c7f5633a9e1960a676a551'),('27b','Qwen/Qwen3.8-27B','28cf73067d5b337860bbef3c85b8b82ba8730956')]
-ENV=dict(os.environ,OMNI_KIT_ACCEPT_EULA='YES',OMNIGIBSON_HEADLESS='1',OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',CUDA_VISIBLE_DEVICES='0',VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json',PYTHONNOUSERSITE='1',PYTHONPATH='/workspace/SafetyJev:/workspace/ManiGuard')
+ENV=dict(os.environ,OMNI_KIT_ACCEPT_EULA='YES',OMNIGIBSON_HEADLESS='1',OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',CUDA_VISIBLE_DEVICES='0',VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json',PYTHONNOUSERSITE='1',PYTHONPATH=str(ROOT)+':'+MANIGUARD)
 
 def run_cli(args,log,timeout=1800):
  with open('/workspace/logs/'+log,'w') as f:
-  subprocess.run([PYTHON,'-u','-m','safetyjev.cli']+args,cwd='/workspace/ManiGuard',env=ENV,stdout=f,stderr=subprocess.STDOUT,check=True,timeout=timeout)
+  subprocess.run([PYTHON,'-u','-m','safetyjev.cli']+args,cwd=MANIGUARD,env=ENV,stdout=f,stderr=subprocess.STDOUT,check=True,timeout=timeout)
 
 def main():
  assert list(BASE.glob('*/complete.json')), '2B pilot must complete before this sweep'
@@ -44,7 +46,7 @@ def main():
    output=ART/('jar-580-'+variant+'-isaac51')
    subprocess.run([PYTHON,str(ROOT/'scripts/remote/reset-policy.py')],env=ENV,check=True,timeout=180)
    record['joint_started_unix_s']=time.time()
-   run_cli(['capture','--maniguard-root','/workspace/ManiGuard','--output',str(output),'--provenance',str(ROOT/'configs/jar-isaac51-provenance.json'),'--online-predictor',str(config),'--','--config','configs/eval/jar_transport_joint.yaml','--benchmark-root','/workspace/data/maniguard-bench/jar_transport','--scenes','task_0000/base','--seed','0','--max-steps','64','--tag','safetyjev-580-'+variant],'capture-580-'+variant+'.log')
+   run_cli(['capture','--maniguard-root',MANIGUARD,'--output',str(output),'--provenance',str(ROOT/'configs/jar-isaac51-provenance.json'),'--online-predictor',str(config),'--','--config','configs/eval/jar_transport_joint.yaml','--benchmark-root','/workspace/data/maniguard-bench/jar_transport','--scenes','task_0000/base','--seed','0','--max-steps','64','--tag','safetyjev-580-'+variant],'capture-580-'+variant+'.log')
    record['joint_ended_unix_s']=time.time()
    completed=list(output.glob('*/complete.json'))
    if len(completed)!=1: raise RuntimeError('Expected one complete real rollout')

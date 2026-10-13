@@ -5,18 +5,20 @@ Uses real π0.5, Open-Jev 2B, Isaac 5.1, and (planner case) OpenRouter.
 """
 import json
 import os
+
+MANIGUARD = os.environ.get('SAFETYJEV_MANIGUARD_ROOT', '/workspace/ManiGuard-dev')
 from pathlib import Path
 import subprocess
 import time
 import threading
 
-ROOT = Path('/workspace/SafetyJev')
+ROOT = Path(__file__).resolve().parents[2]
 ART = ROOT / 'artifacts/planner-integration'
 PYTHON = '/workspace/conda/behavior51/bin/python'
 ENV = dict(os.environ, OMNI_KIT_ACCEPT_EULA='YES', OMNIGIBSON_HEADLESS='1',
            OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',
            CUDA_VISIBLE_DEVICES='0', VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json',
-           PYTHONNOUSERSITE='1', PYTHONPATH='/workspace/SafetyJev:/workspace/ManiGuard')
+           PYTHONNOUSERSITE='1', PYTHONPATH=str(ROOT)+':'+MANIGUARD)
 if not ENV.get('OPENROUTER_API_KEY'):
     ENV['OPENROUTER_API_KEY'] = Path('/run/safetyjev/openrouter.key').read_text().strip()
 CASES = [('shadow', []),
@@ -56,9 +58,9 @@ def main():
         try:
             # The native server reseeds only when episode_seed changes.
             subprocess.run([PYTHON, str(ROOT/'scripts/remote/reset-policy.py')], env=ENV,
-                           cwd='/workspace/ManiGuard', check=True, timeout=240)
+                           cwd=MANIGUARD, check=True, timeout=240)
             command = [PYTHON, '-u', '-m', 'safetyjev.cli', 'capture',
-                       '--maniguard-root', '/workspace/ManiGuard', '--output', str(output),
+                       '--maniguard-root', MANIGUARD, '--output', str(output),
                        '--provenance', str(ROOT/'configs/jar-isaac51-provenance.json'),
                        '--online-predictor', str(ROOT/'configs/openjev-state-only.json')] + extra + [
                        '--', '--config', 'configs/eval/jar_transport_joint.yaml',
@@ -66,7 +68,7 @@ def main():
                        '--scenes', 'task_0000/base', '--seed', '0', '--max-steps', '64',
                        '--tag', 'safetyjev-planner-integration-' + name]
             with open('/workspace/logs/integration-' + name + '.log', 'w') as log:
-                subprocess.run(command, env=ENV, cwd='/workspace/ManiGuard', stdout=log,
+                subprocess.run(command, env=ENV, cwd=MANIGUARD, stdout=log,
                                stderr=subprocess.STDOUT, check=True, timeout=1800)
             complete = list(output.glob('*/complete.json'))
             if len(complete) != 1:

@@ -1,5 +1,11 @@
 # Evaluation results
 
+New experiments now default to ManiGuard dev `ff84435...`; see the
+[migration and validation limits](agentic-loop-design.md#maniguard-dev-migration-october-13).
+The recorded results below and the already-running Astra recovery sweep use the
+historical `be97624...` protocol. No dev GPU rollout is claimed here, and results
+from these two source versions must not be pooled.
+
 ## 2026-10-13: completed DeepSeek Jar predictor + System 1 sweep
 
 All **78/78** planned Jar base trials (26 scenes × seeds 0/1/2) completed with

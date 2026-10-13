@@ -244,6 +244,8 @@ class GuardLoopTests(unittest.TestCase):
             "ever_contacted": False, "_task_objs": [], "_target_obj": None,
             "monitor": None, "goal_checker": None, "goal_detail": {},
         }
+        from runner_fixture import prepare_scope
+        prepare_scope(scope)
         with patch("sys.stdout", new=io.StringIO()):
             exec(code, scope)
         self.assertEqual(len(executed), 1)

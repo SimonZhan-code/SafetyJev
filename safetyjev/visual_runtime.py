@@ -245,10 +245,10 @@ def main():
     if args.command=='report':
         result=report(args.episodes,args.output)
         print(json.dumps({k:result[k] for k in ('coverage','expected_classifications','frame_latency_s')},indent=2));return
-    from .maniguard import launch, SOURCE_HASHES, COMMIT
+    from .maniguard import launch, source_provenance
     if args.oracle_only:
         provenance=json.loads(Path(args.provenance).read_text())
-        provenance.update(source_hashes=SOURCE_HASHES,maniguard_reference_commit=COMMIT)
+        provenance.update(source_provenance())
         bench=args.benchmark_args[1:] if args.benchmark_args[:1]==['--'] else args.benchmark_args
         launch(args.maniguard_root,bench,{'output':args.output,'provenance':provenance,
                'execution_mode':'oracle_only','recheck_every':0})
@@ -261,7 +261,7 @@ def main():
     if not allowed_questions(config['queries']).issubset(allowed_questions(health['queries'])):
         raise ValueError('Serving question definitions mismatch')
     provenance=json.loads(Path(args.provenance).read_text())
-    provenance.update(source_hashes=SOURCE_HASHES,maniguard_reference_commit=COMMIT)
+    provenance.update(source_provenance())
     bench=args.benchmark_args[1:] if args.benchmark_args[:1]==['--'] else args.benchmark_args
     launch(args.maniguard_root,bench,{'output':args.output,'provenance':provenance,
            'execution_mode':'visual_classification','recheck_every':0,'visual_config':config})

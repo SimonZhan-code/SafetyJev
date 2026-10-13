@@ -8,18 +8,24 @@ import hashlib
 import fcntl
 import json
 import os
+
+MANIGUARD = os.environ.get('SAFETYJEV_MANIGUARD_ROOT', '/workspace/ManiGuard-dev')
 from pathlib import Path
 import subprocess
+import sys
 import threading
 import time
 from urllib.request import urlopen
 
 ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(ROOT))
+from safetyjev.maniguard import verify_sources, verify_latest_dev, source_provenance
+
 PY='/workspace/conda/behavior51/bin/python'
 ENV=dict(os.environ,OMNI_KIT_ACCEPT_EULA='YES',OMNIGIBSON_HEADLESS='1',
          OMNIGIBSON_DATA_PATH='/workspace/ManiGuard/behavior-1k/datasets',
          CUDA_VISIBLE_DEVICES='0',VK_ICD_FILENAMES='/etc/vulkan/icd.d/nvidia_icd.json',
-         PYTHONNOUSERSITE='1',PYTHONPATH=str(ROOT)+':/workspace/ManiGuard')
+         PYTHONNOUSERSITE='1',PYTHONPATH=str(ROOT)+':'+MANIGUARD)
 
 
 def save(path, value):
@@ -45,6 +51,8 @@ def main():
     parser.add_argument('--worker',choices=['node-a','node-b'])
     parser.add_argument('--reverse-scenes',action='store_true')
     args=parser.parse_args();out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
+    verify_sources(MANIGUARD)
+    if not (out/'plan.json').exists():verify_latest_dev()
     lock=Path('/workspace/SafetyJev/artifacts/base-sweep.lock').open('w')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     resources=json.loads((ROOT/'artifacts/domain-sweep-resources.json').read_text())
@@ -59,7 +67,7 @@ def main():
         assignment_hash=authorize_selection(json.loads(args.assignment.read_text()),resources,args.worker,selected)
     if args.reverse_scenes:
         for spec in selected.values():spec['scenes']=list(reversed(spec['scenes']))
-    plan={'families':selected,'seed':0,'max_scenes_override':args.max_scenes,
+    plan={'maniguard':source_provenance(),'families':selected,'seed':0,'max_scenes_override':args.max_scenes,
           'max_steps_override':args.max_steps,'sample_stride':1,'threshold':.5,
           'scope':args.level+' current predicate classification; no interventions', 'benchmark_level':args.level,
           'clutter':'VLA and simulator oracle only, requested by user',
@@ -134,13 +142,13 @@ def main():
                     warm=subprocess.run([PY,str(ROOT/'scripts/remote/reset-domain-policy.py'),'--family',family],env=ENV,capture_output=True,text=True,timeout=240)
                     if warm.returncode:raise RuntimeError('Policy warmup failed: '+warm.stderr[-1500:])
                     (out/family/'policy-health.json').write_text(warm.stdout)
-                    command=[PY,'-u','-m','safetyjev.visual_runtime','capture','--maniguard-root','/workspace/ManiGuard',
+                    command=[PY,'-u','-m','safetyjev.visual_runtime','capture','--maniguard-root',MANIGUARD,
                          '--output',str(episodes),'--provenance',str(out/family/'provenance.json')]
                     command+=['--oracle-only'] if family=='clutter' else ['--classifier-config',str(ROOT/f'configs/{family}-domain-visual.json')]
                     command+=['--','--config','configs/eval/'+spec['eval_config'],'--benchmark-root','/workspace/data/maniguard-bench/'+spec['pipeline'],
                          '--scenes',scene,'--seed','0','--port','8001','--max-steps',str(args.max_steps or spec['max_steps']),'--tag','safetyjev-domain-'+args.level]
                     with log.open('w') as stream:
-                        subprocess.run(command,cwd='/workspace/ManiGuard',env=ENV,stdout=stream,stderr=subprocess.STDOUT,check=True,timeout=7200)
+                        subprocess.run(command,cwd=MANIGUARD,env=ENV,stdout=stream,stderr=subprocess.STDOUT,check=True,timeout=7200)
                     added=set(episodes.glob('*/episode.json'))-previous
                     if len(added)!=1:raise RuntimeError('Expected one captured episode')
                     ep=next(iter(added)).parent;rec['episode_id']=ep.name

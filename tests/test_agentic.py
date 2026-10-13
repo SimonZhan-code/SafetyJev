@@ -390,6 +390,8 @@ class AgenticTests(unittest.TestCase):
             'env':SimpleNamespace(step=env_step),'torch':SimpleNamespace(from_numpy=lambda a:SimpleNamespace(unsqueeze=lambda axis:a)),
             'extract_obs':lambda *args:self.obs.copy(),'robot':None,'scene_info':{'prompt':'Move jar'},'episode_seed':123,
             'total_reward':0.,'ever_contacted':False,'_task_objs':[],'_target_obj':None,'monitor':None,'goal_checker':None,'goal_detail':{}}
+        from runner_fixture import prepare_scope
+        prepare_scope(scope)
         with patch.object(ShadowEpisode,'after_step'),patch('safetyjev.planner.urlopen',return_value=test_planner.response()) as http,patch('sys.stdout',new=io.StringIO()):
             exec(code,scope)
         return executed, prompts, http

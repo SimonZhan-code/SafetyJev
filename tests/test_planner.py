@@ -263,6 +263,8 @@ class PlannerLoopTests(unittest.TestCase):
             "ever_contacted": False, "_task_objs": [], "_target_obj": None,
             "monitor": None, "goal_checker": None, "goal_detail": {},
         }
+        from runner_fixture import prepare_scope
+        prepare_scope(scope)
         with patch("safetyjev.planner.urlopen", return_value=response()) as http, patch("sys.stdout", new=io.StringIO()):
             exec(code, scope)
         self.assertEqual(prompts, ["transport", "Close the jar lid before lifting."])

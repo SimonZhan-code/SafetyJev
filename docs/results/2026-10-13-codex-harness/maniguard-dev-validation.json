@@ -1,0 +1,17 @@
+{
+  "maniguard_source_branch": "dev",
+  "maniguard_commit": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "source_manifest": "safetyjev/maniguard-dev.json",
+  "verified_files": 228,
+  "cpu": {
+    "dev_passed": 163,
+    "historical_passed": 158,
+    "historical_skipped_dev_only": 5,
+    "old_clutter_fixture": "Explicit MANIGUARD_SAFETY_MONITOR_SOURCE=/tmp/safetyjev-clutter-monitor.py; dev scope rejection tested separately"
+  },
+  "gpu_simulator_tested": false,
+  "codex_live_smoke": "blocked_tool_inventory",
+  "active_astra_run": "Unmodified historical be97624 source; last observed 54/78 completed, zero failures",
+  "policy_and_dataset_pins": "unchanged",
+  "upstream_dev_at_preparation": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107"
+}
