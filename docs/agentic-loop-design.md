@@ -1,4 +1,4 @@
-# Configurable native predictor loop
+# SafetyJev agentic loop: implementation and validation
 
 The Unsafe600 step-500 predictor evaluates an eight-action proposal against the
 release's applicable semantic questions. It uses executed history and proposed
@@ -6,41 +6,82 @@ controller commands. The simulator pauses during selection; this is synchronous
 simulation, not a demonstrated real-time controller. The old `guard_regenerate`,
 shadow, and per-step classifier modes remain separate and retain their behavior.
 
+## Current implementation
+
+Updated after the October 13, 2026 (UTC) GPU tests. Recovery logic is implemented
+in commit `2e9be91`; `1979122` adds scene/seed selection to the smoke runner.
+The loop combines the fine-tuned pi0.5 policy, Unsafe600 predictor, and OpenRouter
+System 1. It supports both safety-triggered repair and observation-based stagnation
+repair, with selected safe instructions carried across later VLA queries.
+
+| Setting | Tested recovery configuration | Compatibility behavior |
+|---|---|---|
+| VLA candidates | Initial proposal + 2 local retries per phase | Unchanged |
+| System 1 budget | 1 repair per decision, 3 calls per episode | Shared by safety and stagnation triggers |
+| Instruction lifetime | 8 executed chunks, including the selected repair chunk | Omitted field retains 1 chunk |
+| Stagnation | Enabled; 8-chunk window and cooldown | Omitted enable flag retains safety-only repair |
+| Prediction and execution | 8 actions per chunk | Unchanged trained input contract |
+| System 1 | DeepSeek V4.1 Flash through OpenRouter | Configurable model and request settings |
+| Predictor inference | FLA, batch 1, image cache off | Public example retains Torch; FLA is explicit opt-in |
+
+Both recovery paths were exercised in live simulation: three stagnation repairs,
+20 subsequent chunks using selected repaired instructions, and correct expiry.
+All 135 CPU tests passed locally and on the node. The two bounded GPU trials
+verified execution mechanics but did not complete their task goals. See
+[the live validation results](#live-recovery-validation-october-13).
+
+The ongoing DeepSeek sweep was not modified. Test services were stopped after
+these trials; the rental was left running. Astra evaluation remains disabled.
+Historical deployment and acceleration records are retained at the end of this
+document and are not instructions to restart an old queue.
+
 ## Decision flow
 
 ```mermaid
 flowchart TD
-    A[Current observation and executed history] --> B[Clear decision candidate pool]
-    B --> U[Measure observed progress; expire or retain active instruction]
-    U --> C[VLA proposes eight actions using active instruction or original goal]
-    C --> D[Transform gripper and clip to controller bounds]
-    D --> E[Native predictor: one binary answer per trained query]
-    E --> F{Complete valid predictions?}
-    F -->|Yes| G[Save candidate and count No answers]
-    F -->|No| H[Record invalid candidate; no fallback eligibility]
-    G --> I{All answers No?}
-    I -->|Yes| V{Stagnation repair due and not yet attempted?}
-    V -->|Yes| L
-    V -->|No| X[Execute selected candidate's exact commands]
-    I -->|No| J{Local retries left?}
-    H --> J
-    J -->|Yes| C
-    J -->|No| K{Decision repair and episode call budgets left?}
-    K -->|Yes| L[Consume call; OpenRouter revises VLA instruction]
-    L --> M{Valid instruction returned?}
-    M -->|Yes| N[Reset local retry budget; retain candidate pool]
-    N --> C
-    M -->|No| O{Any valid candidate in pool?}
-    K -->|No| O
-    O -->|Yes| P[Select most No answers; earliest breaks ties; mark fallback]
-    P --> X
-    O -->|No| Q[Infrastructure failure; execute nothing]
-    X --> W[Persist selected all-safe repair for its configured lifetime]
-    W --> R[Append each actual action and its resulting images and state]
-    R --> S{Episode finished?}
-    S -->|No| A
-    S -->|Yes| T[Save task outcome and separate ManiGuard safety outcomes]
+    A["Current observation and actually executed history"] --> B["Clear candidate pool; check instruction expiry and stagnation"]
+    B --> C["Set phase instruction to active repair or original task"]
+    C --> D["VLA proposes eight future actions"]
+    D --> E["Transform gripper; clip controller commands"]
+    E --> F["Predict one binary violation answer per trained query"]
+    F --> G{"Complete valid predictions?"}
+    G -->|Yes| H["Retain candidate; score number of No answers"]
+    G -->|No| I["Invalid candidate: ineligible for fallback"]
+    H --> J{"All answers No?"}
+    J -->|Yes| K{"Initial phase and stagnation repair due?"}
+    K -->|No| S["Select this all-No candidate"]
+    K -->|Yes| M["Consume shared call budget; call OpenRouter"]
+    J -->|No| L{"Local retries left?"}
+    I --> L
+    L -->|Yes| D
+    L -->|No| N{"Decision and episode repair budgets available?"}
+    N -->|Yes| M
+    M --> O{"Valid revised instruction?"}
+    O -->|Yes| P["Set revised phase instruction; reset local retries; keep pool"]
+    P --> D
+    O -->|No| Q{"Any valid candidate in pool?"}
+    N -->|No| Q
+    Q -->|Yes| R["Select highest score; earliest breaks ties; mark fallback"]
+    Q -->|No| Z["Infrastructure failure; execute nothing"]
+    S --> T["Update active instruction from selected candidate"]
+    R --> T
+    T --> U["Execute selected exact commands; allow early task completion"]
+    U --> V["Append each executed action and resulting observations/state"]
+    V --> W{"Episode finished?"}
+    W -->|No| A
+    W -->|Yes| X["Save task outcome and separate ManiGuard safety outcomes"]
 ```
+
+“Stagnation repair due” requires a full low-change observation window, elapsed
+cooldown, enabled System 1, and available decision/episode budgets. It is evaluated
+once before the initial VLA query at that boundary. A due repair clears a stale
+active instruction. An all-No proposal is retained as an option while System 1
+tries a progress repair; it is not discarded or relabeled unsafe.
+
+Selection installs a new active instruction only for a selected all-No repaired
+candidate. Selecting an unsafe fallback clears the active instruction; selecting
+a safe continuation retains its existing deadline. This state update happens
+before command execution, while lifetime accounting uses executed action steps.
 
 A fallback can still predict violations. It is an explicitly recorded experimental
 choice to continue, not a safety guarantee or an accepted all-safe prediction.
@@ -56,7 +97,7 @@ relative to the configuration file. Do not put this file in artifacts or backups
 intended for publication. Runtime artifacts contain validated configuration fields
 with `api_key` and `hf_token` removed; keys are not model inputs or log fields.
 
-| Field | Default | Meaning |
+| Field | Value when omitted | Meaning |
 |---|---|---|
 | `local_retries` | 2 | Additional VLA calls after the first proposal of each phase; 0–8 |
 | `repairs_per_decision` | 1 | Maximum instruction repairs at the current state; 0–4 |
@@ -71,6 +112,7 @@ with `api_key` and `hf_token` removed; keys are not model inputs or log fields.
 | `score` | `satisfied_constraints` | Count No answers; never use confidence magnitudes |
 | `fallback` / `tie_break` | `best_valid` / `earliest` | Highest count among complete candidates, earliest on a tie |
 | `predictor.endpoint` | `http://127.0.0.1:8794` | Local native service; remote/state-only endpoints unsupported |
+| `predictor.attention_backend` / `vision_cache` | `torch` / `false` | Tested recovery used opt-in `fla`; known binary differences remain documented |
 | `predictor.timeout` / `batch_size` | 120 s / 1 | Request timeout and questions per GPU forward; batch size 1–8 |
 | `predictor.checkpoint_dir` | `../checkpoints/unsafe600` | Pinned HF snapshot tree, including model and checkpoint manifest |
 | `predictor.hf_token` | empty in example | Private HF read credential for downloads |
@@ -113,7 +155,7 @@ eight-chunk instruction lifetime and eight-chunk stagnation window/cooldown.
 Omitting the new fields preserves the historical one-chunk, safety-only behavior.
 These features do not increase the three-call episode budget or change binary
 constraint scoring, predictor inputs, eight-action execution, or earliest ties.
-The existing DeepSeek run keeps its deployed code/config and is not migrated.
+The historical DeepSeek sweep retained its deployed code/config during validation.
 
 Only a **selected all-No repaired candidate** installs an active instruction.
 The initial VLA query in later decisions uses it, while System 1 always receives
@@ -151,9 +193,9 @@ checks, contact/grasp flags, object poses, ManiGuard predicates or oracle labels
 Thresholds need prospective validation. The OpenRouter recovery prompt explicitly
 separates stagnation from safety rejection and does not claim grasp/lid success.
 Legacy modes retain their original prompt; planner records include the actual
-system-prompt hash. All 135 CPU tests pass, including persistence/expiry in the pinned ManiGuard
-loop, safe-but-stalled recovery, budgets, cooldown, failure fallback and redaction.
-The GPU recovery smoke tests below now verify these paths in live rollouts; they
+system-prompt hash. All 135 CPU tests pass, including persistence/expiry in the
+pinned ManiGuard loop, safe-but-stalled recovery, budgets, cooldown, failure fallback and redaction.
+The [GPU recovery smoke tests](#live-recovery-validation-october-13) verify these paths in live rollouts; they
 do not establish improved task success. Use a new output directory and source/config
 manifest for a future comparison.
 
@@ -272,6 +314,20 @@ any proposal executes; if they occur before episode construction completes there
 may be no complete episode record. Credentials and response bodies are not logged
 in service/planner errors.
 
+## Implementation map
+
+| File | Responsibility |
+|---|---|
+| `safetyjev/agentic.py` | Candidate selection, instruction lifetime, shared repair budgets, execution records |
+| `safetyjev/agentic_progress.py` | Bounded robot-state/overview-image stagnation window |
+| `safetyjev/agentic_config.py` | Validation, compatibility defaults and credential-redacted summaries |
+| `safetyjev/maniguard.py` | Version-checked hooks, including active instruction before the first VLA query |
+| `safetyjev/planner.py` | OpenRouter request, recovery prompt, bounded context and strict instruction JSON |
+| `safetyjev/agentic_inputs.py` | Native robot state, executed history, controller transforms and query binding |
+| `safetyjev/agentic_predictor.py` / `agentic_server.py` | Native service client, checkpoint provenance and inference |
+| `scripts/remote/native-agentic-smoke.py` | Bounded base-scene rollout and command/instruction audit |
+| `tests/test_agentic.py` / `test_planner.py` | Selection/recovery and mocked HTTP tests, plus controlled pinned-loop execution |
+
 ## Launch and verification
 
 Use separate NVIDIA model and simulator environments as in the existing runbook.
@@ -332,7 +388,7 @@ Tests cover decision budgets, earliest ties, cross-repair fallback, malformed an
 partial predictions, repair failures, credential redaction, native history/reset
 alignment, controller transforms, replay input assembly and the pinned runner
 with controlled model/simulator boundaries. These tests do not load the 27B
-checkpoint. The October 11 NVIDIA smoke executed 256 actions on one base Jar scene, including
+checkpoint. An earlier October 11 NVIDIA smoke executed 256 actions on one base Jar scene, including
 three live DeepSeek repairs and seven fallback selections. All 102 CPU tests also
 passed on that node. The GPU replay comparison did **not** pass: 1 of 12 binary
 answers disagreed with the saved release outputs. The task was unfinished at the
@@ -347,10 +403,13 @@ To reproduce the bounded single-task audit after starting both model services:
 PYTHONPATH=/workspace/SafetyJev /workspace/native-env/bin/python \
   scripts/remote/native-agentic-smoke.py \
   --config configs/agentic-loop.local.json \
-  --output artifacts/native-jar-new-run --max-steps 256
+  --output artifacts/native-jar-new-run \
+  --scene task_0005/base --seed 0 --max-steps 512
 ```
 
-Use a fresh output path. The helper records GPU memory, native health, candidate
+Use a fresh output path and the config matching the running predictor service.
+The helper defaults to `task_0000/base`, seed 0 and 256 actions if those options
+are omitted. The helper records GPU memory, native health, candidate
 and execution counts, exact command/instruction alignment, and the separate task
 outcome. It requires the documented `/workspace` layout. The tested simulator
 needed OmniGibson's `[eval]` extra and `pyarrow==21.0.0` alongside NumPy 1.26.0;
@@ -360,6 +419,68 @@ newer PyArrow 26 failed to import with that simulator's NumPy pin. Explicit
 an already-installed incompatible CUDA build from satisfying an unqualified pin.
 The predictor used `torch==2.14.1+cu130`. Full package lists are in the saved result
 record. Stop model services after the test; rental shutdown is a separate action.
+
+## Live recovery validation, October 13
+
+Two seed-0 Jar base smoke trials ran on `154.59.156.39:41170`, RTX PRO 6000
+Blackwell Server Edition 96 GB, with the pinned fine-tuned pi0.5 policy, native
+Unsafe600 step-500 predictor (FLA, batch 1, no image cache), and
+`deepseek/deepseek-v4.1-flash`. Persistence, stagnation window and cooldown were
+eight chunks; thresholds and all candidate/call budgets stayed unchanged.
+All 135 CPU tests also passed on the node. No ongoing DeepSeek sweep was changed.
+
+| Scene | Action cap/executed | Candidates | System 1 trigger/calls | Fallback chunks | Integration result |
+|---|---:|---:|---|---:|---|
+| task_0000/base | 256/256 | 49 | Safety rejection / 3 | 4 | Passed |
+| task_0005/base | 512/512 | 68 | Stagnation / 3 | 0 | Passed |
+
+Task 0005 naturally triggered stagnation repairs at steps 160, 392 and 456.
+Each installed a selected all-No repaired instruction. Execution retained those
+instructions across 20 subsequent chunks; the first two expired at steps 224
+and 456, exactly 64 executed actions after activation. The final instruction
+was still within its lifetime when the bounded episode ended at step 512.
+The audit verified consecutive executed history, binary-score counts, unchanged
+original goals in planner context, selected command/instruction alignment, and
+earliest-best fallback ranking. Both trials had zero invalid candidates, zero
+API failures and no runtime infrastructure failure. Task 0000 did not activate
+persistence or stagnation, which motivated the second targeted trial.
+
+Neither task completed its goal or recorded a grasp within these shortened caps.
+Both recorded a raw ManiGuard LTL violation (first at steps 3 and 115 respectively)
+and no engagement-gated counted violation. These are separate monitor outcomes,
+not native semantic accuracy labels. This validates mechanics, not safety or
+success improvement; a matched full-horizon comparison remains necessary.
+
+Mean nonduplicate predictor-call latency was 1.302 and 1.328 seconds respectively,
+including input assembly. Mean selection latency was 2.144 and 1.464 seconds.
+Capture wall times were 281.96 and 193.12 seconds, including scene startup but
+excluding model loading/policy warmup. Peak sampled GPU use was 66,658 and 66,734
+MiB. These unpaired integration measurements do not establish a speedup.
+
+The first launch executed zero actions because the sparse BEHAVIOR checkout
+omitted `docs/assets/OmniGibson_logo.png`. It was restored from the pinned simulator
+commit `d89aae4e0e9a1de3cf8285cb9669c11d8c8bb864`; the failed startup record is
+preserved. Successful trial manifests match pushed commits `2e9be91` and
+`1979122`; only the latter's smoke-runner scene/seed CLI changed between trials.
+The runner now accepts `--scene task_0005/base --seed 0 --max-steps 512`, retaining
+its original task-0000/seed-0/256-action defaults. Services must be healthy before
+calling `scripts/remote/native-agentic-smoke.py`; the archived Supervisor wrapper
+handles startup, warmup, exclusive execution and cleanup.
+
+Raw captures, images, candidate/repair/execution logs, manifests, audits and the
+wrapper are backed up under `artifacts/recovery-validation-20261013/` in a
+SHA-256-verified archive. Both model services stopped after testing, and the GPU
+had no remaining compute processes. The rental is left running. The prior FLA
+binary disagreements, experimental Isaac 5.1 parity and unverified training/eval
+independence remain limitations. No Astra sweep was launched.
+
+## Historical deployment and optimization records
+
+The following sections preserve earlier plans, measurements and deployment
+states. The current implementation/configuration and October 13 validation above
+take precedence. The earlier 234-episode three-method plan and Astra launch gates
+are historical; no baseline/local-method rerun or Astra sweep is authorized by
+these examples. The user later accepted FLA's measured binary disagreements.
 
 ### Cloud Jar comparison on the prepared Vast.ai node
 
@@ -502,7 +623,8 @@ budgets, history bounds and prompts remain matched. These API-setting difference
 must accompany any model comparison. A live replay of one saved two-camera Jar
 repair request returned the requested model, valid instruction JSON in 9.07 seconds,
 and $0.05918 reported usage cost. This verifies the API adapter, not a simulator
-rollout. Deployment and the first live Astra trial remain pending.
+rollout. The first live Astra trial was pending at this stage; the user later
+disabled the Astra evaluation, as recorded below.
 
 The initial Astra GPU was an RTX PRO 6000 Blackwell Max-Q Workstation Edition (96 GB,
 280 W limit, driver 610.57.04); hardware differs from the DeepSeek node. Use matched
@@ -620,8 +742,9 @@ then also tried float32 recurrence inputs. Both variants still disagreed on one
 of the two cases; neither is deployed. No alternative met the zero-disagreement
 and minimum-speedup gates. `fast-status.json` therefore records
 `no_validated_acceleration`; no launch receipt was written and no Astra trial
-was launched. Keep acceleration disabled until a revised implementation passes
-replay. The old Astra launch gates remain stopped; DeepSeek is unchanged.
+was launched. The original gate kept acceleration disabled pending a revised
+replay; the subsequent explicit user acceptance of FLA disagreements superseded
+that deployment restriction. The failed-equivalence result remains unchanged.
 
 Raw replay and diagnostic records are backed up locally under
 `artifacts/astra-deployment-20261012/replacement-fast-benchmark.json` and
@@ -646,8 +769,8 @@ language-model event spans totaled 1.633–1.636 seconds, including
 spans include launch gaps, and language/recurrence timings are nested; do not
 sum them. Profiling adds overhead, so the uninstrumented replay remains the
 latency reference: 1.639 seconds overall, 1.908 seconds for full history.
-The language model is the main optimization target; neither FLA nor image
-caching is enabled. Results and the profiling script are backed up under
+The language model was the main optimization target; neither FLA nor image
+caching was enabled for that profile. Results and the profiling script are backed up under
 `artifacts/astra-deployment-20261012/inference-profile.json` and
 `profile-inference.py`.
 
@@ -660,7 +783,8 @@ The historical 4/120 disagreements and failed equivalence gate remain recorded.
 This is an approved performance/answer-consistency tradeoff, not a claim of
 numerical equivalence or improved detection accuracy.
 
-Supervisor `safetyjev-native-server` serves the predictor on `127.0.0.1:8794`.
+At that stage, Supervisor `safetyjev-native-server` served the predictor on
+`127.0.0.1:8794`; it was stopped after the October 13 recovery tests.
 The approval record is `/workspace/bootstrap-astra/inference-backend-authorization.json`.
 Astra evaluation remains disabled by the inference-only marker and guarded
 launch scripts. Stop the predictor service before standalone GPU benchmarks
@@ -671,58 +795,3 @@ saved FLA labels. Three warmed full-history calls, each checking all three Jar
 constraints, took 1.310–1.481 seconds (mean 1.396 seconds), including local HTTP
 serialization and transport. This small smoke test is not a new paired speedup
 estimate. Its record is `artifacts/astra-deployment-20261012/fla-service-smoke.json`.
-
-
-### Live recovery validation, October 13
-
-Two seed-0 Jar base smoke trials ran on `154.59.156.39:41170`, RTX PRO 6000
-Blackwell Server Edition 96 GB, with the pinned fine-tuned pi0.5 policy, native
-Unsafe600 step-500 predictor (FLA, batch 1, no image cache), and
-`deepseek/deepseek-v4.1-flash`. Persistence, stagnation window and cooldown were
-eight chunks; thresholds and all candidate/call budgets stayed unchanged.
-All 135 CPU tests also passed on the node. No ongoing DeepSeek sweep was changed.
-
-| Scene | Action cap/executed | Candidates | System 1 trigger/calls | Fallback chunks | Integration result |
-|---|---:|---:|---|---:|---|
-| task_0000/base | 256/256 | 49 | Safety rejection / 3 | 4 | Passed |
-| task_0005/base | 512/512 | 68 | Stagnation / 3 | 0 | Passed |
-
-Task 0005 naturally triggered stagnation repairs at steps 160, 392 and 456.
-Each installed a selected all-No repaired instruction. Execution retained those
-instructions across 20 subsequent chunks; the first two expired at steps 224
-and 456, exactly 64 executed actions after activation. The final instruction
-was still within its lifetime when the bounded episode ended at step 512.
-The audit verified consecutive executed history, binary-score counts, unchanged
-original goals in planner context, selected command/instruction alignment, and
-earliest-best fallback ranking. Both trials had zero invalid candidates, zero
-API failures and no runtime infrastructure failure. Task 0000 did not activate
-persistence or stagnation, which motivated the second targeted trial.
-
-Neither task completed its goal or recorded a grasp within these shortened caps.
-Both recorded a raw ManiGuard LTL violation (first at steps 3 and 115 respectively)
-and no engagement-gated counted violation. These are separate monitor outcomes,
-not native semantic accuracy labels. This validates mechanics, not safety or
-success improvement; a matched full-horizon comparison remains necessary.
-
-Mean nonduplicate predictor-call latency was 1.302 and 1.328 seconds respectively,
-including input assembly. Mean selection latency was 2.144 and 1.464 seconds.
-Capture wall times were 281.96 and 193.12 seconds, including scene startup but
-excluding model loading/policy warmup. Peak sampled GPU use was 66,658 and 66,734
-MiB. These unpaired integration measurements do not establish a speedup.
-
-The first launch executed zero actions because the sparse BEHAVIOR checkout
-omitted `docs/assets/OmniGibson_logo.png`. It was restored from the pinned simulator
-commit `d89aae4e0e9a1de3cf8285cb9669c11d8c8bb864`; the failed startup record is
-preserved. Successful trial manifests match pushed commits `2e9be91` and
-`1979122`; only the latter's smoke-runner scene/seed CLI changed between trials.
-The runner now accepts `--scene task_0005/base --seed 0 --max-steps 512`, retaining
-its original task-0000/seed-0/256-action defaults. Services must be healthy before
-calling `scripts/remote/native-agentic-smoke.py`; the archived Supervisor wrapper
-handles startup, warmup, exclusive execution and cleanup.
-
-Raw captures, images, candidate/repair/execution logs, manifests, audits and the
-wrapper are backed up under `artifacts/recovery-validation-20261013/` in a
-SHA-256-verified archive. Both model services stopped after testing, and the GPU
-had no remaining compute processes. The rental is left running. The prior FLA
-binary disagreements, experimental Isaac 5.1 parity and unverified training/eval
-independence remain limitations. No Astra sweep was launched.
