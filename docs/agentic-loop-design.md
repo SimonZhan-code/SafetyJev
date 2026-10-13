@@ -1183,3 +1183,51 @@ inventory gate is resolved and the existing sweep releases the GPU. The harness
 account cannot read the new ManiGuard source. Preparation started no model or
 simulator jobs. Compact evidence is in
 `docs/results/2026-10-13-codex-harness/maniguard-dev-validation.json`.
+
+
+### Authorized Codex Jar sweep (October 13)
+
+The user expanded the experiment from the two smoke trials to all **26 Jar base
+scenes × seeds 0/1/2 (78 cases)** on `ssh9.vast.ai:13565`. Use
+`configs/codex-harness-jar.example.json`: 2,000 actions, eight-action decisions,
+three shared proposal attempts, 120-second decision deadline, GPT-6 Astra through
+ChatGPT authentication, and FLA batch 1 with vision caching off. No System 1
+OpenRouter controller is substituted. New simulator runs use the pinned, verified
+ManiGuard **dev** source; the historical Astra sweep remains on its original
+revision and separate node.
+
+The existing queue now accepts `--suite jar-base`. It refuses to launch until
+both short smoke cases have passed the offline execution/public-response audit
+with the same runtime source hashes, semantic/provenance files, model settings
+and ManiGuard revision. Only the action cap and output grid differ. The full
+queue skips completed cases only after re-auditing them, archives interrupted
+attempts only with `--retry-failed`, stops on infrastructure failure, and retains
+separate case directories for every seed. GPU overlap, runtime changes and low
+disk space remain launch/run blockers.
+
+```bash
+# These commands remain blocked until the tool-isolation preflight passes.
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
+  --suite smoke --config configs/codex-harness.example.json \
+  --output artifacts/codex-harness-smoke --launch
+
+# Run after both smoke cases complete and their audits pass.
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
+  --suite jar-base --config configs/codex-harness-jar.example.json \
+  --smoke-evidence artifacts/codex-harness-smoke \
+  --output artifacts/jar-codex-harness-id --launch
+```
+
+**Preparation is not launch.** GPU model replay passed, but stock runtime 0.162.1
+still fails the strict tool-isolation contract because undeclared resource-listing
+calls return empty results. The user's earlier approval of dispatch wrappers was
+conditional on a successful audit. A narrowly scoped exception for those two
+empty listings has been requested; until explicitly approved and implemented
+with validated evidence, production admission remains closed. Simulator and asset
+installation on the Codex node can proceed independently. No Codex trial results
+are claimed.
+
+The original Astra recovery sweep on `154.59.156.39:41170` retains its separate
+completion workflow: audit all 78 trials, verify complete off-node backups, push
+final results, then **stop** Vast instance `55620382`. This shutdown instruction
+does not apply to the Codex node, and does not authorize destroying Astra storage.

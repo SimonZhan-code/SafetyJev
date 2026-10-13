@@ -1,0 +1,35 @@
+{
+  "status": "prepared_blocked_isolation",
+  "planned_cases": 78,
+  "scenes": 26,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "max_actions": 2000,
+  "smoke_cases": [
+    "task_0000/base seed0",
+    "task_0005/base seed0"
+  ],
+  "smoke_max_actions": 256,
+  "smoke_required_before_sweep": true,
+  "model": "gpt-6-astra",
+  "auth": "ChatGPT dedicated account",
+  "predictor": "Unsafe600 step500 / FLA0.5.2 / batch1 / no vision cache",
+  "maniguard_dev_revision": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "host": "ssh9.vast.ai",
+  "ssh_port": 13565,
+  "trials_started": 0,
+  "cpu_tests": {
+    "run": 169,
+    "passed": 169,
+    "skipped": 0
+  },
+  "pending_user_decision": "Allow only the two audited empty resource-listing calls; all other forbidden access remains rejected",
+  "astra_retirement": {
+    "instance_id": 55620382,
+    "action": "stop",
+    "only_after": "78 complete, audited, off-node backups verified, final results pushed"
+  }
+}

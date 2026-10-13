@@ -69,4 +69,4 @@ def audit(episode):
             'decision_seconds':[s['selection_latency_s'] for s in selected.values()],
             'predictor_seconds':[e['latency_s'] for e in events if e['event']=='judgment' and e.get('valid')],
             'codex_usage':[e for e in events if e['event']=='usage'],
-            'limits':'Mechanics smoke, not safety improvement or calibration of Codex-written commands'}
+            'limits':'No isolated causal safety improvement or calibration of Codex-written commands established by this run'}
