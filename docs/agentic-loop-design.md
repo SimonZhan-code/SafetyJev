@@ -879,3 +879,19 @@ the authorized rental stop remains gated on verified complete off-node backups
 and pushed final records. [Results and matched DeepSeek comparison](evaluation-results.md)
 retain raw versus gated outcomes, timings and confounding differences. This is
 not an isolated recovery-only causal comparison.
+
+
+### Completed-run failure diagnosis
+
+The [trace analysis](evaluation-results.md) separates initial-state violations,
+predictor-driven selection, rewritten proposals, actual instruction exposure and
+ManiGuard first-violation gating. Both runs acquired 45 raw violations at step zero.
+Local resampling supplied 536/567 and 538/567 transitions from an initially warned
+candidate to an all-clear selection; System 1 supplied the remaining 31 and 29.
+The permissive fallback executed predicted-unsafe candidates in 48.16% and 50.24%
+of selections. Three-call episode limits were normally exhausted early (median
+last repair at action 296), and rewritten instructions controlled only 0.23% of
+DeepSeek selections and 4.02% of Astra selections. These observations motivate
+matched ablations and instruction-sensitivity tests; they do not establish causal
+safety improvement or isolate language-model failure from predictor/VLA limitations.
+No historical runtime or result definitions were changed.
