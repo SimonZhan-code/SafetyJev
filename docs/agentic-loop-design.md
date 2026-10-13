@@ -30,8 +30,9 @@ All 135 CPU tests passed locally and on the node. The two bounded GPU trials
 verified execution mechanics but did not complete their task goals. See
 [the live validation results](#live-recovery-validation-october-13).
 
-The ongoing DeepSeek sweep was not modified. Test services were stopped after
-these trials; the rental was left running. Astra evaluation remains disabled.
+The original DeepSeek sweep was not modified. After the smoke tests, the user
+authorized a full matched Jar recovery sweep on the newer node; it is now running
+with DeepSeek System 1. GPT Astra evaluation remains disabled.
 Historical deployment and acceleration records are retained at the end of this
 document and are not instructions to restart an old queue.
 
@@ -473,6 +474,59 @@ SHA-256-verified archive. Both model services stopped after testing, and the GPU
 had no remaining compute processes. The rental is left running. The prior FLA
 binary disagreements, experimental Isaac 5.1 parity and unverified training/eval
 independence remain limitations. No Astra sweep was launched.
+
+## Full matched Jar recovery sweep
+
+After the bounded validation, the user authorized the new framework on the exact
+Jar base suite used by the original run: **26 scenes × seeds 0/1/2 = 78 trials**,
+System 1 only, with the original **2,000-action cap**. The saved plans have identical
+ordered scene/seed/method cases, benchmark revision and action caps. All 57 static
+policy-launch, warmup, semantic-definition, simulator-YAML, provenance and scene
+file hashes checked against the original plan match. Neither baseline nor local-only
+methods are rerun. Completed smoke episodes remain separate from this full sweep.
+
+| Run | Node | Output under `/workspace/SafetyJev/artifacts/` |
+|---|---|---|
+| Original loop | `154.59.156.28:33632` | `jar-agentic-id` |
+| Recovery loop | `154.59.156.39:41170` | `jar-agentic-recovery-id` |
+
+Both use `deepseek/deepseek-v4.1-flash`; “Astra node” names the newer rental, not
+the selected System 1 model. The recovery sweep retains the smoke-tested eight-chunk
+instruction lifetime, stagnation window/cooldown and thresholds, plus two local
+retries, one repair per decision, and three calls per episode. Its predictor uses
+FLA, batch one and no image cache. The original run remains on its original runtime.
+Since FLA changes some binary answers and the GPU hosts differ, this comparison
+measures the updated configuration as a whole, not recovery logic alone.
+
+The dedicated private config is `configs/agentic-recovery-sweep.local.json` (0600).
+Supervisor `safetyjev-jar-agentic-eval` runs independently on each node. The new
+plan pins runtime hashes at launch, refuses overlapping GPU jobs and preserves
+completed cases on resume. Deployment/comparison records are in
+`/workspace/bootstrap-recovery-sweep-20261013`; copies of the public plan and
+comparison provenance are local in `artifacts/recovery-sweep-20261013/`.
+The earlier inference-only restriction was superseded specifically for this
+user-authorized sweep. Old Astra launch gates and the superseded node remain stopped.
+
+```bash
+cd /workspace/SafetyJev
+/workspace/native-env/bin/python scripts/remote/jar-agentic-eval.py \
+  --config configs/agentic-recovery-sweep.local.json \
+  --output artifacts/jar-agentic-recovery-id --methods system1 --launch
+```
+
+The existing 30-minute follow-up now monitors both sweeps. At launch, the original
+run had 59/78 completed with zero infrastructure failures; the recovery run had
+started its first trial. These are launch-time counts, not final results. Do not
+pull code or edit active hashed runtime files during either run.
+
+The user explicitly authorized **stopping only the original DeepSeek rental**
+after it finishes. Before stopping instance `55452474`, audit all 78 planned
+System 1 cases, confirm capture/model jobs have exited, back up raw captures,
+images/videos, logs, manifests and results off-node, verify backup coverage and
+checksums, then document and commit/push final results. Verify the instance identity
+before issuing a stop; never destroy it or treat lost SSH as completion. The new
+recovery rental remains running after its model services stop. Report each sweep
+separately and compare matched scene/seed results when both are complete.
 
 ## Historical deployment and optimization records
 
