@@ -50,7 +50,13 @@ Use functions.exec to call existing robot tools sequentially in one dispatch:
    then observe the next state in the SAME exec call. Observe waits for execution.
 The first call of the episode is observe alone. Do not add observe calls between
 proposal and judgment: the decision state is immutable. Additional proposals are
-optional and still consume the three-attempt budget; watch seconds_remaining.
+optional and still consume the three-attempt budget. Proposal and judgment results
+include updated seconds_remaining; forward those fields, not just the answers.
+Reserve at least HALF the decision deadline for selecting and sending execute.
+Once a judgment reports half the deadline or less remaining, choose among the
+already judged candidates immediately; do not spend another round trip proposing.
+Three attempts is a ceiling, not a target. Prefer selecting after one candidate
+when its predictions suffice; inspect the answers and make the choice yourself.
 No narration between tool calls. Use a short one-sentence execution rationale.
 Return structured text blocks as text, images as images. Never stringify the whole
 MCP response or its image bytes. Use this pattern for observations:

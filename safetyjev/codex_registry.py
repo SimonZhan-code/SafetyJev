@@ -24,7 +24,8 @@ def digest(value):
 class Decision:
     def __init__(self, *, step, task, state, images, history, questions, bounds,
                  propose, make_inputs, score, log, proposal_limit=3, timeout=120,
-                 clock=time.monotonic):
+                 clock=time.monotonic, report_budget=False):
+        self.report_budget = report_budget
         self.id = uuid.uuid4().hex
         self.step, self.clock = step, clock
         self.started = clock()
@@ -52,6 +53,10 @@ class Decision:
 
     def remaining(self):
         return max(0., self.deadline - self.clock())
+
+    def budget(self):
+        return {'seconds_remaining': self.remaining(),
+                'proposals_remaining': self.limit-self.attempts} if self.report_budget else {}
 
     def check(self):
         if self.closed or self.selected is not None:
@@ -99,8 +104,9 @@ class Decision:
                      'answers': None, 'generation_latency_s': self.clock()-started}
         self.pool[cid] = candidate
         self.log('proposal', {**copy.deepcopy(candidate), 'valid': True, 'attempt': self.attempts})
-        return {k: copy.deepcopy(candidate[k]) for k in
-                ('candidate_id', 'decision_id', 'source', 'commands', 'commands_sha256', 'policy_instruction')}
+        result = {k: copy.deepcopy(candidate[k]) for k in
+                  ('candidate_id', 'decision_id', 'source', 'commands', 'commands_sha256', 'policy_instruction')}
+        return {**result, **self.budget()}
 
     def candidate(self, cid):
         self.check()
@@ -134,7 +140,7 @@ class Decision:
                   'satisfied_constraints': c['satisfied_constraints']}
         self.log('judgment', {**result, 'valid': True, 'cached': cached,
                               'latency_s': self.clock()-started})
-        return result
+        return {**result, **self.budget()}
 
     def execute(self, cid, rationale):
         # Candidate ID is also the execution idempotency key. Receipts survive closure.

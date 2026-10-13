@@ -7,9 +7,9 @@ from .io import read_jsonl
 RESPONSE_FIELDS = {
     'observe': {'task','robot_state','images','executed_history','constraints','action_convention',
                 'controller_bounds','decision_id','step','proposals_remaining','seconds_remaining'},
-    'propose_pi05': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction'},
-    'propose_actions': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction'},
-    'judge': {'candidate_id','prediction_id','answers','satisfied_constraints'},
+    'propose_pi05': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction','seconds_remaining','proposals_remaining'},
+    'propose_actions': {'candidate_id','decision_id','source','commands','commands_sha256','policy_instruction','seconds_remaining','proposals_remaining'},
+    'judge': {'candidate_id','prediction_id','answers','satisfied_constraints','seconds_remaining','proposals_remaining'},
     'execute': {'status','candidate_id','execution_id','decision_id','commands_sha256','planned_actions','executed_actions'},
 }
 

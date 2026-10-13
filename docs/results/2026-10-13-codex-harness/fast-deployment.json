@@ -216,14 +216,30 @@
     "scope": "Original condition only; optimized run not included"
   },
   "live_validation": {
-    "status": "running",
+    "status": "failed",
     "output": "artifacts/codex-harness-fast-smoke",
     "sweep_launch_gate": "Both smoke audits pass, maximum decision <=30s, mean speedup >=1.1 over two original matched smoke cases",
-    "speedup_verified": false
+    "speedup_verified": false,
+    "failure": "decision_timeout",
+    "executed_steps": 208,
+    "committed_chunks": 26,
+    "failing_decision": {
+      "pi05_proposals": 2,
+      "codex_proposals": 1,
+      "complete_judgments": 3,
+      "committed": false
+    },
+    "sweep_launched": false
   },
   "limitations": [
     "Paired dispatch is a model instruction, not enforcement of a fixed number of round trips.",
     "Deadline expiry ends the attempt as an infrastructure failure; no uncommitted candidate executes.",
     "Original completed case remains a separate condition; 77 remaining full trials are planned for the optimized condition."
-  ]
+  ],
+  "followup": {
+    "cpu_tests_passed": 174,
+    "change": "Refresh budgets after proposal and judgment; reserve half the deadline for selection",
+    "deadline_seconds": 30,
+    "live_validation": "pending"
+  }
 }

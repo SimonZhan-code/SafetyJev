@@ -1334,9 +1334,20 @@ isolation preflight. The original full-run backup was verified file by file:
 5,387 files and 306,437,832 bytes, including separate simulator outputs and the
 interrupted attempt. Evidence is in
 [`fast-deployment.json`](results/2026-10-13-codex-harness/fast-deployment.json).
-The optimized live smoke is running. Its deployment gate requires both smoke
+The optimized smoke at `801a43b` stopped at step 208 on `decision_timeout`: all
+three proposals were scored, but no candidate was selected before 30 seconds.
+No uncommitted actions executed. The failed attempt is retained, and it did not
+pass live admission. Its deployment gate requires both smoke
 audits, every decision within 30 seconds, and at least 1.1x lower mean decision
 latency relative to the two original matched smoke cases before launching the
 remaining sweep. A failing latency gate holds the queue for diagnosis; it does
 not silently relax the deadline or change the experiment. No speedup is yet
 validated.
+
+The follow-up paired mode returns fresh `seconds_remaining` and
+`proposals_remaining` after every successful proposal and judgment, including
+cached judgments. It instructs Codex to reserve half the deadline for selection
+and avoid more proposals once that reserve is reached. This is advice to the
+model, not an automatic selection or a reduced hard proposal budget. Individual
+mode retains its original response shape. A fresh smoke output preserves the
+failed deadline experiment separately.

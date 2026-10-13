@@ -131,6 +131,27 @@ class RegistryTests(unittest.TestCase):
             self.assertIsNone(self.d.selected)
             self.assertFalse(any(k=='selection' for k,v in self.logs))
 
+    def test_paired_responses_refresh_budget_after_services_and_cache(self):
+        self.d.deadline=30;self.d.report_budget=True
+        def propose(*_):
+            self.now[0]=4
+            return np.zeros((8,8))
+        self.propose.side_effect=propose
+        p=self.d.proposal(self.d.id,source='pi05',instruction='Move jar')
+        self.assertEqual((p['seconds_remaining'],p['proposals_remaining']),(26,2))
+        def score(*_):
+            self.now[0]=7
+            return {'a':False,'b':True}
+        self.score.side_effect=score
+        j=self.d.judge(p['candidate_id'])
+        self.assertEqual((j['seconds_remaining'],j['proposals_remaining']),(23,2))
+        self.now[0]=20
+        cached=self.d.judge(p['candidate_id'])
+        self.assertEqual(cached['seconds_remaining'],10)
+        self.assertEqual(self.score.call_count,1)
+        self.d.report_budget=False
+        self.assertNotIn('seconds_remaining',self.d.judge(p['candidate_id']))
+
     def test_failed_persistence_does_not_commit(self):
         a=self.candidate();r=self.rationale(a)
         self.d.log=Mock(side_effect=OSError('private-path'))

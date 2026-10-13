@@ -115,7 +115,8 @@ class CodexEpisode(AgenticEpisode):
             state=self.native_history.rows[-1]['state'], images=images, history=self.executed_history,
             questions=self.questions, bounds=action_space, propose=propose,
             make_inputs=lambda commands: self.native_history.inputs(commands, 1/self.cfg.action_frequency, self.directory),
-            score=score, log=self._log, proposal_limit=c['proposal_limit'], timeout=c['decision_timeout_s'])
+            score=score, log=self._log, proposal_limit=c['proposal_limit'], timeout=c['decision_timeout_s'],
+            report_budget=c['tool_sequence']=='paired')
         self.decisions += 1
         old_handler = signal.getsignal(signal.SIGALRM)
         def timeout(*_):
