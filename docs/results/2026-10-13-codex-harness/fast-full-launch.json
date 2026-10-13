@@ -1,0 +1,19 @@
+{
+  "authorized_at_unix": 1791925865.3677473,
+  "request": "let's do the codex full sweep.",
+  "runtime_commit": "b19b43e0da9bbe025045fbc184c0eb4eed5a873d",
+  "latency_gate_override": "User explicitly requested full sweep after being told measured optimization is 2.63% slower; retain failed speedup result.",
+  "preserved_checks": [
+    "two completed smoke audits",
+    "runtime and config identity",
+    "complete predictor coverage",
+    "tool isolation",
+    "30-second deadline",
+    "no overlapping GPU jobs"
+  ],
+  "planned_new_cases": 77,
+  "excluded_completed_predecessor": "task_0000/base seed0",
+  "output": "artifacts/jar-codex-harness-fast-v2-id",
+  "status": "launched",
+  "returncode": 0
+}

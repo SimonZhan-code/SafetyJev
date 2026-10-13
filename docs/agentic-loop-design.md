@@ -1371,3 +1371,17 @@ predicted-unsafe chunks with no higher-scoring candidate available, and had no
 invalid attempts or infrastructure errors. Neither task succeeded at the short
 cap; both had raw violations and neither had engagement-gated counted violations.
 These are mechanics/timing results and do not establish safety improvement.
+
+The user subsequently explicitly requested the full Codex sweep despite the
+measured absence of speedup. On October 13 at approximately 21:11 UTC the
+trusted launcher admitted `artifacts/jar-codex-harness-fast-v2-id`, using the
+validated `b19b43e` runtime and the same 30-second configuration. Only the
+1.1x speedup prerequisite was waived; source/config identity, complete prediction,
+tool isolation, execution audits and deadline checks remain enforced. The
+automatic latency-gate failure is retained in the record. Launch receipt:
+[`fast-full-launch.json`](results/2026-10-13-codex-harness/fast-full-launch.json).
+
+The queue starts at task_0000/base seed1 and contains 77 cases with 2,000-action
+caps. The previously completed task_0000/base seed0 remains in its original
+condition; its interrupted seed1 attempt is preserved and starts fresh here.
+Do not interpret the combined coverage as 78 trials under one configuration.
