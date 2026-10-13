@@ -1287,3 +1287,44 @@ matched its remote SHA-256 manifest; the compressed archive hash and verificatio
 receipt are saved in
 [`smoke-backup-verification.json`](results/2026-10-13-codex-harness/smoke-backup-verification.json).
 This backup excludes the still-running full sweep.
+
+### Paired dispatch and hard deadline (October 13)
+
+The user requested an optimized Codex mode after the first 2,000-action trial
+required 86.0 minutes. Its 250 decisions averaged 19.49 seconds; 367 predictor
+calls averaged 1.227 seconds, while pi0.5 proposals averaged 0.082 seconds.
+The decision-time residual after measured proposal/judgment calls was 73.3
+minutes; this includes model, network and harness overhead and cannot be claimed
+as pure model inference time.
+
+`tool_sequence` is configurable as `individual` (historical default) or `paired`.
+The paired prompt asks Codex to issue proposal then judge in one `functions.exec`,
+and, after inspecting the answers and choosing, execute then observe in one call.
+It retains the same five robot tools and candidate registry; batching does not
+introduce an automatic choice, all-No veto, or fallback. The prompt requests no
+routine narration and explicitly forwards MCP images using `image(block)`, rather
+than serializing image bytes into text. These are prompt instructions, not a
+claim that every model response follows the optimal sequence.
+
+New examples `configs/codex-harness-fast-smoke.example.json` and
+`configs/codex-harness-fast-jar.example.json` select paired calls, low reasoning,
+and a **30-second hard deadline per decision**, including tool calls. The first
+decision also includes worker startup/admission. The simulator remains paused
+while Codex decides. Expiry rejects late results, terminates the attempt as a
+harness failure and executes no uncommitted candidate; it does not select the
+best candidate automatically. Execution of an already committed eight-action
+chunk is outside this decision deadline. A deadline is not a promise that every
+trial will finish successfully or that an episode lasts only 30 seconds.
+
+The original queue was stopped with one completed case and task_0000/base seed1
+interrupted after 672 actions. Its captures and source provenance are preserved
+under `artifacts/jar-codex-harness-id`, with `optimization-pause.json`. Optimized
+smoke evidence goes to `artifacts/codex-harness-fast-smoke`; the optimized sweep
+goes to `artifacts/jar-codex-harness-fast-id`. `--exclude-completed-from` accepts
+an earlier matching ManiGuard/full-suite directory, re-audits each completed
+case, and pins record/plan hashes in the new plan. Only audited completed cases
+are excluded; interrupted cases start fresh. Thus the optimized queue plans 77
+new trials, and the original completed trial stays a separate condition rather
+than being reported as an optimized result. The two optimized smoke trials must
+pass their own source/config and execution audits before that queue can start.
+The Astra recovery sweep is unaffected.

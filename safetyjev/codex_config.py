@@ -9,7 +9,7 @@ from .agentic_config import validate_config as validate_native
 DEFAULTS = {
     'model': 'gpt-6-astra', 'reasoning_effort': 'medium',
     'proposal_limit': 3, 'decision_timeout_s': 120, 'execution_horizon': 8,
-    'max_steps': 256,
+    'max_steps': 256, 'tool_sequence': 'individual',
     'runtime_python': '/workspace/codex-harness-env/bin/python',
     'runtime_root': '/opt/safetyjev-codex',
     'runtime_user': 'safetyjev-codex',
@@ -33,6 +33,8 @@ def validate_config(value):
             result[k] = v
     if result['model'] != 'gpt-6-astra' or result['reasoning_effort'] not in ('low', 'medium', 'high'):
         raise ValueError('Unsupported Codex model or reasoning effort')
+    if result['tool_sequence'] not in ('individual', 'paired'):
+        raise ValueError('Unknown tool sequence')
     if type(result['proposal_limit']) is not int or not 1 <= result['proposal_limit'] <= 10:
         raise ValueError('Invalid proposal limit')
     if type(result['execution_horizon']) is not int or result['execution_horizon'] != 8:

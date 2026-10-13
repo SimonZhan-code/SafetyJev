@@ -41,6 +41,24 @@ class CodexSweepTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'smoke-evidence'):
             queue.verify_smoke(None,{}, {},Path('/tmp/cfg'))
 
+    def test_predecessor_excludes_only_audited_completed_cases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'plan.json').write_text(json.dumps({'suite':'jar-base','max_steps':2000,'maniguard':{'revision':'dev'}}))
+            for seed,status in ((0,'completed'),(1,'running'),(2,'failed')):
+                case=root/('task_0000-base-seed'+str(seed));case.mkdir()
+                (case/'record.json').write_text(json.dumps({'status':status}))
+                ep=case/'episodes'/'one';ep.mkdir(parents=True);(ep/'complete.json').write_text('{}')
+            with patch.object(queue.jar,'source_provenance',return_value={'revision':'dev'}), patch.object(queue,'audit',return_value={'status':'completed'}) as audit:
+                rows=queue.completed_predecessor(root)
+                self.assertEqual([(r['scene'],r['seed']) for r in rows],[('task_0000/base',0)])
+                self.assertEqual(audit.call_count,1)
+                self.assertEqual(len(rows[0]['record_sha256']),64)
+                audit.return_value={'status':'infrastructure_failure'}
+                with self.assertRaisesRegex(ValueError,'audit failed'):queue.completed_predecessor(root)
+            with patch.object(queue.jar,'source_provenance',return_value={'revision':'other'}):
+                with self.assertRaisesRegex(ValueError,'Incompatible'):queue.completed_predecessor(root)
+
     def test_failures_do_not_become_task_outcomes(self):
         good={'status':'completed','task_success':True,'safe_success':True,'raw_violation':True,
               'result':{'counted_violation':False,'ever_contacted':True,'ever_grasped':True},

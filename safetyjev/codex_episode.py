@@ -74,7 +74,8 @@ class CodexEpisode(AgenticEpisode):
                'CODEX_HOME': c['runtime_home']+'/.codex',
                'LANG': 'C.UTF-8'}
         cmd = [c['runtime_python'], '-m', 'safetyjev.codex_worker', '--socket', str(path),
-               '--model', c['model'], '--reasoning-effort', c['reasoning_effort']]
+               '--model', c['model'], '--reasoning-effort', c['reasoning_effort'],
+               '--tool-sequence', c['tool_sequence'], '--decision-timeout', str(c['decision_timeout_s'])]
         # No root environment, model credentials, supervisor access, or inherited descriptors.
         self.worker = subprocess.Popen(cmd, env=env, cwd=c['runtime_home']+'/work',
             user=account.pw_uid, group=account.pw_gid, extra_groups=[],

@@ -15,7 +15,8 @@ def preflight(config):
     env={'PATH':'/usr/bin:/bin','HOME':str(home),'CODEX_HOME':str(home/'.codex'),
          'PYTHONPATH':config['runtime_root'],'PYTHONNOUSERSITE':'1','LANG':'C.UTF-8'}
     proc=subprocess.run([config['runtime_python'],'-m','safetyjev.codex_worker','--preflight',
-        '--model',config['model'],'--reasoning-effort',config['reasoning_effort']],
+        '--model',config['model'],'--reasoning-effort',config['reasoning_effort'],
+        '--tool-sequence',config['tool_sequence'],'--decision-timeout',str(config['decision_timeout_s'])],
         cwd=home/'work',env=env,user=account.pw_uid,group=account.pw_gid,extra_groups=[],
         capture_output=True,text=True,timeout=100,umask=0o077)
     try:report=json.loads(proc.stdout)

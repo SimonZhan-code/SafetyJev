@@ -60,6 +60,30 @@ def verify_smoke(directory, config, source_hashes, config_path):
             raise ValueError('Smoke execution audit failed')
 
 
+def completed_predecessor(directory):
+    """Exclude audited terminal cases while retaining their distinct experiment identity."""
+    if directory is None:
+        return []
+    directory=directory.resolve()
+    plan=json.loads((directory/'plan.json').read_text())
+    if (plan.get('suite')!='jar-base' or plan.get('max_steps')!=2000 or
+            plan.get('maniguard')!=jar.source_provenance()):
+        raise ValueError('Incompatible predecessor suite')
+    rows=[]
+    for scene,seed in case_grid('jar-base'):
+        case=directory/(scene.replace('/','-')+'-seed'+str(seed))
+        record=case/'record.json'
+        if not record.exists() or json.loads(record.read_text()).get('status')!='completed':
+            continue
+        eps=list((case/'episodes').glob('*/complete.json'))
+        if len(eps)!=1 or audit(eps[0].parent)['status']!='completed':
+            raise ValueError('Predecessor execution audit failed')
+        rows.append({'scene':scene,'seed':seed,'record':str(record),
+            'record_sha256':hashlib.sha256(record.read_bytes()).hexdigest(),
+            'plan_sha256':hashlib.sha256((directory/'plan.json').read_bytes()).hexdigest()})
+    return rows
+
+
 def summarize(records, planned):
     done=[r for r in records if r.get('status')=='completed']
     return {'planned':planned,'completed':len(done),
@@ -110,6 +134,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--suite',choices=('smoke','jar-base'),default='smoke')
     p.add_argument('--smoke-evidence',type=Path)
+    p.add_argument('--exclude-completed-from',type=Path)
     p.add_argument('--config',type=Path,default=ROOT/'configs/codex-harness.example.json')
     p.add_argument('--output',type=Path,default=ROOT/'artifacts/codex-harness-smoke')
     p.add_argument('--check',action='store_true')
@@ -119,7 +144,12 @@ def main():
     config=load_config(args.config)
     cap=256 if args.suite=='smoke' else 2000
     if config['max_steps']!=cap:raise ValueError('Incorrect action cap for selected suite')
-    grid=case_grid(args.suite)
+    if args.exclude_completed_from and args.suite!='jar-base':
+        raise ValueError('Only full sweeps may exclude predecessor cases')
+    excluded=completed_predecessor(args.exclude_completed_from)
+    excluded_keys={(r['scene'],r['seed']) for r in excluded}
+    grid=[c for c in case_grid(args.suite) if c not in excluded_keys]
+    if not grid:raise ValueError('No remaining cases')
     JOB='safetyjev-codex-smoke' if args.suite=='smoke' else 'safetyjev-codex-jar-eval'
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True);out.chmod(0o700)
     # This check is CPU-only and can run while the existing sweep uses the GPU.
@@ -140,6 +170,7 @@ def main():
         paths.extend(sorted((jar.BENCH/scene).glob('*.json*')))
     plan={'maniguard':jar.source_provenance(),'suite':args.suite,'cases':[[s,n] for s,n in grid],'max_steps':cap,'mode':'codex_harness','config':config,
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
+    if excluded:plan['excluded_predecessor_cases']=excluded
     if args.suite=='jar-base':verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config)
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text())!=plan:
         raise RuntimeError('Plan changed; use a new output directory')
@@ -149,6 +180,7 @@ def main():
     if args.launch:
         command=[sys.executable,'-u',str(Path(__file__).resolve()),'--suite',args.suite,'--config',str(args.config.resolve()),'--output',str(out)]
         if args.smoke_evidence:command+=['--smoke-evidence',str(args.smoke_evidence.resolve())]
+        if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
         if args.retry_failed:command.append('--retry-failed')
         if any(not all(c.isalnum() or c in '/._-' for c in x) for x in command):raise ValueError('Unsafe Supervisor path')
         Path('/etc/supervisor/conf.d/'+JOB+'.conf').write_text(f'[program:{JOB}]\ncommand={" ".join(command)}\ndirectory={ROOT}\nautostart=false\nautorestart=false\nstopasgroup=true\nkillasgroup=true\nstopwaitsecs=60\nstdout_logfile={out}/queue.log\nstderr_logfile={out}/queue.err\n')

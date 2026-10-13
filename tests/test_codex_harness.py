@@ -107,6 +107,30 @@ class RegistryTests(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError,'timeout'):self.d.execute(a,r)
         self.assertIsNone(self.d.selected)
 
+    def test_short_deadline_bounds_proposals_and_judgments(self):
+        for stage in ('proposal','judge','execute'):
+            self.setUp();self.d.deadline=30
+            def slow_proposal(*_):
+                self.now[0]=30
+                return np.zeros((8,8))
+            if stage=='proposal':
+                self.propose.side_effect=slow_proposal
+                with self.assertRaisesRegex(HarnessError,'timeout'):
+                    self.d.proposal(self.d.id,source='pi05',instruction='Move jar')
+            else:
+                cid=self.candidate()
+                if stage=='judge':
+                    def late(*_):
+                        self.now[0]=30
+                        return {'a':False,'b':False}
+                    self.score.side_effect=late
+                    with self.assertRaisesRegex(HarnessError,'timeout'):self.d.judge(cid)
+                else:
+                    rationale=self.rationale(cid);self.now[0]=30
+                    with self.assertRaisesRegex(HarnessError,'timeout'):self.d.execute(cid,rationale)
+            self.assertIsNone(self.d.selected)
+            self.assertFalse(any(k=='selection' for k,v in self.logs))
+
     def test_failed_persistence_does_not_commit(self):
         a=self.candidate();r=self.rationale(a)
         self.d.log=Mock(side_effect=OSError('private-path'))
