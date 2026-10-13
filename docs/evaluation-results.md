@@ -31,8 +31,9 @@ mechanics results do not establish safety improvement.
 [Timing/audit record](results/2026-10-13-codex-harness/prepared-timing-final.json)
 and the [design discussion](agentic-loop-design.md#completed-prepared-candidate-timing-trial)
 retain configuration and interpretation limits. Model services are stopped.
-Full off-node backup verification and the authorized rental stop remain pending;
-no further sweep is launched.
+Full off-node backup is verified across 4,030 files and 219,087,836 bytes,
+including archive/per-file checksums and exact coverage. The authorized rental
+stop follows securing these records; no further sweep is launched.
 
 ## 2026-10-13: completed DeepSeek Jar predictor + System 1 sweep
 

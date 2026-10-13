@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "c8e9945b4b6e07712c6cb788db414dc805a76a2d6d6563e3e9ed1c2c09915610",
+  "files_verified": 4030,
+  "bytes_verified": 219087836,
+  "coverage": "Entire prepared timing trial and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}

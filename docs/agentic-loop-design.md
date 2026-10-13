@@ -1490,7 +1490,8 @@ trial, not evidence of improved safety or task performance. The report records
 
 [Final timing and audit evidence](results/2026-10-13-codex-harness/prepared-timing-final.json)
 contains the distributions and counts. Both model services are stopped and GPU
-memory is empty. The full trial and separate simulator-output backup is still
-transferring; rental stop remains pending local archive/file checksum and coverage
-verification, followed by secured documentation. Do not launch another trial or
+memory is empty. The full trial and separate simulator-output backup is verified locally across
+4,030 files and 219,087,836 bytes, with matching archive and per-file SHA256 and
+exact manifest coverage. [Backup receipt](results/2026-10-13-codex-harness/prepared-timing-backup-verification.json).
+The authorized rental stop follows securing these records. Do not launch another trial or
 full sweep from this result.

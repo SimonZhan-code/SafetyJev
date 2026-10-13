@@ -79,6 +79,6 @@
     "batch_size": 1,
     "vision_cache": false
   },
-  "backup_status": "Transferring; no local checksum/coverage verification receipt yet.",
-  "rental_status": "Model services stopped; rental stop pending verified backup and pushed final records."
+  "backup_status": "Verified locally: 4,030 files, 219,087,836 bytes; see prepared-timing-backup-verification.json.",
+  "rental_status": "Model services stopped; authorized rental stop next after this receipt is pushed."
 }
