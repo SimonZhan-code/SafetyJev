@@ -865,3 +865,149 @@ saved FLA labels. Three warmed full-history calls, each checking all three Jar
 constraints, took 1.310–1.481 seconds (mean 1.396 seconds), including local HTTP
 serialization and transport. This small smoke test is not a new paired speedup
 estimate. Its record is `artifacts/astra-deployment-20261012/fla-service-smoke.json`.
+
+## Codex robot harness experimental arm
+
+This arm lives on `codex/codex-robot-harness`; historical classifier and
+predictor-plus-System1 modes keep their existing behavior. GPT-6 Astra uses the
+stock Python Codex SDK and ChatGPT login, rather than the OpenRouter planner.
+The trusted runner owns the simulator and both model connections. Codex can
+request pi0.5 proposals or write controller commands, judge candidates, and choose
+any completely scored candidate. There is no hidden all-No veto, best-score
+fallback, instruction TTL, automatic stagnation repair, or three-call repair cap.
+
+```mermaid
+flowchart TD
+    S[Paused ManiGuard decision state] --> F[Allowlist: two images, 16D proprioception, executed history]
+    F --> C[GPT-6 Astra in stock Codex]
+    C --> P[propose_pi05: revised instruction]
+    C --> W[propose_actions: eight commands]
+    P --> R[Trusted immutable candidate registry]
+    W --> R
+    R --> J[Native Unsafe600 step500: FLA, batch1, cache off]
+    J --> B[All fixed questions: binary Yes/No answers]
+    B --> C
+    C --> E[execute candidate ID with predictor citation]
+    E --> V[Check state, hash, complete predictions and deadline]
+    V --> S
+    S --> H[Append only actually executed actions and post-action states]
+    H --> F
+    S --> O[Private outcomes and native AP/LTL evaluator]
+    O --> A[Offline audit and reports]
+    C --> T[120 seconds without commitment: infrastructure failure]
+```
+
+`configs/codex-harness.example.json` is credential-free. `--codex-harness-config`
+selects `codex_harness` and rejects legacy guard/planner/agentic flags. Defaults
+are model `gpt-6-astra`, medium reasoning, three proposal attempts, 120 seconds
+per decision (including tool calls), eight actions per candidate, and 256 actions
+per smoke episode. Runtime paths identify a dedicated unprivileged account,
+empty working directory, credential home and private Unix socket. The predictor
+must report the pinned native checkpoint, FLA, batch size one and cache disabled.
+Prediction reset/history masks and image preprocessing reuse the existing
+`chunk_start_v2` implementation. The known FLA versus Torch disagreement is
+4/120 binary answers in the earlier replay; equivalence is not claimed.
+
+The five tools are `observe`, `propose_pi05(decision_id, instruction)`,
+`propose_actions(decision_id, actions)`, `judge(candidate_id)` and
+`execute(candidate_id, rationale)`. Direct commands must be exactly 8×8, with
+seven absolute joint positions in radians and a gripper value. Both proposal
+sources share the attempt budget, including duplicates and malformed requests.
+Transformation and clipping precede registration and prediction. Duplicate inputs
+may reuse complete predictions. Rejected/unexecuted proposals never enter history.
+
+`judge` returns a prediction ID, complete Yes/No answers and a count of No answers;
+logits and probabilities remain private. The execution rationale must contain that
+prediction ID, the exact answer mapping and explanatory text. Codex may choose an
+earlier, lower-scoring or predicted-unsafe candidate. These choices are recorded
+explicitly; the runner never replaces the choice. Candidate IDs are unique
+execution request IDs. Committing invalidates the decision, and repeated requests
+return the original receipt without advancing simulation. Receipts later report
+actual execution length, including early task termination. A crash ends the
+attempt; `--retry-failed` archives it and starts a fresh episode/conversation.
+
+Only allowlisted responses cross the Unix gateway. Observations contain two camera
+images, the current 16D robot state, at most eight executed action/post-action-state
+pairs, task text, fixed question text/IDs, controller conventions and budgets.
+Object poses, contact/grasp flags, predicates, LTL states, rewards, success labels,
+scene paths and prior results remain in the private evaluator. Terminal replies
+say only `session_closed`. Images may guide planning; reported safety judgments
+must cite the predictor. This enforces evidence availability and execution
+consistency, not the model's private reasoning. Codex-written actions have no
+established predictor reliability or calibration.
+
+### Remote setup and launch gate
+
+The dedicated environment pins `openai-codex==0.162.1`, its bundled
+`openai-codex-cli-bin==0.162.1`, and `zstandard==0.25.0`. Setup copies only the
+worker/MCP/transport/inventory modules into `/opt/safetyjev-codex`. The account
+cannot read private evaluator outputs; ChatGPT authentication stays in its own
+credential store. HF credentials remain with the trusted predictor service.
+The node does not support nested namespaces, so this design does not depend on a
+nested Docker/bubblewrap sandbox or enable an unsandboxed shell fallback.
+
+On an isolated checkout of this branch on the prepared NVIDIA node:
+
+```bash
+python3 scripts/remote/setup-codex-harness.py \
+  --output /workspace/bootstrap-codex-harness/preflight.json
+# If authentication is absent, run once and complete the browser sign-in:
+runuser -u safetyjev-codex -- env -i \
+  HOME=/home/safetyjev-codex CODEX_HOME=/home/safetyjev-codex/.codex \
+  PATH=/usr/bin:/bin \
+  /workspace/codex-harness-env/lib/python3.11/site-packages/codex_cli_bin/bin/codex \
+  login --device-auth
+# Re-run setup/preflight after login. Do not launch unless it passes.
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py --check
+# Only after the prior sweep, backups, and GPU services release the node:
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py --launch
+```
+
+The separate Supervisor queue is `safetyjev-codex-smoke`; model jobs are
+`safetyjev-codex-predictor` and `safetyjev-codex-pi05`. The queue refuses active
+SafetyJev services, occupied GPU memory/processes, changed source manifests and
+failed tool/authentication preflight. It runs only Jar `task_0000/base` and
+`task_0005/base`, seed 0, 256 actions. Existing completed smoke cases are audited
+and skipped. Outputs are private under `artifacts/codex-harness-smoke`, separate
+from previous sweeps. Back up this tree **and** `/workspace/ManiGuard/outputs`,
+verify checksums and command audits, then commit compact result records before
+stopping the rental. Do not merge this branch or launch a sweep.
+
+The preflight checks account/model availability, SDK/runtime versions, all five
+MCP tools, absent MCP resources, and the actual advertised native tool inventory.
+The inventory probe uses a credential-free local dummy Responses endpoint; it
+performs no model inference and no robot tool calls. A separate ephemeral SDK
+thread verifies the MCP inventory. Every episode repeats admission checks. The
+probe observes a separate CLI request with the same configuration; it is not a
+proof about all future app-server turns, so passing it alone would still require
+the planned live transcript/adversarial audit.
+
+### Validation status on October 13, 2026
+
+ChatGPT device authentication **succeeded** on the dedicated remote account, and
+`gpt-6-astra` is available. All five MCP robot tools load. **Live smoke is blocked
+by the tool-isolation gate**, not authentication or predictor availability.
+The stock 0.162.1 Astra catalog selects `code_mode_only` and multi-agent v2;
+despite feature-disable settings, its request still advertises `functions.exec`,
+`functions.wait`, input-request tools and collaboration tools. The gate rejects
+these. No weakening of the allowlist, alternate model or shell fallback is used.
+Diagnostic local direct-tool catalog experiments also left non-robot tools
+exposed and were not adopted. See the compact preflight evidence under
+`docs/results/2026-10-13-codex-harness/`.
+
+The full CPU suite passes **156 tests**, including 21 new harness tests.
+Tests cover proposal budgets, transforms, duplicate prediction caching,
+partial/malformed answers, exact citations, deadline expiry, stale/mutated
+candidates, earlier/lower/unsafe choices, repeated execution and oracle canaries.
+Controlled integration executes the pinned ManiGuard action loop with both
+proposal sources, exact command/instruction alignment and early completion.
+These tests neither load the trained checkpoint nor demonstrate live Codex
+isolation. The two GPU/Codex smoke trials and model-visible transcript audit
+remain unexecuted until the stock runtime can satisfy the restricted inventory.
+
+Offline `codex_audit.audit` checks execution receipts, candidate hashes, scored
+answers/citations, command/instruction alignment and public response fields.
+Reports retain task success, ManiGuard engagement-gated safe success, raw
+violations, proposal sources, invalid attempts, unsafe/lower-score selections,
+latencies and available token usage. Simulator parity and training/evaluation
+independence remain unverified, as in the earlier experiments.

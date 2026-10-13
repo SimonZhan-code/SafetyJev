@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 agentic = ["numpy", "Pillow", "h5py", "huggingface_hub"]
+codex = ["openai-codex==0.162.1", "openai-codex-cli-bin==0.162.1", "zstandard==0.25.0"]
 
 [project.scripts]
 safetyjev = "safetyjev.cli:main"

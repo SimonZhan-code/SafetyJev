@@ -1,0 +1,20 @@
+{
+  "model": "gpt-6-astra",
+  "reasoning_effort": "medium",
+  "proposal_limit": 3,
+  "decision_timeout_s": 120,
+  "execution_horizon": 8,
+  "max_steps": 256,
+  "runtime_python": "/workspace/codex-harness-env/bin/python",
+  "runtime_root": "/opt/safetyjev-codex",
+  "runtime_user": "safetyjev-codex",
+  "runtime_home": "/home/safetyjev-codex",
+  "socket_root": "/run/safetyjev-codex",
+  "predictor": {
+    "endpoint": "http://127.0.0.1:8794",
+    "timeout": 120,
+    "attention_backend": "fla",
+    "vision_cache": false,
+    "batch_size": 1
+  }
+}

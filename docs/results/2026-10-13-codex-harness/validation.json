@@ -1,0 +1,26 @@
+{
+  "cpu_tests": 156,
+  "cpu_suite": "passed",
+  "new_harness_tests": 21,
+  "pinned_maniguard_loop": "controlled model/simulator boundaries, direct and pi05 proposals, early termination",
+  "remote_chatgpt_authentication": "passed",
+  "model": "gpt-6-astra",
+  "remote_tool_isolation": "blocked",
+  "gpu_smoke_trials_completed": 0,
+  "prior_astra_sweep_modified": false,
+  "scope": "CPU mechanics and admission checks only; no live model/robot validation",
+  "source_sha256": {
+    "safetyjev/codex_config.py": "0f1594ea8bce38bf27d3b8a686ba322b7743ab81820b15a0aefab362ac96faad",
+    "safetyjev/codex_audit.py": "96db25a78f97b96092e6c0529e0c1d0a961d9ec624b144a18e55d6d7935e9dca",
+    "safetyjev/codex_worker.py": "318170a4cb93b11888f59712c18d76c573e0b3343a7582af94c44d6937154e1b",
+    "safetyjev/codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263",
+    "safetyjev/codex_registry.py": "9f194dd65ae6de0eae3c34f2645b5edb9b6056132a1e865b251aa0c6240691d7",
+    "safetyjev/codex_bridge.py": "5b484145b272b04970b9006f0a7287847c09acbb498c816705614351f76ab624",
+    "safetyjev/codex_tools.py": "d1080d3f90bf78c5c823f5c1d9f2105a1b4f3e3a587d24c3b2b4b13a9114753b",
+    "safetyjev/codex_setup.py": "627ca6e9fa6648f91f75cdf83cc8b244196d0ac11b3985ea717d4e115ba1c2bc",
+    "safetyjev/codex_episode.py": "93099199e877b4210ce6645f91576742b3d9b6fb7cfe365acf3fe5d14b9f1a9b",
+    "tests/test_codex_harness.py": "525dd6b2262738121831e9175bd782ccd3f26d234f32912b13a2366b9d907e9a",
+    "scripts/remote/codex-robot-smoke.py": "c289891c48d5c642bd334b2eeabb73b8bac78b6630ab75378e345374e845db49",
+    "scripts/remote/setup-codex-harness.py": "3eea160a37aaa227a9a544505e1b12bc196ca4ea04266b5f04ba0b69768c48fd"
+  }
+}

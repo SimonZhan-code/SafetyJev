@@ -1,0 +1,69 @@
+{
+  "status": "blocked_tool_inventory",
+  "chatgpt_authenticated": true,
+  "attestation": {
+    "sdk_version": "0.162.1",
+    "runtime_version": "0.162.1",
+    "model": "gpt-6-astra",
+    "mcp_tools": [
+      "observe",
+      "execute",
+      "propose_actions",
+      "propose_pi05",
+      "judge"
+    ],
+    "disabled_features": [
+      "shell_tool",
+      "unified_exec",
+      "shell_snapshot",
+      "code_mode",
+      "code_mode_host",
+      "apps",
+      "browser_use",
+      "browser_use_external",
+      "computer_use",
+      "in_app_browser",
+      "multi_agent",
+      "multi_agent_v2",
+      "memories",
+      "hooks",
+      "goals",
+      "image_generation",
+      "artifact",
+      "workspace_dependencies",
+      "tool_suggest",
+      "view_image",
+      "plugins",
+      "remote_plugin",
+      "sleep_tool",
+      "skill_search",
+      "skill_mcp_dependency_install",
+      "code_mode_only",
+      "default_mode_request_user_input",
+      "send_message_to_user_async"
+    ],
+    "native_inventory": [
+      "collaboration.followup_task",
+      "collaboration.interrupt_agent",
+      "collaboration.list_agents",
+      "collaboration.send_message",
+      "collaboration.spawn_agent",
+      "collaboration.wait_agent",
+      "functions.exec",
+      "functions.request_user_input",
+      "functions.request_user_input_async",
+      "functions.wait"
+    ]
+  },
+  "source_sha256": {
+    "__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+    "codex_worker.py": "318170a4cb93b11888f59712c18d76c573e0b3343a7582af94c44d6937154e1b",
+    "codex_tools.py": "d1080d3f90bf78c5c823f5c1d9f2105a1b4f3e3a587d24c3b2b4b13a9114753b",
+    "codex_bridge.py": "5b484145b272b04970b9006f0a7287847c09acbb498c816705614351f76ab624",
+    "codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263"
+  },
+  "sdk_version": "0.162.1",
+  "runtime_version": "0.162.1",
+  "scope": "CPU/auth/tool inventory only; no robot or GPU inference",
+  "exit_code": 2
+}

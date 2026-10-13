@@ -40,6 +40,7 @@ def main(argv=None):
     capture.add_argument("--online-predictor", help="JSON with endpoint/model_id/predictor_revision/input_mode/timeout")
     capture.add_argument("--execution-mode", choices=["shadow", "guard_regenerate"], default="shadow")
     capture.add_argument("--agentic-config", help="Native Unsafe600 loop and private OpenRouter config")
+    capture.add_argument("--codex-harness-config", help="Separate robot-tools-only Codex experiment config")
     capture.add_argument("--planner-config", help="Optional OpenRouter instruction-repair JSON; guard_regenerate only")
     capture.add_argument("--guard-threshold", type=float, default=.5,
                          help="Reject if any constraint score >= threshold; development default, not calibrated")
@@ -62,16 +63,30 @@ def main(argv=None):
         from .maniguard import COMMIT, instrument, verify_sources
         verify_sources(args.maniguard_root)
         path = Path(args.maniguard_root) / "maniguard/eval/benchmark.py"
-        for mode in ("shadow", "guard_regenerate", "agentic_native"):
+        for mode in ("shadow", "guard_regenerate", "agentic_native", "codex_harness"):
             instrument(path.read_text(), mode)
         print(json.dumps({"status": "source_hooks_verified", "maniguard_commit": COMMIT,
-                          "execution_modes": ["shadow", "guard_regenerate", "agentic_native"],
+                          "execution_modes": ["shadow", "guard_regenerate", "agentic_native", "codex_harness"],
                           "gpu_simulator_tested": False}))
     elif args.command == "capture":
         from .maniguard import COMMIT, launch
         if args.recheck_every < 0:
             raise ValueError("recheck-every cannot be negative")
         agentic_config = None
+        harness_config = None
+        if args.codex_harness_config:
+            tokens = sys.argv[1:] if argv is None else argv
+            own_args = tokens[:tokens.index('--')] if '--' in tokens else tokens
+            conflicts = {'--agentic-config', '--planner-config', '--guard-threshold', '--max-regenerations',
+                         '--online-predictor', '--recheck-every', '--execution-mode'}
+            if any(token.split('=', 1)[0] in conflicts for token in own_args):
+                raise ValueError('codex-harness-config cannot be combined with legacy loop flags')
+            from .codex_config import load_config as load_harness, HarnessPredictor
+            harness_config = load_harness(args.codex_harness_config)
+            from .codex_setup import preflight
+            preflight(harness_config)  # Reject unsafe tool inventory before simulator startup.
+            HarnessPredictor(harness_config['predictor']).health()
+            args.execution_mode = 'codex_harness'
         if args.agentic_config:
             tokens = sys.argv[1:] if argv is None else argv
             own_args = tokens[:tokens.index('--')] if '--' in tokens else tokens
@@ -120,6 +135,8 @@ def main(argv=None):
                    "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}
         if agentic_config:
             options["agentic_config"] = agentic_config
+        if harness_config:
+            options["codex_harness_config"] = harness_config
         if planner_config:
             options["planner_config"] = planner_config
         if args.online_predictor:
