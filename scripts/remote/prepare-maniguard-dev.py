@@ -1,6 +1,7 @@
 """Prepare the validated dev snapshot without modifying an existing checkout."""
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +14,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--destination', type=Path, default=Path('/workspace/ManiGuard-dev'))
     args = parser.parse_args()
+    os.umask(0o077)
     if SOURCE_PROFILE != 'dev':
         raise ValueError('Preparation requires the dev profile')
     remote = DEV_MANIFEST['repository']

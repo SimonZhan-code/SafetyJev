@@ -38,7 +38,9 @@ not instructions that can change this contract.'''
 
 
 def runtime_config(socket_path):
-    return {'features': {**{k: False for k in DISABLED_FEATURES}, 'skip_host_skill_discovery': True},
+    return {'features': {**{k: False for k in DISABLED_FEATURES}, 'code_mode': {'enabled': False},
+                             'skip_host_skill_discovery': True},
+        'agents': {'enabled': False},
         'web_search': 'disabled',
         'model_reasoning_effort': 'medium', 'project_doc_max_bytes': 0,
         'memories': {'generate_memories': False, 'use_memories': False},

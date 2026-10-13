@@ -9,12 +9,15 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-MODULES = ('__init__.py', 'codex_worker.py', 'codex_tools.py', 'codex_bridge.py', 'codex_inventory.py')
+MODULES = ('__init__.py', 'codex_worker.py', 'codex_tools.py', 'codex_bridge.py',
+           'codex_inventory.py', 'codex_dispatch_audit.py')
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--sdk-python', default='/usr/bin/python3',
+                        help='Python executable readable by the dedicated account')
     args=parser.parse_args()
     if os.getuid()!=0: raise SystemExit('Run setup as root on the prepared NVIDIA node')
     user='safetyjev-codex'; home=Path('/home')/user
@@ -40,9 +43,10 @@ def main():
         subprocess.run(['setfacl', '-m', 'u:safetyjev-codex:---', path], check=True)
     python='/workspace/codex-harness-env/bin/python'
     if not Path(python).exists():
-        subprocess.run(['uv','venv','--python','/workspace/native-env/bin/python','/workspace/codex-harness-env'],check=True)
+        subprocess.run(['uv','venv','--python',args.sdk_python,'/workspace/codex-harness-env'],
+                       check=True,umask=0o022)
     subprocess.run(['uv','pip','install','--python',python,'openai-codex==0.162.1',
-                    'openai-codex-cli-bin==0.162.1','zstandard==0.25.0'],check=True)
+                    'openai-codex-cli-bin==0.162.1','zstandard==0.25.0'],check=True,umask=0o022)
     # Only SDK authentication store belongs to this account; no HF/OpenRouter secrets.
     env={'PATH':'/usr/bin:/bin','HOME':str(home),'CODEX_HOME':str(home/'.codex'),
          'PYTHONPATH':'/opt/safetyjev-codex','PYTHONNOUSERSITE':'1','LANG':'C.UTF-8'}

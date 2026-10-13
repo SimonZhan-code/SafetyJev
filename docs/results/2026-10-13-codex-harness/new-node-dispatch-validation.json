@@ -1,0 +1,34 @@
+{
+  "checked_at": "2026-10-13T16:34:04.497643+00:00",
+  "source_sha256": {
+    "codex_worker.py": "3d2a0c8f5e19938e8da3810b5695394bba4872573b4eb30cd0e3f1cb65a87219",
+    "codex_dispatch_audit.py": "2bc518812b6fd7a7d9bf26913ec4a08832ee55414fa4186571c28ad39a0901ee",
+    "codex_tools.py": "d1080d3f90bf78c5c823f5c1d9f2105a1b4f3e3a587d24c3b2b4b13a9114753b",
+    "codex_bridge.py": "5b484145b272b04970b9006f0a7287847c09acbb498c816705614351f76ab624",
+    "codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263"
+  },
+  "maniguard_commit": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition, 0 MiB, 0 %",
+  "node": "ssh9.vast.ai:13565",
+  "sdk_version": "0.162.1",
+  "runtime_version": "0.162.1",
+  "authentication": "ChatGPT device login verified on dedicated account",
+  "local_tests": {
+    "discovered": 166,
+    "passed": 166,
+    "skipped": 0
+  },
+  "remote_tests": {
+    "discovered": 166,
+    "passed": 163,
+    "skipped": 3
+  },
+  "live_trials_started": 0,
+  "admission": "blocked_tool_isolation",
+  "audit_evidence": "new-node-dispatch-isolation-audit.json",
+  "limitation": "CPU fake-provider audit only; no trained model or live simulator validation",
+  "cpu_logs_sha256": {
+    "safetyjev-dispatch-cpu-tests.log": "53f06a74d7f2e32e5481a8c92aff71ea39f15f6bdb93372414e42a271aec8dc3",
+    "safetyjev-remote-dispatch-cpu-tests.log": "0c187a34ec98aba8cfb28212f3614370d740efe541f9fd9570431c3b65d62a59"
+  }
+}

@@ -987,12 +987,12 @@ the planned live transcript/adversarial audit.
 ChatGPT device authentication **succeeded** on the dedicated remote account, and
 `gpt-6-astra` is available. All five MCP robot tools load. **Live smoke is blocked
 by the tool-isolation gate**, not authentication or predictor availability.
-The stock 0.162.1 Astra catalog selects `code_mode_only` and multi-agent v2;
-despite feature-disable settings, its request still advertises `functions.exec`,
-`functions.wait`, input-request tools and collaboration tools. The gate rejects
-these. No weakening of the allowlist, alternate model or shell fallback is used.
-Diagnostic local direct-tool catalog experiments also left non-robot tools
-exposed and were not adopted. See the compact preflight evidence under
+The initial stock 0.162.1 probe exposed dispatch wrappers, input-request tools
+and collaboration tools. Setting `agents.enabled = false` subsequently removed
+collaboration. The user approved dispatch wrappers **only after a successful
+isolation audit**; the next subsection records that audit and its remaining
+failure. Production admission stays closed. No alternate model or shell fallback
+is used. See the compact preflight evidence under
 `docs/results/2026-10-13-codex-harness/`.
 
 The full CPU suite passes **156 tests locally and on the NVIDIA node**, including
@@ -1013,6 +1013,58 @@ Reports retain task success, ManiGuard engagement-gated safe success, raw
 violations, proposal sources, invalid attempts, unsafe/lower-score selections,
 latencies and available token usage. Simulator parity and training/evaluation
 independence remain unverified, as in the earlier experiments.
+
+### Dispatch audit on the new test node (October 13)
+
+On `ssh9.vast.ai:13565`, the dedicated `safetyjev-codex` account is authenticated
+with ChatGPT. SDK and CLI are both **0.162.1**. The CPU-only audit uses the official
+SDK app-server, a local mock Responses endpoint and the real robot MCP adapter
+connected to an inert Unix-socket stub. It never connects to a simulator, invokes
+GPU models or consumes ChatGPT inference tokens. Each of the five robot methods
+is exercised. Run it as the dedicated account after setup:
+
+```bash
+runuser -u safetyjev-codex -- env -i PATH=/usr/bin:/bin \
+  HOME=/home/safetyjev-codex CODEX_HOME=/home/safetyjev-codex/.codex \
+  PYTHONPATH=/opt/safetyjev-codex PYTHONNOUSERSITE=1 \
+  /workspace/codex-harness-env/bin/python -m safetyjev.codex_dispatch_audit
+```
+
+The candidate dispatch configuration enables the isolated V8 host and excludes
+the `functions` and `clock` namespaces from nested tools. A **diagnostic-only**
+copy of the stock bundled catalog removes Astra's optional
+`experimental_supported_tools`; its model identity, instructions and code-mode
+selection remain unchanged. Both catalog hashes are recorded. This yields only
+`functions.exec` and `functions.wait` at the top level and exactly the five robot
+methods in both `ALL_TOOLS` and the actual JavaScript `tools` object.
+
+**Result: blocked, not admitted for live trials.** All thirteen nested probes
+were rejected, including Node imports, network access, function-constructor
+access to `process`, file operations and simulator/configuration access. All five
+robot stub calls completed; the file canary remained unchanged. Direct forged
+shell, file-read, image-read, configuration and simulator calls were unsupported;
+file writes were blocked by read-only policy. But forged direct
+`list_mcp_resources` and `list_mcp_resource_templates` calls still executed,
+returning empty lists. An empty result is not rejection. No privileged data was
+observed, but the required tool-only invocation contract did not pass.
+
+Evidence: [remote audit](results/2026-10-13-codex-harness/new-node-dispatch-isolation-audit.json).
+The production worker does **not** import or activate this diagnostic configuration
+and still rejects wrappers without admission. Namespace exclusions control nested
+exposure; the audit demonstrates that they do not remove every directly callable
+handler. The next prerequisite is a runtime mechanism that rejects undeclared
+direct calls, followed by a repeat of this audit. Pre-tool hooks alone are not
+being claimed as that boundary: official documentation says callback failures can
+allow execution to continue. See [code-mode configuration](https://learn.chatgpt.com/docs/config-file/config-reference)
+and [hook limitations](https://learn.chatgpt.com/docs/hooks).
+
+The updated CPU suite passes **166 tests locally**; on the new node, **163 pass
+and three historical Clutter-fixture tests are skipped**. These include regressions
+for missing audit evidence, extra nested capabilities, empty successful resource
+listings and catalog changes outside optional tools. This validates the gateway
+and audit logic, not the trained checkpoint or the two live Jar trials. The new
+node has no running model/simulator jobs. Its SDK environment uses readable
+system Python; trusted source preparation defaults to owner-only permissions.
 
 
 ### ManiGuard dev migration (October 13)
