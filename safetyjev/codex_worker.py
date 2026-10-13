@@ -1,9 +1,12 @@
 """Unprivileged SDK host. It knows only the robot bridge and its ChatGPT login."""
 import argparse
+import hashlib
 import importlib.metadata
 import json
 import os
 from pathlib import Path
+import subprocess
+import tempfile
 
 from .codex_bridge import rpc
 from .codex_tools import TOOL_NAMES
@@ -53,12 +56,19 @@ def runtime_config(socket_path):
 
 def validate_attestation(value):
     expected = {'sdk_version', 'runtime_version', 'model', 'mcp_tools', 'disabled_features', 'native_inventory'}
-    if not isinstance(value, dict) or set(value) != expected:
+    if not isinstance(value, dict) or set(value) not in (expected, expected | {'isolation'}):
         raise ValueError('Invalid runtime attestation')
     if value['sdk_version'] != SDK_VERSION or value['runtime_version'] != SDK_VERSION or value['model'] != 'gpt-6-astra':
         raise ValueError('Unexpected runtime identity')
-    if set(value['mcp_tools']) != set(TOOL_NAMES) or value['disabled_features'] != list(DISABLED_FEATURES):
+    disabled=[k for k in DISABLED_FEATURES if 'isolation' not in value or k not in ('code_mode','code_mode_host')]
+    if set(value['mcp_tools']) != set(TOOL_NAMES) or value['disabled_features'] != disabled:
         raise ValueError('Unexpected runtime tool inventory')
+    if 'isolation' in value:
+        from .codex_dispatch_audit import validate_report, WRAPPERS
+        validate_report(value['isolation'])
+        if value['native_inventory']!=WRAPPERS:
+            raise ValueError('Unexpected dispatch inventory')
+        return
     # No model-visible tool outside the five robot methods is permitted.
     allowed = {'mcp__robot__'+n for n in TOOL_NAMES}
     names = value['native_inventory']
@@ -81,7 +91,20 @@ def main():
                 raise RuntimeError('runtime_version_mismatch')
         if args.model != 'gpt-6-astra' or os.getuid() == 0:
             raise RuntimeError('invalid_runtime_identity')
-        config = runtime_config(args.socket)
+        from .codex_dispatch_audit import audit, dispatch_config, restricted_catalog, validate_report
+        from openai_codex.client import _resolve_codex_bin
+        isolation = audit(allow_empty_resources=True)
+        validate_report(isolation)
+        # Use the same stock catalog restriction that passed the real-runtime audit.
+        catalog_dir = tempfile.TemporaryDirectory(prefix='safetyjev-models-')
+        exported = subprocess.check_output([str(_resolve_codex_bin(CodexConfig())),
+            'debug','models','--bundled'],timeout=20)
+        catalog_path = Path(catalog_dir.name)/'models.json'
+        catalog_path.write_text(json.dumps(restricted_catalog(json.loads(exported))))
+        if (hashlib.sha256(exported).hexdigest()!=isolation['original_catalog_sha256'] or
+                hashlib.sha256(catalog_path.read_bytes()).hexdigest()!=isolation['diagnostic_catalog_sha256']):
+            raise RuntimeError('audited_catalog_changed')
+        config = dispatch_config(args.socket, catalog_path)
         config['model_reasoning_effort'] = args.reasoning_effort
         from .codex_inventory import probe_inventory
         from .codex_inventory import toml
@@ -104,7 +127,8 @@ def main():
                 raise RuntimeError('unexpected_mcp_server_or_resources')
             attestation = {'sdk_version': SDK_VERSION, 'runtime_version': SDK_VERSION,
                 'model': args.model, 'mcp_tools': list(servers[0]['tools']),
-                'disabled_features': list(DISABLED_FEATURES), 'native_inventory': names}
+                'disabled_features': [k for k in DISABLED_FEATURES if k not in ('code_mode','code_mode_host')],
+                'native_inventory': names, 'isolation': isolation}
             if args.preflight:
                 try:
                     validate_attestation(attestation)

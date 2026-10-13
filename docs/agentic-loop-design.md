@@ -1206,7 +1206,7 @@ separate case directories for every seed. GPU overlap, runtime changes and low
 disk space remain launch/run blockers.
 
 ```bash
-# These commands remain blocked until the tool-isolation preflight passes.
+# Start only after the tool-isolation preflight passes.
 /workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
   --suite smoke --config configs/codex-harness.example.json \
   --output artifacts/codex-harness-smoke --launch
@@ -1218,14 +1218,25 @@ disk space remain launch/run blockers.
   --output artifacts/jar-codex-harness-id --launch
 ```
 
-**Preparation is not launch.** GPU model replay passed, but stock runtime 0.162.1
-still fails the strict tool-isolation contract because undeclared resource-listing
-calls return empty results. The user's earlier approval of dispatch wrappers was
-conditional on a successful audit. A narrowly scoped exception for those two
-empty listings has been requested; until explicitly approved and implemented
-with validated evidence, production admission remains closed. Simulator and asset
-installation on the Codex node can proceed independently. No Codex trial results
-are claimed.
+**Approved tool policy and admission.** The user explicitly approved the two
+empty resource-listing responses on October 13. Production now allows the five
+robot tools through `functions.exec`/`functions.wait`, plus only the exact native
+listing results `{"resources":[]}` and `{"resourceTemplates":[]}`. Resource reads,
+nonempty listings, host file/shell/network access, configuration changes and
+simulator access remain denied. The original strict failed audit is retained.
+
+The revised remote audit and authenticated preflight passed on
+`ssh9.vast.ai:13565` with SDK/runtime 0.162.1 and GPT-6 Astra. It verified all five
+robot dispatches, thirteen rejected nested access probes, absent host globals,
+unchanged file canary, and seven rejected direct access probes; the other two
+direct probes returned exactly the approved empty lists. Every episode repeats
+this audit and checks the bundled model-catalog hashes before opening its real
+conversation. The catalog changes only optional tool declarations, preserving
+the selected model and instructions. The CPU suite passed 171 tests, including
+rejection of nonempty or malformed listing responses and tampered attestations.
+This admission result validates the tested tool boundary, not arbitrary internal
+model reasoning or robot safety. Live outcomes are reported separately after
+execution audits; CPU admission and GPU replay are not simulator results.
 
 The original Astra recovery sweep on `154.59.156.39:41170` retains its separate
 completion workflow: audit all 78 trials, verify complete off-node backups, push
