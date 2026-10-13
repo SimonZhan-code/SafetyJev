@@ -1,5 +1,63 @@
 # Evaluation results
 
+## 2026-10-13: completed DeepSeek Jar predictor + System 1 sweep
+
+All **78/78** planned Jar base trials (26 scenes × seeds 0/1/2) completed with
+zero infrastructure failures. This is the original safety-triggered loop with
+DeepSeek V4.1 Flash, the pinned fine-tuned pi0.5 policy, native Unsafe600 step-500
+predictor, Torch backend and batch one. It does not include the newer instruction
+persistence/stagnation recovery changes or the interrupted new-node DeepSeek run.
+
+| Outcome | Count / 78 | Rate |
+|---|---:|---:|
+| Task success | 23 | 29.49% |
+| Engagement-gated safe success | 22 | 28.21% |
+| Task success without any raw LTL violation | 2 | 2.56% |
+| Ever contacted | 75 | 96.15% |
+| Ever grasped | 28 | 35.90% |
+| Raw LTL violation | 68 | 87.18% |
+| Engagement-gated counted violation | 8 | 10.26% |
+
+The large raw/gated difference is a property of ManiGuard's outcome definitions;
+22 safe successes must not be described as 22 episodes without raw violations.
+Per-seed task successes were 7, 6 and 10; gated safe successes were 7, 6 and 9
+(each seed has 26 trials). These are closed-loop outcomes, not predictor accuracy.
+
+The full audit checked all 78 terminal records, source hashes and exact command
+and instruction alignment for **130,366 executed actions**. There were 33,443
+candidate evaluations, 16,306 selections, 7,853 best-valid fallbacks, 233 System 1
+repairs, zero repair errors and zero invalid candidates. The historical loop did
+not implement persistent repaired instructions or stagnation-triggered repair;
+its planner records therefore lack the newer trigger/event fields.
+
+Mean selection latency was 4.732 seconds (median 4.694); mean planner request
+latency was 1.488 seconds. Median episode wall time was 1,400.57 seconds (23.34
+minutes); summed recorded episode wall time was 102,477.29 seconds (28.47 hours).
+This sum spans the recorded cases and is not the last Supervisor session uptime.
+Timing includes simulator/policy setup at episode level and synchronous guard
+work at selection level; it does not demonstrate real-time robot execution.
+
+[Final audit and per-case outcomes](results/2026-10-13-deepseek-jar/final-audit.json),
+[summary](results/2026-10-13-deepseek-jar/summary.json), and
+[pinned plan](results/2026-10-13-deepseek-jar/plan.json) preserve the evidence.
+The complete raw artifact/log backup and verification receipt are retained locally
+under `artifacts/deepseek-final-20261013/`. Both archive hashes and every file
+checksum/size passed verification: **288,623 files, 15,513,158,055 uncompressed
+bytes**, including 286,738 PNG images and 186 videos. The capture/log archive and
+the separate simulator output archive are both complete. See the tracked
+[backup receipt](results/2026-10-13-deepseek-jar/backup-verification.json).
+Instance `55452474` is ready for the explicitly authorized destruction after
+these results are pushed.
+
+The Astra recovery sweep remains in progress and must be compared on matched
+scene/seed cases after completion. Model/API settings, recovery logic, predictor
+backend and GPU host differ, so this is not an isolated causal comparison of any
+one change. Experimental Isaac 5.1 parity, differences between predictor semantic
+targets and ManiGuard temporal predicates, and unverified training/evaluation
+independence remain limitations. Astra's approved FLA backend also had 4/120 binary
+disagreements in the saved reference replay. Prior classifier results are unchanged.
+
+
 
 ## 2026-10-06: requested draft at 176-case progress snapshot
 

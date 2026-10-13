@@ -30,7 +30,8 @@ All 135 CPU tests passed locally and on the node. The two bounded GPU trials
 verified execution mechanics but did not complete their task goals. See
 [the live validation results](#live-recovery-validation-october-13).
 
-The original DeepSeek sweep was not modified. After the smoke tests, the user
+The original DeepSeek sweep completed all 78 trials with 23 task successes and
+22 engagement-gated safe successes; see [final results](evaluation-results.md#2026-10-13-completed-deepseek-jar-predictor--system-1-sweep). Its runtime was not modified. After the smoke tests, the user
 authorized a full matched Jar recovery sweep on the newer node; it is now running
 with GPT-6 Astra System 1 after an explicit model correction. The mistakenly
 launched DeepSeek recovery queue was stopped and its output is excluded from Astra results.
@@ -527,12 +528,13 @@ run had 59/78 completed with zero infrastructure failures; the recovery run had
 started its first trial. These are launch-time counts, not final results. Do not
 pull code or edit active hashed runtime files during either run.
 
-The user explicitly authorized **stopping only the original DeepSeek rental**
-after it finishes. Before stopping instance `55452474`, audit all 78 planned
+The user explicitly authorized **destroying only the original DeepSeek rental**
+after it finishes. Before destroying instance `55452474`, audit all 78 planned
 System 1 cases, confirm capture/model jobs have exited, back up raw captures,
 images/videos, logs, manifests and results off-node, verify backup coverage and
 checksums, then document and commit/push final results. Verify the instance identity
-before issuing a stop; never destroy it or treat lost SSH as completion. The new
+before destruction; never treat lost SSH as completion or proof of deletion.
+This explicit user correction supersedes the earlier stop-only instruction. The new
 recovery rental remains running after its model services stop. Report each sweep
 separately and compare matched scene/seed results when both are complete.
 

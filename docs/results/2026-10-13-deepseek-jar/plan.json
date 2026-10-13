@@ -1,0 +1,542 @@
+{
+  "cases": [
+    [
+      "task_0000/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0000/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0000/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0001/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0001/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0001/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0002/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0002/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0002/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0003/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0003/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0003/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0004/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0004/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0004/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0005/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0005/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0005/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0006/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0006/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0006/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0007/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0007/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0007/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0008/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0008/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0008/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0009/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0009/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0009/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0010/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0010/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0010/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0011/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0011/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0011/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0012/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0012/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0012/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0013/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0013/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0013/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0014/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0014/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0014/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0015/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0015/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0015/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0016/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0016/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0016/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0017/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0017/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0017/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0018/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0018/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0018/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0019/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0019/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0019/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0020/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0020/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0020/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0021/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0021/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0021/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0022/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0022/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0022/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0023/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0023/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0023/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0024/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0024/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0024/base",
+      2,
+      "system1"
+    ],
+    [
+      "task_0025/base",
+      0,
+      "system1"
+    ],
+    [
+      "task_0025/base",
+      1,
+      "system1"
+    ],
+    [
+      "task_0025/base",
+      2,
+      "system1"
+    ]
+  ],
+  "methods": [
+    "system1"
+  ],
+  "pilot": false,
+  "max_steps": 2000,
+  "benchmark_revision": "2ea32a1451669fb736ae78ffce9cc82aad4cceac",
+  "all_scenes": [
+    "task_0000/base",
+    "task_0001/base",
+    "task_0002/base",
+    "task_0003/base",
+    "task_0004/base",
+    "task_0005/base",
+    "task_0006/base",
+    "task_0007/base",
+    "task_0008/base",
+    "task_0009/base",
+    "task_0010/base",
+    "task_0011/base",
+    "task_0012/base",
+    "task_0013/base",
+    "task_0014/base",
+    "task_0015/base",
+    "task_0016/base",
+    "task_0017/base",
+    "task_0018/base",
+    "task_0019/base",
+    "task_0020/base",
+    "task_0021/base",
+    "task_0022/base",
+    "task_0023/base",
+    "task_0024/base",
+    "task_0025/base"
+  ],
+  "config": {
+    "local_retries": 2,
+    "repairs_per_decision": 1,
+    "execution_horizon": 8,
+    "score": "satisfied_constraints",
+    "acceptance": "all_no",
+    "fallback": "best_valid",
+    "tie_break": "earliest",
+    "constraint_ids": null,
+    "predictor": {
+      "endpoint": "http://127.0.0.1:8794",
+      "timeout": 120,
+      "checkpoint_dir": "/workspace/SafetyJev/checkpoints/unsafe600",
+      "batch_size": 1
+    },
+    "system1": {
+      "enabled": true,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "include_images": true,
+      "reasoning_enabled": false,
+      "timeout": 30,
+      "max_tokens": 256,
+      "max_calls_per_episode": 3,
+      "history_limit": 8
+    }
+  },
+  "source_sha256": {
+    "/workspace/SafetyJev/safetyjev/__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+    "/workspace/SafetyJev/safetyjev/agentic.py": "4ef6fc298b76d5e15b187a82ecf5894da70faef32ea23068dc299130d6101f5c",
+    "/workspace/SafetyJev/safetyjev/agentic_config.py": "863baa7f6a58985e2daa62dfab1d34f9bc68a2d9ceb48778736cb067c09e0cab",
+    "/workspace/SafetyJev/safetyjev/agentic_inputs.py": "1cde6e81f46e40ab9b7e34a42a5c04e5880c8f8b3864edd72f18e3a72630440a",
+    "/workspace/SafetyJev/safetyjev/agentic_predictor.py": "3d04a48d9dc07ab297483146bfe12f82f3890085e552c9c78782bb80e67b4d24",
+    "/workspace/SafetyJev/safetyjev/agentic_replay.py": "8881138165a2f0b3728d116e280ac22afd8617f80c7d89a3d9aa2bb690a3a60b",
+    "/workspace/SafetyJev/safetyjev/agentic_server.py": "0ea8f43490fecafc343da745a415c2d4babf51d27e098b68b7b28e7f06f0e072",
+    "/workspace/SafetyJev/safetyjev/capture.py": "649b949e52c131c15f51c59f0eb194c791395631187ff87288dac8bec896fcc9",
+    "/workspace/SafetyJev/safetyjev/chunk_judge.py": "53a8ca0d6b6c38104c9367848226fb100aae3d4c31fe6bffe3f845cfca25da7e",
+    "/workspace/SafetyJev/safetyjev/chunk_judge_model.py": "013c4c1c62a657472ddf680d7db7993df511351a333b8d6e6fc66f7b9707ce1f",
+    "/workspace/SafetyJev/safetyjev/cli.py": "9e0eaea71ea4d058000a201b14e4b2190b9af7d759e7dcb41de14b09a0b65911",
+    "/workspace/SafetyJev/safetyjev/guard.py": "04207d94669caf5198b4cbc3d8de6c6d496b629727fa39c73aaf8a4e0cc33008",
+    "/workspace/SafetyJev/safetyjev/io.py": "e5d160fa67acdb204a82e9c51b3e9ea4ff597bc86bcfbbbdd15c028ce8444f88",
+    "/workspace/SafetyJev/safetyjev/labels.py": "a00df56512798cfb19d357ab60945584fe1d6250a043ff9833c14c196e697201",
+    "/workspace/SafetyJev/safetyjev/maniguard.py": "5fe07617cdf48d2127d336b30b425f60e05cdc174321d6323186825dffdd07d7",
+    "/workspace/SafetyJev/safetyjev/metrics.py": "3d77595d44af7f1e1fabf0f94c10b31b092859159f696a2077cfa065a8f88169",
+    "/workspace/SafetyJev/safetyjev/planner.py": "ee99d581458b25d0d26c8a312f09bc811a8894e5189f8ee078f47490eadf0567",
+    "/workspace/SafetyJev/safetyjev/predictor_judge_schema.py": "d8c8e22b1b742659c7885f4fb24a9195ccf43ea00eef3989f5fd1a9a919b6fde",
+    "/workspace/SafetyJev/safetyjev/predictors.py": "361e417a9a790ac6e561b44db597ea035b89a2004e54aecc1e456f70fd2b4779",
+    "/workspace/SafetyJev/safetyjev/semantic_labels.py": "c02c61f7cba493714159fea59e64733946e0cef7c09c5023404a20c4b772ca27",
+    "/workspace/SafetyJev/safetyjev/visual_runtime.py": "c9333c1032e988d26b65d9d0d2c494899dedad1023bb87f673b27dc4667d88c8",
+    "/workspace/SafetyJev/safetyjev/visual_server.py": "9c7af3a3777e1921e09bf557505544670693e226178558beeb999e75a883b31a",
+    "/workspace/SafetyJev/scripts/remote/jar-agentic-eval.py": "f4631dcb6ddb6cfb08905e378f2074d7c58b5d759093aaf532b74551ad8e57c6",
+    "/workspace/SafetyJev/scripts/remote/serve-pi05.sh": "91aeb40d32ac43c2fcf39849ec64cd80822c1e460130034c0afed2d5ddcd5bd6",
+    "/workspace/SafetyJev/scripts/remote/warm-jar-policy.py": "4c283f10a36bd88aeff895157faba77f3c3dbc33d71e17b7d57b259c1ae50507",
+    "/workspace/SafetyJev/configs/predictor-semantic-definitions.json": "89853b4eb5eb49d83c84a5a0de2b7e473d510a25db36076d4f48502b1f3ba5f9",
+    "/workspace/SafetyJev/configs/jar-isaac51-provenance.json": "a478b2114447c7d2ebc5d4d15cbc49c49e966db9a52b9879289e27aaa4353275",
+    "/workspace/ManiGuard/configs/eval/jar_transport_joint.yaml": "9da4e4205dda5ae3d80e93c603bbff64195ee6072fbcdb0bea678d160835dde8",
+    "/workspace/data/maniguard-bench/jar_transport/task_0000/base/diagnostics.jsonl": "b2ec214ff0946f84e8dec52e37fee87dceb201d4089faa505264135453e08cc6",
+    "/workspace/data/maniguard-bench/jar_transport/task_0000/base/scene_ep1.json": "c336ff6251d9ef39d01548dac5676fc750f8d83edb94816956a93091ec31efbd",
+    "/workspace/data/maniguard-bench/jar_transport/task_0001/base/diagnostics.jsonl": "2063702edde2c76dd84800f8f80c2dae65de1a1d4818916b70ca71dd88ba71d0",
+    "/workspace/data/maniguard-bench/jar_transport/task_0001/base/scene_ep1.json": "922da321ec80b5cfd3fe819a8420f6f63d77e4586b9e60051bf9fe0636599d12",
+    "/workspace/data/maniguard-bench/jar_transport/task_0002/base/diagnostics.jsonl": "cbd10847e9695d0ec4b9310225ce2cf88bd61aadd74947302f87441ea488427a",
+    "/workspace/data/maniguard-bench/jar_transport/task_0002/base/scene_ep1.json": "d23c0045d246375d3e25d8b33ea47ccc5614358d5729d7ac4fd7dd9f30e7b5d5",
+    "/workspace/data/maniguard-bench/jar_transport/task_0003/base/diagnostics.jsonl": "1750be70282c7f885dabd531b8754b73b04df7079e93a6e28be651c49c46c4a2",
+    "/workspace/data/maniguard-bench/jar_transport/task_0003/base/scene_ep1.json": "7f7c7baf088dc2d834d4ac904d68f5a5b68df19be5ae7c4fe791d459fd9d517a",
+    "/workspace/data/maniguard-bench/jar_transport/task_0004/base/diagnostics.jsonl": "b04f724feae8b03bcfb32907ad1b6c704e978ad153019cea954d34a68560b60b",
+    "/workspace/data/maniguard-bench/jar_transport/task_0004/base/scene_ep1.json": "11eb5acfba4c189492ab1567f0d4bb28b9160f01ed8d960035590a0998e3fb0a",
+    "/workspace/data/maniguard-bench/jar_transport/task_0005/base/diagnostics.jsonl": "4ee5456fe5cc81f1156a9a0234ec6a546e1f0ac9b22179788910a322c906b4cf",
+    "/workspace/data/maniguard-bench/jar_transport/task_0005/base/scene_ep1.json": "650b782a273ece2e724cb3e708080f2a4c94b5e7890dbde5a910fa370f1848bb",
+    "/workspace/data/maniguard-bench/jar_transport/task_0006/base/diagnostics.jsonl": "d90c8aa550fa35464560b69eeb9531735878c133e85c4e960a6fdb6218d252d5",
+    "/workspace/data/maniguard-bench/jar_transport/task_0006/base/scene_ep1.json": "82946843e039cbcb5bfb4df69329e6b8cfb9e3f626ca2adfe36333b0a471bf69",
+    "/workspace/data/maniguard-bench/jar_transport/task_0007/base/diagnostics.jsonl": "0c05fc1b0e2056741f8d6d2828ca76c1dd5966813c92ac836fd9758c0fff1ea6",
+    "/workspace/data/maniguard-bench/jar_transport/task_0007/base/scene_ep1.json": "df8489ff94e75301957f7a0320b1bb90f5b52a2c5768a0d3c193baf6a6ca1761",
+    "/workspace/data/maniguard-bench/jar_transport/task_0008/base/diagnostics.jsonl": "f379bef6e7fefad67f82f39d3dbd0c63675d288735c1cf6553dea6a32e895cb2",
+    "/workspace/data/maniguard-bench/jar_transport/task_0008/base/scene_ep1.json": "b4cb9cf84f320582938c3118db88ef615a1651c575bc1f29df081eb8f40bfd28",
+    "/workspace/data/maniguard-bench/jar_transport/task_0009/base/diagnostics.jsonl": "b3c6995d0df12033313c2fb26ab3be33ff8bb2d4e9b21cd25dbf4c7f89ea1546",
+    "/workspace/data/maniguard-bench/jar_transport/task_0009/base/scene_ep1.json": "c4a3d21575eb9b01346fbe4ef9fbd6ea8e872f9d4e8498b43e2ffcf61ee4bf85",
+    "/workspace/data/maniguard-bench/jar_transport/task_0010/base/diagnostics.jsonl": "aa5b70a75a51a9ab969eed74ad0f42e4e42b55b9aab6f57dbe75d6327e0999b7",
+    "/workspace/data/maniguard-bench/jar_transport/task_0010/base/scene_ep1.json": "8fde3f5c59d5b059aa90c6bb081dc416870ac88f38d9171c863f635b62d134f9",
+    "/workspace/data/maniguard-bench/jar_transport/task_0011/base/diagnostics.jsonl": "7650f00d46c37a1b55462eaf24f10c3a2e9228f173fa3c8ce2ab754a9048adfe",
+    "/workspace/data/maniguard-bench/jar_transport/task_0011/base/scene_ep1.json": "7fa94cc4004769b36d5f81050dbd397c95033871dab79c6a6e4dc575316c520b",
+    "/workspace/data/maniguard-bench/jar_transport/task_0012/base/diagnostics.jsonl": "da6e9b5c8b4bd148c9194d10bfd4d06f4464ff021cacef8b32c41cea70fb0595",
+    "/workspace/data/maniguard-bench/jar_transport/task_0012/base/scene_ep1.json": "beb8d412f9ce5e288322687219cc3c28ea4d83c0d47f321b6823e1d042c65bf0",
+    "/workspace/data/maniguard-bench/jar_transport/task_0013/base/diagnostics.jsonl": "e6887bcd4ae806351b15e2d07f4dbb1a75530c8169945b3917aa35355b5b8ead",
+    "/workspace/data/maniguard-bench/jar_transport/task_0013/base/scene_ep1.json": "67d440a2ca52888441d36f6562b849d18456efa5c9179e824ff4627a9c530753",
+    "/workspace/data/maniguard-bench/jar_transport/task_0014/base/diagnostics.jsonl": "0fe5f3e5b41ac6a541daa2a1e11267432a5d2c355daa17f16e174b9cdb624373",
+    "/workspace/data/maniguard-bench/jar_transport/task_0014/base/scene_ep1.json": "82070bd4becd09b4fefcf3b13e540698e26988ffeb15687b1d8753c62ff502e8",
+    "/workspace/data/maniguard-bench/jar_transport/task_0015/base/diagnostics.jsonl": "4bf06ab226bb0c2a9d65ce5b0b26f46206297705aa21d71ec1a3d76252d65e6b",
+    "/workspace/data/maniguard-bench/jar_transport/task_0015/base/scene_ep1.json": "287b1b890f65d07b846900688425eb3c4a7cb5ccdfd0185d522df0d1e56d3e33",
+    "/workspace/data/maniguard-bench/jar_transport/task_0016/base/diagnostics.jsonl": "22fd00cd5074f4b819cde40c35316d29e3f648a60bc8c831863f9cd7be6f0961",
+    "/workspace/data/maniguard-bench/jar_transport/task_0016/base/scene_ep1.json": "2b36b521eb804ea20d5f45a7298c9434e65e9060a54d29b45699fced52f23daa",
+    "/workspace/data/maniguard-bench/jar_transport/task_0017/base/diagnostics.jsonl": "873e7607067b59a7a24eafb2331a83791c74d2e14c48abd559ea7ee70f8c3d26",
+    "/workspace/data/maniguard-bench/jar_transport/task_0017/base/scene_ep1.json": "d62683247ffd91270eb5f6e1d882cdff561d558e401967530c75fd0de2583da8",
+    "/workspace/data/maniguard-bench/jar_transport/task_0018/base/diagnostics.jsonl": "6b9207e0466bdfa156bafa124550aeee4705b5994e06c7bb7c635b57c63e870f",
+    "/workspace/data/maniguard-bench/jar_transport/task_0018/base/scene_ep1.json": "fa1e014dcfd2c52789dfbaa8768372512b80b22965f5334616d8d8852262de6d",
+    "/workspace/data/maniguard-bench/jar_transport/task_0019/base/diagnostics.jsonl": "32577560f5aab4aa0b1d15a006ee0daf08f497987e85de2179fcb90cd10433a5",
+    "/workspace/data/maniguard-bench/jar_transport/task_0019/base/scene_ep1.json": "fca69754b480b778d9df0469767c7e0fe6e1e2b43ed34a4e29b12a95f0cda2df",
+    "/workspace/data/maniguard-bench/jar_transport/task_0020/base/diagnostics.jsonl": "5be6e918e2cc2d869d1a702db01711de814d67bacc7a034006ef579e1768598d",
+    "/workspace/data/maniguard-bench/jar_transport/task_0020/base/scene_ep1.json": "364b667d99084fc2a4d206cf9b0edeb802025319d587b6c522ad72a252688270",
+    "/workspace/data/maniguard-bench/jar_transport/task_0021/base/diagnostics.jsonl": "c6b97d36a12a793a99ff4efbbf3d92ab8d012b30bafe3d98accf7dc17239aed4",
+    "/workspace/data/maniguard-bench/jar_transport/task_0021/base/scene_ep1.json": "408f988191f937885b516e4beb6b2091488dc3c6cb21802e11a2c231379cb145",
+    "/workspace/data/maniguard-bench/jar_transport/task_0022/base/diagnostics.jsonl": "86abe2bc99a258ea9aa3a72e4a78d02fe8fcef24020866ee51e1e123bac861f7",
+    "/workspace/data/maniguard-bench/jar_transport/task_0022/base/scene_ep1.json": "1ecf905ae2996861b54859ba22e0fe3759a74475fb2c4ff83176601406c3a665",
+    "/workspace/data/maniguard-bench/jar_transport/task_0023/base/diagnostics.jsonl": "7985077ef7eb56b31206ea5bca779655ade7113806861e6e029431921eda3f81",
+    "/workspace/data/maniguard-bench/jar_transport/task_0023/base/scene_ep1.json": "eb71242eac480e3a2b2f5bd49f6003236297089a68370347886f5d1cdccc8a52",
+    "/workspace/data/maniguard-bench/jar_transport/task_0024/base/diagnostics.jsonl": "f59affbfe93205055c50e4c66435f5ca3b218895cd9f64f1e9e9773efbfa92bd",
+    "/workspace/data/maniguard-bench/jar_transport/task_0024/base/scene_ep1.json": "431dae44f50d62a28ce937b5b0455318ebcfa3b2685aae2eb83edad63608240a",
+    "/workspace/data/maniguard-bench/jar_transport/task_0025/base/diagnostics.jsonl": "62a62dc3f64f985ac4be7ffb8dc5fe7786e8b3b98a7db93317cae69e8569da6f",
+    "/workspace/data/maniguard-bench/jar_transport/task_0025/base/scene_ep1.json": "00ae89772411b9de8fe3948a6b21577e6205f27ebb588156a963ed89172fd82c"
+  },
+  "limitations": [
+    "Experimental Isaac 5.1 parity; selected released policy step is not independently matched to paper.",
+    "Native NVIDIA replay: 1/12 binary disagreements; numerical parity unresolved.",
+    "Predictor semantic targets differ from native temporal predicates.",
+    "Training/evaluation group independence not established."
+  ]
+}

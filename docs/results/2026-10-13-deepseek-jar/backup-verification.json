@@ -1,0 +1,24 @@
+{
+  "status": "verified",
+  "verified_unix": 1791885571.0202072,
+  "archives": [
+    {
+      "archive": "artifacts.tar.zst",
+      "sha256": "699ce1bd85031d6fef30eef1c61f9e3f1bd995459ac0ddcafb557732a7959814",
+      "archive_bytes": 14873742753,
+      "verified_files": 288071,
+      "verified_uncompressed_bytes": 15363064711,
+      "manifest_sha256": "a46f09c9ce5e56b170e901621bf6a19568f1651d49f84d2372f5f3d7ad3e56af"
+    },
+    {
+      "archive": "simulator-outputs.tar.zst",
+      "sha256": "1f8c86ebe9e7f5800d71ff5300f70155aeb12f72a49f8548f853cbd39183e299",
+      "archive_bytes": 110312889,
+      "verified_files": 552,
+      "verified_uncompressed_bytes": 150093344,
+      "manifest_sha256": "c4578bfa1345e0117e18bc48153fd7f6996b16c57169ae0f2e5a0e907b5376c4"
+    }
+  ],
+  "total_verified_files": 288623,
+  "all_file_checksums_and_coverage_match": true
+}
