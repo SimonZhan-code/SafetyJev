@@ -21,7 +21,7 @@ repair, with selected safe instructions carried across later VLA queries.
 | Instruction lifetime | 8 executed chunks, including the selected repair chunk | Omitted field retains 1 chunk |
 | Stagnation | Enabled; 8-chunk window and cooldown | Omitted enable flag retains safety-only repair |
 | Prediction and execution | 8 actions per chunk | Unchanged trained input contract |
-| System 1 | DeepSeek V4.1 Flash through OpenRouter | Configurable model and request settings |
+| System 1 | GPT-6 Astra for the full recovery sweep; DeepSeek for the earlier smoke tests | Configurable model and request settings |
 | Predictor inference | FLA, batch 1, image cache off | Public example retains Torch; FLA is explicit opt-in |
 
 Both recovery paths were exercised in live simulation: three stagnation repairs,
@@ -32,7 +32,8 @@ verified execution mechanics but did not complete their task goals. See
 
 The original DeepSeek sweep was not modified. After the smoke tests, the user
 authorized a full matched Jar recovery sweep on the newer node; it is now running
-with DeepSeek System 1. GPT Astra evaluation remains disabled.
+with GPT-6 Astra System 1 after an explicit model correction. The mistakenly
+launched DeepSeek recovery queue was stopped and its output is excluded from Astra results.
 Historical deployment and acceleration records are retained at the end of this
 document and are not instructions to restart an old queue.
 
@@ -488,30 +489,37 @@ methods are rerun. Completed smoke episodes remain separate from this full sweep
 | Run | Node | Output under `/workspace/SafetyJev/artifacts/` |
 |---|---|---|
 | Original loop | `154.59.156.28:33632` | `jar-agentic-id` |
-| Recovery loop | `154.59.156.39:41170` | `jar-agentic-recovery-id` |
+| Recovery loop + GPT-6 Astra | `154.59.156.39:41170` | `jar-agentic-astra-recovery-id` |
 
-Both use `deepseek/deepseek-v4.1-flash`; “Astra node” names the newer rental, not
-the selected System 1 model. The recovery sweep retains the smoke-tested eight-chunk
+The original run uses `deepseek/deepseek-v4.1-flash`; the new run uses
+`openai/gpt-6-astra`, as explicitly requested. Astra uses reasoning enabled,
+a 4,096-token response cap and a 120-second timeout (provider-default reasoning
+effort). A live two-camera recovery prompt returned valid instruction JSON from
+`openai/gpt-6-astra` in 5.44 seconds, with reported cost $0.060305. This API probe
+is separate from simulator outcomes. The recovery sweep retains the smoke-tested eight-chunk
 instruction lifetime, stagnation window/cooldown and thresholds, plus two local
 retries, one repair per decision, and three calls per episode. Its predictor uses
 FLA, batch one and no image cache. The original run remains on its original runtime.
-Since FLA changes some binary answers and the GPU hosts differ, this comparison
+Since the System 1 model and API settings differ, FLA changes some binary answers,
+and the GPU hosts differ, this comparison
 measures the updated configuration as a whole, not recovery logic alone.
 
-The dedicated private config is `configs/agentic-recovery-sweep.local.json` (0600).
+The dedicated private config is `configs/agentic-astra-recovery-sweep.local.json` (0600).
 Supervisor `safetyjev-jar-agentic-eval` runs independently on each node. The new
 plan pins runtime hashes at launch, refuses overlapping GPU jobs and preserves
 completed cases on resume. Deployment/comparison records are in
-`/workspace/bootstrap-recovery-sweep-20261013`; copies of the public plan and
-comparison provenance are local in `artifacts/recovery-sweep-20261013/`.
+`/workspace/bootstrap-astra-recovery-20261013`; copies of the public plan, API probe
+and comparison provenance are local in `artifacts/astra-recovery-sweep-20261013/`.
+The interrupted new-node DeepSeek artifacts remain in `jar-agentic-recovery-id`
+with a superseded marker; they must never count toward the 78 Astra trials.
 The earlier inference-only restriction was superseded specifically for this
 user-authorized sweep. Old Astra launch gates and the superseded node remain stopped.
 
 ```bash
 cd /workspace/SafetyJev
 /workspace/native-env/bin/python scripts/remote/jar-agentic-eval.py \
-  --config configs/agentic-recovery-sweep.local.json \
-  --output artifacts/jar-agentic-recovery-id --methods system1 --launch
+  --config configs/agentic-astra-recovery-sweep.local.json \
+  --output artifacts/jar-agentic-astra-recovery-id --methods system1 --launch
 ```
 
 The existing 30-minute follow-up now monitors both sweeps. At launch, the original
