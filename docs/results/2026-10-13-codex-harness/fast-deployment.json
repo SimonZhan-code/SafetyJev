@@ -248,9 +248,40 @@
     "cpu_tests_passed": 174,
     "change": "Refresh budgets after proposal and judgment; reserve half the deadline for selection",
     "deadline_seconds": 30,
-    "live_validation": "running",
+    "live_validation": "completed",
     "implementation_commit": "b19b43e",
     "output": "artifacts/codex-harness-fast-v2-smoke",
-    "full_sweep_output": "artifacts/jar-codex-harness-fast-v2-id"
+    "full_sweep_output": "artifacts/jar-codex-harness-fast-v2-id",
+    "completed_smokes": 2,
+    "executed_actions": 512,
+    "decisions": 64,
+    "command_instruction_audits_passed": true,
+    "public_response_audits_passed": true,
+    "proposal_sources": {
+      "pi05": 67,
+      "codex": 2
+    },
+    "predicted_unsafe_selections": 3,
+    "higher_score_available": 0,
+    "invalid_attempts": 0,
+    "infrastructure_failures": 0,
+    "task_success": 0,
+    "raw_violations": 2,
+    "counted_violations": 0,
+    "mean_decision_s": 13.908968296760577,
+    "baseline_mean_decision_s": 13.55234541054233,
+    "max_decision_s": 25.961783347651362,
+    "speedup": 0.9743602200674147,
+    "full_sweep_launched": false,
+    "gate": "blocked_latency_validation",
+    "services": "stopped",
+    "backup": {
+      "status": "verified",
+      "archive_sha256": "bdcf16701a9dff155f88c209c20ae0a6c335309eba7e29d56a8232c472a7bbaa",
+      "files_verified": 1073,
+      "bytes_verified": 70255726,
+      "coverage": "Completed optimized v2 smoke captures and both separate simulator outputs",
+      "scope": "Completed v2 smoke only; no full sweep launched"
+    }
   }
 }

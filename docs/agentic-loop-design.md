@@ -1357,3 +1357,17 @@ Follow-up runtime `b19b43e` passed 174 CPU tests and was deployed to a fresh
 verified off-node backup of 445 files (23,378,000 bytes). The new gate targets
 `artifacts/jar-codex-harness-fast-v2-id` for the remaining 77 cases only after
 the same smoke and latency checks pass. The 30-second limit remains unchanged.
+
+The v2 smoke completed both 256-action cases: 512 executed actions and 64
+decisions, with exact command/instruction alignment and public-response audits
+passing. All decisions met the 30-second limit (maximum 25.96 seconds). However,
+mean decision time was 13.91 seconds versus 13.55 seconds in the original matched
+smokes: 0.974x throughput, or 2.63% longer decision time. This does not demonstrate
+a speedup. The latency gate held the full optimized sweep, and model services
+stopped; the rental remains running. No completed full cases were repeated.
+
+The two short tests used 67 pi0.5 and two Codex-written proposals, selected three
+predicted-unsafe chunks with no higher-scoring candidate available, and had no
+invalid attempts or infrastructure errors. Neither task succeeded at the short
+cap; both had raw violations and neither had engagement-gated counted violations.
+These are mechanics/timing results and do not establish safety improvement.
