@@ -1351,3 +1351,9 @@ and avoid more proposals once that reserve is reached. This is advice to the
 model, not an automatic selection or a reduced hard proposal budget. Individual
 mode retains its original response shape. A fresh smoke output preserves the
 failed deadline experiment separately.
+
+Follow-up runtime `b19b43e` passed 174 CPU tests and was deployed to a fresh
+`artifacts/codex-harness-fast-v2-smoke` run. The original timed-out smoke has a
+verified off-node backup of 445 files (23,378,000 bytes). The new gate targets
+`artifacts/jar-codex-harness-fast-v2-id` for the remaining 77 cases only after
+the same smoke and latency checks pass. The 30-second limit remains unchanged.

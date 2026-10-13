@@ -229,7 +229,15 @@
       "complete_judgments": 3,
       "committed": false
     },
-    "sweep_launched": false
+    "sweep_launched": false,
+    "backup": {
+      "status": "verified",
+      "archive_sha256": "b98dff7c430ade6976da14585259b30fc5380a788d20afd1bcac3422a859ca76",
+      "files_verified": 445,
+      "bytes_verified": 23378000,
+      "coverage": "Failed optimized v1 smoke captures and separate simulator outputs",
+      "scope": "Timed-out v1 smoke only; v2 not included"
+    }
   },
   "limitations": [
     "Paired dispatch is a model instruction, not enforcement of a fixed number of round trips.",
@@ -240,6 +248,9 @@
     "cpu_tests_passed": 174,
     "change": "Refresh budgets after proposal and judgment; reserve half the deadline for selection",
     "deadline_seconds": 30,
-    "live_validation": "pending"
+    "live_validation": "running",
+    "implementation_commit": "b19b43e",
+    "output": "artifacts/codex-harness-fast-v2-smoke",
+    "full_sweep_output": "artifacts/jar-codex-harness-fast-v2-id"
   }
 }
