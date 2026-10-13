@@ -1446,3 +1446,10 @@ trial wall time and decision distributions before recommending a larger run.
 FLA's historical 4/120 reference disagreements and unvalidated predictor behavior
 on Codex-written commands remain limitations; a timing test establishes neither
 safety improvement nor equivalence of experiment conditions.
+
+Runtime `1ef16b0` passed authenticated remote isolation admission and launched the
+single timing trial at approximately 21:50 UTC. The early 224-action snapshot
+averaged 9.08 seconds per decision (maximum 16.88), including five adaptive
+proposals and no harness failures. This is partial timing, not a completed-trial
+result or a controlled speedup estimate. [Launch evidence](results/2026-10-13-codex-harness/prepared-timing-launch.json)
+records the exact configuration and source admission.
