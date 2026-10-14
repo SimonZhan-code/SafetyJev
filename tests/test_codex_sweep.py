@@ -34,6 +34,8 @@ class CodexSweepTests(unittest.TestCase):
                 (ep/'complete.json').write_text('{}')
             with patch.object(queue.jar,'source_provenance',return_value={'revision':'dev-pin'}), patch.object(queue,'audit',return_value={'status':'completed'}):
                 queue.verify_smoke(root,cfg,hashes,config_path)
+                with self.assertRaisesRegex(ValueError,'contact-reporting mode'):
+                    queue.verify_smoke(root,cfg,hashes,config_path,persistent_contacts=True)
                 for key in ('runtime.py','semantics.json'):
                     with self.assertRaisesRegex(ValueError,'runtime differs'):
                         queue.verify_smoke(root,cfg,dict(hashes,**{key:'changed'}),config_path)

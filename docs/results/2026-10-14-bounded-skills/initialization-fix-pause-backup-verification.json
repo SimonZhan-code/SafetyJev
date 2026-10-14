@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "6fa814bcdf3167917076275ebe4503692b006b21cbceae731dc2e70eb3519f58",
+  "files_verified": 8886,
+  "bytes_verified": 497229324,
+  "coverage": "Full paused 300-second queue including completed cases, initialization failures, interrupted case, and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}

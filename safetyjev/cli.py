@@ -37,6 +37,7 @@ def main(argv=None):
     capture.add_argument("--output", required=True)
     capture.add_argument("--provenance", required=True, help="JSON with policy repo/revision and benchmark revision")
     capture.add_argument("--recheck-every", type=int, default=0, help="0: chunk starts only; N: every N executed actions")
+    capture.add_argument("--persistent-contacts", action="store_true", help="Opt-in pinned Isaac 5.1 persistent contact repair; distinct provenance")
     capture.add_argument("--online-predictor", help="JSON with endpoint/model_id/predictor_revision/input_mode/timeout")
     capture.add_argument("--execution-mode", choices=["shadow", "guard_regenerate"], default="shadow")
     capture.add_argument("--agentic-config", help="Native Unsafe600 loop and private OpenRouter config")
@@ -127,7 +128,8 @@ def main(argv=None):
         provenance.update(source_provenance())
         options = {"output": str(Path(args.output).resolve()), "provenance": provenance,
                    "recheck_every": args.recheck_every, "execution_mode": args.execution_mode,
-                   "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations}
+                   "guard_threshold": args.guard_threshold, "max_regenerations": args.max_regenerations,
+                   "persistent_contacts": args.persistent_contacts}
         if agentic_config:
             options["agentic_config"] = agentic_config
         if harness_config:

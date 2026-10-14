@@ -57,7 +57,7 @@ def verify_latest_dev():
         raise ValueError("Upstream dev advanced to " + latest + "; validate the new adapter before starting another run")
 
 
-def instrument(source, execution_mode="shadow"):
+def instrument(source, execution_mode="shadow", persistent_contacts=False):
     if hashlib.sha256(source.encode()).hexdigest() != RUNNER_SHA256:
         raise ValueError("Unsupported ManiGuard runner. Use pinned commit " + COMMIT)
     if execution_mode not in ("shadow", "guard_regenerate", "visual_classification", "oracle_only", "agentic_native", "codex_harness"):
@@ -111,6 +111,18 @@ def instrument(source, execution_mode="shadow"):
             "                    success = False\n"
             "                    done = True\n"
             "                    break\n"))
+    if persistent_contacts:
+        if SOURCE_PROFILE != 'dev':
+            raise ValueError('Persistent contact adapter requires pinned dev runner')
+        edits.extend([
+            ('            env.reset()\n', '            env.reset()\n'
+             '            from safetyjev.contact_reports import prepare_contact_reports\n'
+             '            from safetyjev.capture import OPTIONS as sj_options\n'
+             '            sj_options["provenance"]["contact_reporting"] = prepare_contact_reports(env)\n'),
+            ('            if og.sim is not None:\n', '            if og.sim is not None:\n'
+             '                from safetyjev.contact_reports import close_contact_reports\n'
+             '                close_contact_reports()\n'),
+        ])
     for old, new in edits:
         if source.count(old) != 1:
             raise ValueError("Integration anchor changed: " + repr(old))
@@ -123,11 +135,16 @@ def launch(repo, benchmark_args, options):
     from . import capture
     verify_sources(repo)
     path = Path(repo).resolve() / "maniguard/eval/benchmark.py"
-    source = instrument(path.read_text(), options.get("execution_mode", "shadow"))
+    source = instrument(path.read_text(), options.get("execution_mode", "shadow"), options.get("persistent_contacts", False))
     capture.OPTIONS = options
     sys.path.insert(0, str(Path(repo).resolve()))
     sys.argv = [str(path)] + benchmark_args
     # __file__ preserves ManiGuard's own REPO_ROOT calculations.
     namespace = {"__name__": "safetyjev_instrumented_runner", "__file__": str(path)}
     exec(compile(source, str(path), "exec"), namespace)
-    namespace["main"]()
+    try:
+        namespace["main"]()
+    finally:
+        if options.get("persistent_contacts"):
+            from .contact_reports import close_contact_reports
+            close_contact_reports()

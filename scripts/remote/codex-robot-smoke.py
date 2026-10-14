@@ -44,12 +44,14 @@ def case_grid(suite):
 SINGLE_SMOKE_LAUNCHER_SHA256 = '68f9a9340a6e78c37db90f93f30b160f077d7fd2e05aaec143ccec11ebaf1ede'
 
 
-def verify_smoke(directory, config, source_hashes, config_path, authorized_single=False, queue_update=False):
+def verify_smoke(directory, config, source_hashes, config_path, authorized_single=False, queue_update=False, persistent_contacts=False):
     """A longer budget cannot bypass live mechanics and source validation."""
     if directory is None:
         raise ValueError('Jar sweep requires --smoke-evidence')
     plan=json.loads((directory/'plan.json').read_text())
     progress=json.loads((directory/'progress.json').read_text())
+    if bool(plan.get('persistent_contacts',False)) != persistent_contacts:
+        raise ValueError('Smoke contact-reporting mode differs from sweep')
     count=1 if authorized_single else 2
     if authorized_single and config.get('tool_sequence')!='skills':
         raise ValueError('Single-smoke authorization applies only to bounded skills')
@@ -282,6 +284,7 @@ def main():
     p.add_argument('--retry-failed',action='store_true')
     p.add_argument('--continue-on-timeout',action='store_true',help='Record audited planner/skill timeouts and advance without retrying them')
     p.add_argument('--continue-on-initialization-failure',action='store_true')
+    p.add_argument('--persistent-contacts',action='store_true',help='Pinned contact-reporting repair; requires new plan and matching smoke')
     p.add_argument('--queue-update-from',help='SHA256 of the original plan for the authorized queue-only amendment')
     args=p.parse_args();os.umask(0o077)
     config=load_config(args.config)
@@ -327,8 +330,9 @@ def main():
     if excluded:plan['excluded_predecessor_cases']=excluded
     if args.continue_on_timeout:plan['timeout_policy']='record_and_continue'
     if args.continue_on_initialization_failure:plan['initialization_failure_policy']='record_and_continue'
+    if args.persistent_contacts:plan['persistent_contacts']=True
     if args.suite=='jar-base':
-        verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke,bool(args.queue_update_from))
+        verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke,bool(args.queue_update_from),args.persistent_contacts)
         plan['smoke_admission']={'authorized_single':args.authorized_single_smoke,'evidence':str(args.smoke_evidence.resolve())}
     archive=out/'plan-before-initialization-continuation.json'
     if args.queue_update_from:
@@ -351,6 +355,7 @@ def main():
         if args.smoke_evidence:command+=['--smoke-evidence',str(args.smoke_evidence.resolve())]
         if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
         if args.retry_failed:command.append('--retry-failed')
+        if args.persistent_contacts:command.append('--persistent-contacts')
         if args.continue_on_timeout:command.append('--continue-on-timeout')
         if args.continue_on_initialization_failure:command.append('--continue-on-initialization-failure')
         if args.queue_update_from:command+=['--queue-update-from',args.queue_update_from]
@@ -398,6 +403,7 @@ def main():
                     '--output',str(case/'episodes'),'--provenance',str(ROOT/'configs/jar-isaac51-provenance.json'),
                     '--codex-harness-config',str(args.config.resolve()),'--','--config','configs/eval/jar_transport_joint.yaml',
                     '--benchmark-root',str(jar.BENCH),'--scenes',scene,'--seed',str(seed),'--max-steps',str(cap),'--tag','codex-harness-'+case.name]
+                if args.persistent_contacts:command.insert(command.index('--'), '--persistent-contacts')
                 with (case/'capture.log').open('w') as log:
                     capture=subprocess.run(command,cwd=jar.MANIGUARD,env=env,stdout=log,stderr=subprocess.STDOUT,check=False,timeout=cap//8*config['decision_timeout_s']+900)
                 report=terminal_report(case,scene,seed,time.monotonic()-started,capture.returncode,args.continue_on_timeout,args.continue_on_initialization_failure)

@@ -1,0 +1,606 @@
+{
+  "status": "repair_validated_sweep_stopped",
+  "scope": "Simulator-only initialization/contact regression; not policy task trials",
+  "root_cause": "Raw-body contact reports vanish for sleeping jar although PhysX has not sent CONTACT_LOST. Waking once restores measured contact; passive waiting alone does not.",
+  "mode": "physx_pair_persistence_v1",
+  "implementation_sha256": "cbb43c9c34fae6be21fa2c4eed5a63870963ee633b1a7a8fc02ff6c93c4a3307",
+  "cpu_validation": {
+    "passed": 216,
+    "subtests_passed": 82,
+    "historical_fixture_skips": 3
+  },
+  "live_regressions": [
+    {
+      "scene": "task_0000/base",
+      "seed": 0,
+      "policy_actions": 0,
+      "exit_code": 0,
+      "passed": true,
+      "initial_validation_passed": true,
+      "negative_initial_guard_rejected": true,
+      "reset_cache_empty": true,
+      "reset_validation_passed": true,
+      "samples": [
+        {
+          "label": "initial",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.09760735183954239,
+              0.00011518358951434493,
+              0.6161348223686218
+            ],
+            "asleep": false,
+            "raw_contacts": 7,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "after_60_passive_steps",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.09760694205760956,
+              0.00011497840750962496,
+              0.6161347031593323
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "negative_lifted",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.09760694950819016,
+              0.00011497762170620263,
+              0.8129974007606506
+            ],
+            "asleep": false,
+            "raw_contacts": 0,
+            "persistent_bodies": 0
+          },
+          "tracked_pairs": 1
+        },
+        {
+          "label": "reset_and_reprime",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.09761013090610504,
+              0.0001120631059166044,
+              0.6161348819732666
+            ],
+            "asleep": false,
+            "raw_contacts": 5,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "negative_support_moved",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.09755484759807587,
+              0.00028873729752376676,
+              0.5629955530166626
+            ],
+            "asleep": false,
+            "raw_contacts": 2,
+            "persistent_bodies": 1
+          },
+          "tracked_pairs": 3
+        }
+      ]
+    },
+    {
+      "scene": "task_0003/base",
+      "seed": 0,
+      "policy_actions": 0,
+      "exit_code": 0,
+      "passed": true,
+      "initial_validation_passed": true,
+      "negative_initial_guard_rejected": true,
+      "reset_cache_empty": true,
+      "reset_validation_passed": true,
+      "samples": [
+        {
+          "label": "initial",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.00901778880506754,
+              3.989750985056162e-05,
+              0.7434338331222534
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "after_60_passive_steps",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.00901778880506754,
+              3.989750985056162e-05,
+              0.7434338331222534
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "negative_lifted",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.009017756208777428,
+              3.9893435314297676e-05,
+              0.940296471118927
+            ],
+            "asleep": false,
+            "raw_contacts": 0,
+            "persistent_bodies": 0
+          },
+          "tracked_pairs": 1
+        },
+        {
+          "label": "reset_and_reprime",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.00901778880506754,
+              3.989750985056162e-05,
+              0.7434338331222534
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "negative_support_moved",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.009017638862133026,
+              3.984838258475065e-05,
+              0.6977894306182861
+            ],
+            "asleep": false,
+            "raw_contacts": 3,
+            "persistent_bodies": 1
+          },
+          "tracked_pairs": 1
+        }
+      ]
+    },
+    {
+      "scene": "task_0004/base",
+      "seed": 0,
+      "policy_actions": 0,
+      "exit_code": 0,
+      "passed": true,
+      "initial_validation_passed": true,
+      "negative_initial_guard_rejected": true,
+      "reset_cache_empty": true,
+      "reset_validation_passed": true,
+      "samples": [
+        {
+          "label": "initial",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -8.591567166149616e-06,
+              0.00013252254575490952,
+              0.7180272936820984
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "after_60_passive_steps",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -8.591567166149616e-06,
+              0.00013252254575490952,
+              0.7180272936820984
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "negative_lifted",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -8.591101504862309e-06,
+              0.00013252219650894403,
+              0.9148898124694824
+            ],
+            "asleep": false,
+            "raw_contacts": 0,
+            "persistent_bodies": 0
+          },
+          "tracked_pairs": 1
+        },
+        {
+          "label": "reset_and_reprime",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -8.591567166149616e-06,
+              0.00013252254575490952,
+              0.7180272936820984
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 2
+        },
+        {
+          "label": "negative_support_moved",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -8.611707016825676e-06,
+              0.00013259006664156914,
+              0.6730645895004272
+            ],
+            "asleep": false,
+            "raw_contacts": 4,
+            "persistent_bodies": 1
+          },
+          "tracked_pairs": 1
+        }
+      ]
+    },
+    {
+      "scene": "task_0005/base",
+      "seed": 0,
+      "policy_actions": 0,
+      "exit_code": 0,
+      "passed": true,
+      "initial_validation_passed": true,
+      "negative_initial_guard_rejected": true,
+      "reset_cache_empty": true,
+      "reset_validation_passed": true,
+      "samples": [
+        {
+          "label": "initial",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -0.0024547206703573465,
+              0.00042631023097783327,
+              0.45677807927131653
+            ],
+            "asleep": false,
+            "raw_contacts": 7,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 3
+        },
+        {
+          "label": "after_60_passive_steps",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -0.002454770728945732,
+              0.00042653450509533286,
+              0.45677822828292847
+            ],
+            "asleep": false,
+            "raw_contacts": 8,
+            "persistent_bodies": 3
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "negative_lifted",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.017032286152243614,
+              -0.011961291544139385,
+              0.6419020891189575
+            ],
+            "asleep": false,
+            "raw_contacts": 0,
+            "persistent_bodies": 0
+          },
+          "tracked_pairs": 8
+        },
+        {
+          "label": "reset_and_reprime",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -0.002454702276736498,
+              0.00042653444688767195,
+              0.45677801966667175
+            ],
+            "asleep": false,
+            "raw_contacts": 7,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 3
+        },
+        {
+          "label": "negative_support_moved",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              -0.0024528969079256058,
+              0.0004541474627330899,
+              0.4036373496055603
+            ],
+            "asleep": false,
+            "raw_contacts": 1,
+            "persistent_bodies": 1
+          },
+          "tracked_pairs": 2
+        }
+      ]
+    },
+    {
+      "scene": "task_0002/base",
+      "seed": 0,
+      "policy_actions": 0,
+      "exit_code": 0,
+      "passed": true,
+      "initial_validation_passed": true,
+      "negative_initial_guard_rejected": true,
+      "reset_cache_empty": true,
+      "reset_validation_passed": true,
+      "samples": [
+        {
+          "label": "initial",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.0017418928910046816,
+              -0.0037895895075052977,
+              0.3693995773792267
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "after_60_passive_steps",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.0017418928910046816,
+              -0.0037895895075052977,
+              0.3693995773792267
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "negative_lifted",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.0017418947536498308,
+              -0.0037895881105214357,
+              0.5662621855735779
+            ],
+            "asleep": false,
+            "raw_contacts": 0,
+            "persistent_bodies": 0
+          },
+          "tracked_pairs": 1
+        },
+        {
+          "label": "reset_and_reprime",
+          "ap": {
+            "jar_on_support": true,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.001741187646985054,
+              -0.0037902214098721743,
+              0.36939969658851624
+            ],
+            "asleep": true,
+            "raw_contacts": 0,
+            "persistent_bodies": 2
+          },
+          "tracked_pairs": 10
+        },
+        {
+          "label": "negative_support_moved",
+          "ap": {
+            "jar_on_support": false,
+            "jar_closed": false,
+            "jar_dropped": false,
+            "jar_upright": true
+          },
+          "jar": {
+            "position": [
+              0.00174118229188025,
+              -0.0037902186159044504,
+              0.3244371712207794
+            ],
+            "asleep": false,
+            "raw_contacts": 4,
+            "persistent_bodies": 1
+          },
+          "tracked_pairs": 3
+        }
+      ]
+    }
+  ],
+  "validation_limits": [
+    "Seed 0 on five scenes, not all 78 scene/seed cases",
+    "No learned-model or policy trial executed with this repair",
+    "Live candidate core matches final implementation; final adds unit-tested cleanup if waking raises",
+    "Earlier diagnostic lookup errors and shutdown errors preserved in raw backup"
+  ],
+  "queue_state": {
+    "completed_current": 2,
+    "initialization_failed": 9,
+    "timeouts": 0,
+    "interrupted_scene": "task_0005/base",
+    "interrupted_seed": 0,
+    "predecessor_completed_separate": 4,
+    "evaluation_services": "stopped",
+    "model_services": "stopped",
+    "gpu_compute_processes": 0,
+    "resume_authorized": false
+  },
+  "next_admission": "New provenance/plan and matching repaired-contact live smoke evidence required before a user-authorized evaluation resumes",
+  "historical_results_unchanged": true,
+  "diagnostic_backup": {
+    "status": "verified",
+    "archive_sha256": "d8dd84c3a2b771d6fe6611b35ea11c0be4a6b6740d7b7e762e2e0cdaaac40bb3",
+    "files_verified": 39,
+    "bytes_verified": 827605,
+    "all_file_checksums_and_coverage_match": true
+  }
+}
