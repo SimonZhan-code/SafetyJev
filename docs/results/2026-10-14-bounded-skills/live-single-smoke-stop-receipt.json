@@ -1,0 +1,35 @@
+{
+  "instance_id": 55768662,
+  "action": "stop",
+  "time_utc": "2026-10-14T05:19:25.214832+00:00",
+  "backup_verified": true,
+  "results_commit": "7e6921b",
+  "idle_checks": {
+    "instance_id": 55768662,
+    "evaluation_and_model_jobs_idle": true,
+    "gpu_empty": true
+  },
+  "platform_before": {
+    "id": 55768662,
+    "actual_status": "running",
+    "cur_state": "running",
+    "intended_status": "running",
+    "ssh_host": "ssh9.vast.ai",
+    "ssh_port": 13564,
+    "public_ipaddr": "154.50.100.64"
+  },
+  "stop_http_status": 200,
+  "platform_success": true,
+  "terminal_stopped_observed": true,
+  "followup_http_status": 200,
+  "platform_after": {
+    "id": 55768662,
+    "actual_status": "exited",
+    "cur_state": "stopped",
+    "intended_status": "stopped",
+    "ssh_host": "ssh9.vast.ai",
+    "ssh_port": 13564,
+    "public_ipaddr": "154.50.100.64"
+  },
+  "verification_note": "Follow-up platform GET confirms cur_state=stopped, intended_status=stopped, actual_status=exited."
+}
