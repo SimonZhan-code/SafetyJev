@@ -31,6 +31,8 @@ CASES=('task_0000/base','task_0005/base')
 def case_grid(suite):
     if suite == 'smoke':
         return [(scene, 0) for scene in CASES]
+    if suite == 'single-smoke':
+        return [('task_0000/base', 1)]
     if suite == 'timing':
         return [('task_0000/base', 1)]
     if suite == 'jar-base':
@@ -136,7 +138,7 @@ def create_services(out):
 def main():
     global JOB
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--suite',choices=('smoke','jar-base','timing'),default='smoke')
+    p.add_argument('--suite',choices=('smoke','single-smoke','jar-base','timing'),default='smoke')
     p.add_argument('--smoke-evidence',type=Path)
     p.add_argument('--exclude-completed-from',type=Path)
     p.add_argument('--config',type=Path,default=ROOT/'configs/codex-harness.example.json')
@@ -146,7 +148,7 @@ def main():
     p.add_argument('--retry-failed',action='store_true')
     args=p.parse_args();os.umask(0o077)
     config=load_config(args.config)
-    cap=256 if args.suite=='smoke' else 2000
+    cap=256 if args.suite in ('smoke','single-smoke') else 2000
     if config['max_steps']!=cap:raise ValueError('Incorrect action cap for selected suite')
     if args.exclude_completed_from and args.suite!='jar-base':
         raise ValueError('Only full sweeps may exclude predecessor cases')
@@ -155,6 +157,7 @@ def main():
     grid=[c for c in case_grid(args.suite) if c not in excluded_keys]
     if not grid:raise ValueError('No remaining cases')
     JOB={'smoke':'safetyjev-codex-smoke', 'jar-base':'safetyjev-codex-jar-eval',
+         'single-smoke':'safetyjev-codex-single-smoke',
          'timing':'safetyjev-codex-timing'}[args.suite]
     if config['tool_sequence']=='skills':JOB += '-skills'
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True);out.chmod(0o700)
