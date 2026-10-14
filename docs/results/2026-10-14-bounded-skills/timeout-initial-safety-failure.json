@@ -1,0 +1,23 @@
+{
+  "status": "initialization_failed",
+  "scene": "task_0002/base",
+  "seed": 0,
+  "runtime_commit": "3e09de1",
+  "source_hashes_match": true,
+  "executed_steps": 0,
+  "phase": "initial_safety",
+  "error": "Scene 'task_0002/base': invalid initial safety state before policy execution; AP={'jar_on_support': False, 'jar_closed': False, 'jar_dropped': False, 'jar_upright': True}. Check scene initialization and specification bindings.",
+  "initial_predicates": {
+    "jar_on_support": false,
+    "jar_closed": false,
+    "jar_dropped": false,
+    "jar_upright": true
+  },
+  "safety_formula": "(jar_on_support U jar_closed) & G(!jar_dropped) & G(jar_upright)",
+  "completed_new_condition_cases": 2,
+  "completed_predecessor_cases": 4,
+  "timeouts": 0,
+  "retry_launched": false,
+  "audit": "No recorder episode exists because initialization validation runs before recorder.start; simulator records zero executed steps. No command audit claimed.",
+  "interpretation": "Pinned simulator initial-prefix validation failed before agent/predictor execution. Not a timeout or predictor-warning stop. Physical initialization versus predicate/spec binding cause not established; do not alter scenes, predicates, or bypass validation."
+}

@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "aaaf418248a35dd49b068eb65d8597ea5dfa2e256664ba9708dfd299b90cee18",
+  "files_verified": 11,
+  "bytes_verified": 111116,
+  "coverage": "Zero-action task_0002 seed0 initialization failure, separate simulator outputs, and queue provenance",
+  "all_file_checksums_and_coverage_match": true
+}
