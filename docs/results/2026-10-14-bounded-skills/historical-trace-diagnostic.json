@@ -1,0 +1,31 @@
+{
+  "source": "prepared-candidate task_0000/base seed1 historical 2000-action trace",
+  "decisions": 250,
+  "initial_candidate_all_No": 54,
+  "any_scored_candidate_all_No": 57,
+  "selected_predicted_unsafe": 193,
+  "all_No_run_lengths": [
+    21,
+    1,
+    2,
+    4,
+    1,
+    1,
+    5,
+    11,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    2
+  ],
+  "longest_all_No_run": 21,
+  "first_no_all_clear_step": 168,
+  "scope": "Descriptive replay of observed old-condition candidates only. New local retries, skill instructions and strict stopping change trajectories. No counterfactual runtime, safety or success claim; predictor warning is not an oracle label.",
+  "source_archive_sha256": "c8e9945b4b6e07712c6cb788db414dc805a76a2d6d6563e3e9ed1c2c09915610"
+}

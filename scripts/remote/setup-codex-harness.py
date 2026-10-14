@@ -16,6 +16,7 @@ MODULES = ('__init__.py', 'codex_worker.py', 'codex_tools.py', 'codex_bridge.py'
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--tool-sequence', choices=('individual','paired','prepared','skills'), default='individual')
     parser.add_argument('--sdk-python', default='/usr/bin/python3',
                         help='Python executable readable by the dedicated account')
     args=parser.parse_args()
@@ -50,7 +51,7 @@ def main():
     # Only SDK authentication store belongs to this account; no HF/OpenRouter secrets.
     env={'PATH':'/usr/bin:/bin','HOME':str(home),'CODEX_HOME':str(home/'.codex'),
          'PYTHONPATH':'/opt/safetyjev-codex','PYTHONNOUSERSITE':'1','LANG':'C.UTF-8'}
-    proc=subprocess.run([python,'-m','safetyjev.codex_worker','--preflight'],env=env,
+    proc=subprocess.run([python,'-m','safetyjev.codex_worker','--preflight','--tool-sequence',args.tool_sequence],env=env,
         cwd=home/'work',user=account.pw_uid,group=account.pw_gid,extra_groups=[],
         capture_output=True,text=True,timeout=100,umask=0o077)
     try:report=json.loads(proc.stdout)

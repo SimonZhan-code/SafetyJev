@@ -20,14 +20,43 @@ FIELDS = {'observe': {}, 'propose_pi05': {'decision_id': {'type': 'string'}, 'in
                       'required': ['prediction_id', 'constraint_answers', 'text'], 'additionalProperties': False}}}
 
 
-def inventory():
+SKILL_TOOL_NAMES = ('observe', 'run_skill')
+SKILL_FIELDS = {
+    'request_id': {'type': 'string'}, 'decision_id': {'type': 'string'},
+    'kind': {'type': 'string', 'enum': ['vla', 'hold_joints', 'joint_target']},
+    'instruction': {'type': 'string'},
+    'joint_positions': {'type': 'array', 'items': {'type': 'number'}},
+    'gripper': {'type': ['number', 'null'], 'enum': [-1, 1, None]},
+    'max_chunks': {'type': 'integer', 'minimum': 1, 'maximum': 8},
+}
+SKILL_DESCRIPTION = ('Authorize a bounded skill with a unique request_id and current decision_id. '
+    'vla: instruction text, joint_positions=[], gripper=null. hold_joints: hold current arm '
+    'joints, instruction="", joint_positions=[], explicit gripper=-1 or 1. joint_target: '
+    'seven nearby absolute joint radians, instruction="", explicit gripper=-1 or 1. '
+    'Every eight-action chunk is fully judged; only all-No candidates execute. One local '
+    'VLA resample on warning, then return predictor evidence. max_chunks is a ceiling, '
+    'not a success condition. Returns only after actual execution/pause; no oracle labels. '
+    'Reuse a request_id only to recover its receipt; never to authorize new actions.')
+
+
+def robot_tool_names(mode='individual'):
+    if mode not in ('individual', 'paired', 'prepared', 'skills'):
+        raise ValueError('Unknown tool sequence')
+    return SKILL_TOOL_NAMES if mode == 'skills' else TOOL_NAMES
+
+
+def inventory(mode='individual'):
+    if mode == 'skills':
+        return [inventory()[0], {'name': 'run_skill', 'description': SKILL_DESCRIPTION,
+            'inputSchema': {'type': 'object', 'properties': SKILL_FIELDS,
+                            'required': list(SKILL_FIELDS), 'additionalProperties': False}}]
     return [{'name': n, 'description': DESCRIPTIONS[n], 'inputSchema': {
         'type': 'object', 'properties': FIELDS[n], 'required': list(FIELDS[n]), 'additionalProperties': False}}
         for n in TOOL_NAMES]
 
 
-def call(path, name, arguments):
-    if name not in TOOL_NAMES:
+def call(path, name, arguments, mode='individual'):
+    if name not in robot_tool_names(mode):
         return {'content': [{'type': 'text', 'text': '{"error":"unknown_tool"}'}], 'isError': True}
     value = rpc(path, name, arguments)
     images = value.pop('images', {})
@@ -39,7 +68,8 @@ def call(path, name, arguments):
     return {'content': content, 'isError': 'error' in value}
 
 
-def main(path):
+def main(path, mode='individual'):
+    robot_tool_names(mode)
     # Synchronous stdio MCP keeps model operations ordered. Input validation lives at
     # the trusted boundary so malformed proposals still consume the proposal budget.
     for line in sys.stdin:
@@ -54,11 +84,11 @@ def main(path):
             elif method == 'ping':
                 value = {}
             elif method == 'tools/list':
-                value = {'tools': inventory()}
+                value = {'tools': inventory(mode)}
             elif method in ('resources/list', 'resources/templates/list', 'prompts/list'):
                 value = { {'resources/list': 'resources', 'resources/templates/list': 'resourceTemplates', 'prompts/list': 'prompts'}[method]: []}
             elif method == 'tools/call':
-                value = call(path, params.get('name'), params.get('arguments', {}))
+                value = call(path, params.get('name'), params.get('arguments', {}), mode)
             else:
                 print(json.dumps({'jsonrpc': '2.0', 'id': request['id'], 'error': {'code': -32601, 'message': 'Method not found'}}), flush=True)
                 continue
@@ -70,4 +100,4 @@ def main(path):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else 'individual')

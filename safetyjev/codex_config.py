@@ -10,6 +10,8 @@ DEFAULTS = {
     'model': 'gpt-6-astra', 'reasoning_effort': 'medium',
     'proposal_limit': 3, 'decision_timeout_s': 120, 'execution_horizon': 8,
     'max_steps': 256, 'tool_sequence': 'individual', 'decision_target_s': None,
+    'skill_max_chunks': 8, 'skill_replans_without_progress': 1, 'skill_call_limit': 64,
+    'skill_joint_delta_limit': 0.2,
     'runtime_python': '/workspace/codex-harness-env/bin/python',
     'runtime_root': '/opt/safetyjev-codex',
     'runtime_user': 'safetyjev-codex',
@@ -33,7 +35,7 @@ def validate_config(value):
             result[k] = v
     if result['model'] != 'gpt-6-astra' or result['reasoning_effort'] not in ('low', 'medium', 'high'):
         raise ValueError('Unsupported Codex model or reasoning effort')
-    if result['tool_sequence'] not in ('individual', 'paired', 'prepared'):
+    if result['tool_sequence'] not in ('individual', 'paired', 'prepared', 'skills'):
         raise ValueError('Unknown tool sequence')
     if type(result['proposal_limit']) is not int or not 1 <= result['proposal_limit'] <= 10:
         raise ValueError('Invalid proposal limit')
@@ -49,6 +51,14 @@ def validate_config(value):
         raise ValueError('Invalid soft decision target')
     if result['tool_sequence'] == 'prepared' and result['proposal_limit'] != 2:
         raise ValueError('Prepared mode requires one initial proposal plus one retry')
+    for k, low, high in (('skill_max_chunks', 1, 8), ('skill_replans_without_progress', 0, 2), ('skill_call_limit', 1, 256)):
+        if type(result[k]) is not int or not low <= result[k] <= high:
+            raise ValueError('Invalid bounded skill budget')
+    delta = result['skill_joint_delta_limit']
+    if type(delta) not in (int, float) or not math.isfinite(delta) or not 0 < delta <= 0.2:
+        raise ValueError('Invalid joint primitive bound')
+    if result['tool_sequence'] == 'skills' and (result['proposal_limit'] != 2 or t > 120):
+        raise ValueError('Skills require two proposals and watchdog at most 120 seconds')
     for k in ('runtime_python', 'runtime_root', 'runtime_home', 'socket_root'):
         if not isinstance(result[k], str) or not Path(result[k]).is_absolute():
             raise ValueError('Runtime paths must be absolute')

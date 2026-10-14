@@ -105,7 +105,7 @@ class Decision:
                 actions = self.propose(instruction)
                 if np.asarray(actions).ndim == 2:
                     actions = actions[:8]
-            elif source != 'codex':
+            elif source not in ('codex', 'joint_primitive'):
                 raise HarnessError('invalid_source')
             if np.asarray(actions).shape != (8, 8):
                 raise HarnessError('invalid_actions')

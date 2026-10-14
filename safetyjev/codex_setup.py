@@ -23,5 +23,5 @@ def preflight(config):
     except ValueError:raise RuntimeError('Codex preflight failed') from None
     if proc.returncode or report.get('status')!='passed':
         raise RuntimeError('Codex tool-isolation/authentication preflight did not pass')
-    validate_attestation(report['attestation'])
+    validate_attestation(report['attestation'], config['tool_sequence'])
     return report

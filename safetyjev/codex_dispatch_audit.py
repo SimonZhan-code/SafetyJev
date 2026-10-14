@@ -14,7 +14,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from .codex_inventory import toml, tool_names
-from .codex_tools import TOOL_NAMES
+from .codex_tools import TOOL_NAMES, robot_tool_names
 from .codex_worker import SDK_VERSION, runtime_config
 
 ROBOT_NAMES = sorted('mcp__robot__'+name for name in TOOL_NAMES)
@@ -45,9 +45,9 @@ def rejected_output(value):
     return value.startswith(('unsupported call:', 'patch rejected:', 'resources/read failed:'))
 
 
-def dispatch_config(socket_path, catalog_path):
+def dispatch_config(socket_path, catalog_path, tool_sequence='individual'):
     """Candidate configuration, used only by this audit until it passes."""
-    config = runtime_config(socket_path)
+    config = runtime_config(socket_path, tool_sequence)
     config['features'].update(code_mode_host=True,
         code_mode={'enabled': True, 'excluded_tool_namespaces': ['functions', 'clock']},
         code_mode_only_strict_3p_tools=True, apply_patch_freeform=False,
@@ -68,15 +68,17 @@ def restricted_catalog(original):
     return result
 
 
-def assess(inventory, nested, attempts, robot_calls, canary_unchanged, *, allow_empty_resources=False):
+def assess(inventory, nested, attempts, robot_calls, canary_unchanged, *, allow_empty_resources=False, tool_sequence='individual'):
+    names = robot_tool_names(tool_sequence)
+    robot_names = sorted('mcp__robot__'+n for n in names)
     checks = {
         'only_dispatch_wrappers': sorted(inventory) == WRAPPERS,
-        'only_robot_nested_tools': nested.get('names') == ROBOT_NAMES and nested.get('keys') == ROBOT_NAMES,
+        'only_robot_nested_tools': nested.get('names') == robot_names and nested.get('keys') == robot_names,
         'host_globals_absent': nested.get('globals') == {k: 'undefined' for k in
             ('process', 'require', 'fetch', 'Deno', 'WebSocket', 'XMLHttpRequest')},
         'nested_forbidden_calls_rejected': set(nested.get('denied', {})) == DENIED_PROBES
             and all(value is True for value in nested['denied'].values()),
-        'all_robot_methods_dispatched': sorted(robot_calls) == sorted(TOOL_NAMES),
+        'all_robot_methods_dispatched': sorted(robot_calls) == sorted(names),
         'canary_unchanged': canary_unchanged,
         # The user-approved exception admits only the exact empty-list payloads.
         'direct_calls_within_policy': len(attempts)==len(DIRECT_PROBES)
@@ -86,23 +88,23 @@ def assess(inventory, nested, attempts, robot_calls, canary_unchanged, *, allow_
     return {'status': 'passed' if all(checks.values()) else 'blocked_tool_isolation', 'checks': checks}
 
 
-def validate_report(report):
+def validate_report(report, tool_sequence='individual'):
     if report.get('status')!='passed' or report.get('allow_empty_resources') is not True:
         raise ValueError('Dispatch audit did not pass the approved policy')
     if any(report.get(k)!=SDK_VERSION for k in ('sdk_version','runtime_version')) or report.get('model')!='gpt-6-astra':
         raise ValueError('Dispatch audit runtime mismatch')
     assessed=assess(report['native_inventory'],report['nested_audit'],report['direct_attempts'],
-                    report['robot_stub_calls'],report['checks']['canary_unchanged'],allow_empty_resources=True)
+                    report['robot_stub_calls'],report['checks']['canary_unchanged'],allow_empty_resources=True, tool_sequence=tool_sequence)
     if assessed['status']!='passed' or assessed['checks']!=report['checks']:
         raise ValueError('Dispatch audit evidence is incomplete')
     servers=report['mcp_servers']
     if (len(servers)!=1 or servers[0]['name']!='robot' or
-            set(servers[0]['tools'])!=set(TOOL_NAMES) or
+            set(servers[0]['tools'])!=set(robot_tool_names(tool_sequence)) or
             servers[0]['resource_count']!=0 or servers[0]['resource_template_count']!=0):
         raise ValueError('Unexpected MCP capabilities')
 
 
-def audit(*, allow_empty_resources=False):
+def audit(*, allow_empty_resources=False, tool_sequence='individual'):
     from openai_codex import Codex, CodexConfig, ApprovalMode, Sandbox
     from openai_codex.client import _resolve_codex_bin
     from openai_codex.generated.v2_all import ListMcpServerStatusResponse
@@ -133,7 +135,7 @@ def audit(*, allow_empty_resources=False):
         socket_path = str(root/'robot.sock')
         robot = socketserver.UnixStreamServer(socket_path, Robot)
         threading.Thread(target=robot.serve_forever, daemon=True).start()
-        config = dispatch_config(socket_path, catalog_path)
+        config = dispatch_config(socket_path, catalog_path, tool_sequence)
         # Every tool is reached through the real MCP adapter, but this stub cannot
         # advance a simulator or return any oracle records.
         script = '''const denied = {};
@@ -160,6 +162,12 @@ for (const name of ['observe','propose_pi05','propose_actions','judge','execute'
 text({audit_nested:true,names:ALL_TOOLS.map(x=>x.name).sort(),keys:Object.keys(tools).sort(),
  globals:{process:typeof process,require:typeof require,fetch:typeof fetch,Deno:typeof Deno,
  WebSocket:typeof WebSocket,XMLHttpRequest:typeof XMLHttpRequest},denied});'''
+        if tool_sequence == 'skills':
+            begin = script.index("for (const name of ['observe'")
+            end = script.index('text({audit_nested', begin)
+            calls = {'observe': {}, 'run_skill': {'request_id': 'audit', 'decision_id': 'audit',
+                'kind': 'vla', 'instruction': 'audit', 'joint_positions': [], 'gripper': None, 'max_chunks': 1}}
+            script = script[:begin] + 'for (const [name,args] of Object.entries('+json.dumps(calls)+')) { await tools["mcp__robot__"+name](args); }\n' + script[end:]
         requests = [dict(type='custom_tool_call', name='exec', input=script)]
         requests += [dict(type='function_call', name=name, arguments=json.dumps(args)) for name, args in (
             ('list_mcp_resources', {}), ('list_mcp_resource_templates', {}),
@@ -239,7 +247,7 @@ text({audit_nested:true,names:ALL_TOOLS.map(x=>x.name).sort(),keys:Object.keys(t
                              'result':text.replace(str(root), '<audit-temp>')[:1500]})
         inventory = inventories[0] if inventories else []
         report = assess(inventory, nested, attempts, robot_calls, canary.read_text() == 'UNCHANGED',
-                        allow_empty_resources=allow_empty_resources)
+                        allow_empty_resources=allow_empty_resources, tool_sequence=tool_sequence)
         report.update(sdk_version=SDK_VERSION, runtime_version=SDK_VERSION, model='gpt-6-astra',
             allow_empty_resources=allow_empty_resources,
             scope='CPU-only mock-provider audit; no ChatGPT tokens, model inference or simulator',
@@ -261,12 +269,13 @@ text({audit_nested:true,names:ALL_TOOLS.map(x=>x.name).sort(),keys:Object.keys(t
 if __name__ == '__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--allow-empty-resources',action='store_true')
+    parser.add_argument('--tool-sequence', choices=('individual','paired','prepared','skills'), default='individual')
     args=parser.parse_args()
     def timeout(*_): raise TimeoutError('audit_deadline')
     signal.signal(signal.SIGALRM, timeout)
     signal.alarm(90)
     try:
-        result = audit(allow_empty_resources=args.allow_empty_resources)
+        result = audit(allow_empty_resources=args.allow_empty_resources, tool_sequence=args.tool_sequence)
     except Exception:
         result = {'status':'audit_failed', 'scope':'No live trials authorized by this result'}
     finally:

@@ -1498,3 +1498,111 @@ The authorized stop for exact instance **55768662** returned HTTP 200
 in `e9a1c10`. The immediate follow-up GET returned HTTP 429; terminal stopped state
 was not independently observed. [Platform receipt](results/2026-10-13-codex-harness/prepared-timing-stop-receipt.json). Do not launch another trial or
 full sweep from this result.
+
+### Bounded skills and limited replanning (2026-10-14 implementation)
+
+The new `tool_sequence: "skills"` is a separate experimental condition. Codex
+chooses a bounded skill instead of selecting every eight-action candidate. The
+trusted owner-thread runner proposes, predicts and executes each eight-action
+chunk locally, then re-observes the **actual** next state before proposing again.
+There is no open-loop 64-action prediction, GPU batching change or skipped check.
+FLA 0.5.2, batch one, vision cache off, the pinned pi0.5/Unsafe600 step-500 models,
+normalization, gripper transformation, native history and reset masks are retained.
+
+The initial defaults bound both compute and repeated calls to Codex:
+
+| Setting | New skill mode |
+|---|---|
+| Public tools | `observe`, `run_skill` |
+| Skill ceiling | Eight chunks / 64 actions; Codex may request fewer |
+| Local recovery | One pi0.5 resample per warned state |
+| Execution rule | Complete binary predictions for **all** fixed questions, all `No` |
+| Unresolved warning | Pause before execution and return exact predictor evidence |
+| Codex recovery | One replan without action progress, then `predictor_blocked` |
+| Repeated identical blocked plan | Reuse its evidence at the unchanged state; consume replan budget |
+| Episode skill requests | 64, including invalid new requests |
+| Watchdog | 120 s per planner wait / skill, including tools; an already committed chunk finishes |
+| Simple controls | Hold arm joints with explicit gripper; nearby absolute joint target |
+| Joint target convention | Seven radians, at most 0.2 rad per joint from current proprioception, interpolated over eight actions |
+
+The request includes an idempotency key, current observation decision ID, skill
+kind and bounds. An exact retry of an old request returns its receipt. Reusing
+its key with changed arguments is rejected. `run_skill` replies only after the
+actual execution boundary, warning or generic session closure. Cancellation is
+serialized with commitment: if cancellation wins, no further chunk commits; an
+already committed chunk finishes. Crash recovery remains a fresh episode with
+archived partial records, never an in-place replay of outstanding commands.
+
+`predictor_blocked` and `planner_call_budget` are explicit unsuccessful policy
+terminations, separate from service failures, hard timeouts and cancellations.
+They must remain in task-outcome denominators. They are not task success or
+proof that a collision was prevented. Terminal public responses reveal only
+`session_closed`; private outcomes and termination diagnostics stay offline.
+The episode skill-request ceiling and watchdogs bound replanning, not an exact
+token charge. Repeated observation/receipt reads cannot extend a planner deadline.
+
+The primitive backend reads only the seven arm positions from the allowed 16D
+state. It never reads object poses, contacts, grasp status, collision geometry,
+goal predicates or LTL state. Gripper width is **not** interpreted as a controller
+command: the caller supplies the explicit binary value. Primitive actions pass
+through the same command transformation, complete predictor coverage and exact
+execution audit as pi0.5. Their predictor calibration is unvalidated. Cartesian
+IK, object-centric pick/place, segmentation and oracle-assisted primitives are
+not part of this implementation.
+
+This selection rule differs deliberately from the historical Codex arm, which
+could execute warned or lower-scoring candidates. Historical modes and results
+remain intact. New skill results cannot be pooled with those trials as one sweep.
+
+**Selective RPent integration.** The optional `safetyjev.rpent_adapter.make_toolkit`
+implements the native Tool/ToolResult/Toolkit interface referenced at
+[RPent a3340f4](https://github.com/RLinf/RPent/tree/a3340f46b00755dae419e1350a6740829534064c).
+It registers only the two gateway methods and overrides default file/memory
+registration, automatic environment capture, and exception/traceback forwarding.
+It has no simulator handle and reports no oracle success. This is a toolkit
+facade for an installed pinned RPent, not a deployment of RPent's stock planner
+or its full-access sandbox. The production entrypoint uses our existing audited
+stock Codex SDK harness directly. The optional facade has protocol-unit coverage;
+a full RPent installation/end-to-end integration has not been exercised here.
+
+The MCP allowlist, prompt, runtime inventory and adversarial dispatch audit are
+mode-specific. An old five-tool attestation cannot admit the two-tool skill
+mode. The approved restricted `functions.exec`/`functions.wait` wrappers and
+exact empty resource listings remain the only native exceptions. Official
+[Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+supports an `enabled_tools` allowlist; admission additionally checks the effective
+runtime inventory and denied host capabilities, not just configuration text.
+
+**Deployment and validation.** Configuration is
+`configs/codex-harness-skills-smoke.example.json`; fresh outputs and Supervisor
+names prevent accidental reuse of earlier queues. On a separately authorized,
+idle node with the existing models and validated ManiGuard dev checkout:
+
+```sh
+python scripts/remote/setup-codex-harness.py --tool-sequence skills \
+  --output /workspace/codex-skills-setup.json
+SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev \
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
+  --suite smoke --config configs/codex-harness-skills-smoke.example.json \
+  --output artifacts/codex-harness-skills-smoke --check
+# After successful admission and explicit live-test authorization:
+SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev \
+/workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py \
+  --suite smoke --config configs/codex-harness-skills-smoke.example.json \
+  --output artifacts/codex-harness-skills-smoke --launch
+```
+
+The job is `safetyjev-codex-smoke-skills`. Admission rechecks current ManiGuard
+`dev`, source hashes, authentication, exact tool isolation, pinned predictor
+health and GPU exclusivity. The upstream head checked during this implementation
+was still `ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107`. Both rentals remain paused;
+no live smoke or GPU inference was started for this change.
+
+Report total wall time, actual actions, skill duration, planner wait, local
+chunk-selection/predictor timing, local retries, policy blocks, infrastructure
+failures and private task/gated/raw outcomes separately. Local chunk timings do
+not include Codex waiting and must not be compared directly with historical
+per-chunk Codex decision times. Token usage remains recorded as SDK usage events.
+The new offline auditor verifies delegation bounds, exact registered/scored/
+executed commands, instructions, receipts and all-No execution, plus nested
+public response allowlists. See [validation evidence](results/2026-10-14-bounded-skills/validation.json).

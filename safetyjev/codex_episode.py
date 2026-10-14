@@ -99,7 +99,7 @@ class CodexEpisode(AgenticEpisode):
         self.transcript_thread = threading.Thread(target=transcript, daemon=True)
         self.transcript_thread.start()
 
-    def select_chunk(self, step, observation, initial_chunk, regenerate, action_space, horizon):
+    def _new_decision(self, step, observation, regenerate, action_space, horizon):
         if horizon != 8 or self.native_history.rows[-1]['step'] != step:
             raise HarnessError('invalid_history_alignment')
         c = self.harness_config
@@ -120,7 +120,17 @@ class CodexEpisode(AgenticEpisode):
             questions=self.questions, bounds=action_space, propose=propose,
             make_inputs=lambda commands: self.native_history.inputs(commands, 1/self.cfg.action_frequency, self.directory),
             score=score, log=self._log, proposal_limit=c['proposal_limit'], timeout=c['decision_timeout_s'],
-            report_budget=c['tool_sequence'] in ('paired', 'prepared'), soft_target=c['decision_target_s'])
+            report_budget=c['tool_sequence'] in ('paired', 'prepared', 'skills'), soft_target=c['decision_target_s'])
+        return d
+
+    def select_chunk(self, step, observation, initial_chunk, regenerate, action_space, horizon):
+        c = self.harness_config
+        if c["tool_sequence"] == "skills":
+            from .codex_skills import SkillLoop
+            if not hasattr(self, "skill_loop"):
+                self.skill_loop = SkillLoop(self)
+            return self.skill_loop.select_chunk(step, observation, regenerate, action_space, horizon)
+        d = self._new_decision(step, observation, regenerate, action_space, horizon)
         self.decisions += 1
         old_handler = signal.getsignal(signal.SIGALRM)
         def timeout(*_):
@@ -226,10 +236,16 @@ class CodexEpisode(AgenticEpisode):
             self.bridge = None
 
     def finish(self, result):
+        if hasattr(self, 'skill_loop'):
+            self.skill_loop.finish(result['steps'])
         self._stop_worker()
         result['safetyjev_codex'] = {'decisions': self.decisions, 'proposal_attempts': self.candidate_attempts,
             'predicted_unsafe_selected': self.unsafe_selected, 'higher_score_available': self.lower_score_selected,
             'infrastructure_failure': self.failure_reason, 'execution_receipts': list(self.receipts.values())}
+        if hasattr(self, 'skill_loop'):
+            result['safetyjev_codex']['skills'] = self.skill_loop.metrics()
+            if self.skill_loop.policy_stop:
+                result.setdefault('rollout_diagnostics', {})['termination_reason'] = self.skill_loop.policy_stop
         if self.failure_reason or self.invalid:
             result.update(status='crashed', success=False)
         ShadowEpisode.finish(self, result)

@@ -100,7 +100,9 @@ def summarize(records, planned):
         'predicted_unsafe_selected':sum(r['predicted_unsafe_selected'] for r in done),
         'higher_score_available':sum(r['higher_score_available'] for r in done),
         'invalid_attempts':sum(r['invalid_attempts'] for r in done),
-        'proposal_sources':{s:sum(r['proposal_sources'][s] for r in done) for s in ('pi05','codex')},
+        'proposal_sources':{s:sum(r['proposal_sources'].get(s,0) for r in done) for s in sorted({'pi05','codex'} | {s for r in done for s in r['proposal_sources']})},
+        'predictor_blocked':sum((r.get('skills') or {}).get('policy_stop')=='predictor_blocked' for r in done),
+        'planner_budget_stops':sum((r.get('skills') or {}).get('policy_stop')=='planner_call_budget' for r in done),
         'interpretation':'Partial results exclude infrastructure failures; not an isolated causal comparison.'}
 
 
@@ -154,6 +156,7 @@ def main():
     if not grid:raise ValueError('No remaining cases')
     JOB={'smoke':'safetyjev-codex-smoke', 'jar-base':'safetyjev-codex-jar-eval',
          'timing':'safetyjev-codex-timing'}[args.suite]
+    if config['tool_sequence']=='skills':JOB += '-skills'
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True);out.chmod(0o700)
     # This check is CPU-only and can run while the existing sweep uses the GPU.
     try:checked=preflight(config)

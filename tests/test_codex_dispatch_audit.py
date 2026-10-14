@@ -82,5 +82,19 @@ class DispatchAuditTests(unittest.TestCase):
         self.assertEqual(source, original)
         with self.assertRaises(ValueError): restricted_catalog({'models':[]})
 
+    def test_skill_mode_requires_its_own_exact_inventory(self):
+        from safetyjev.codex_worker import runtime_config, instructions
+        e=self.evidence()
+        self.assertEqual(assess(*e,tool_sequence='skills')['status'],'blocked_tool_isolation')
+        names=['mcp__robot__observe','mcp__robot__run_skill']
+        e[1]['names']=names;e[1]['keys']=names;e[3]=['observe','run_skill']
+        self.assertEqual(assess(*e,tool_sequence='skills')['status'],'passed')
+        self.assertEqual(assess(*e)['status'],'blocked_tool_isolation')
+        config=runtime_config('/socket','skills')['mcp_servers']['robot']
+        self.assertEqual(config['enabled_tools'],['observe','run_skill'])
+        self.assertEqual(config['args'][-1],'skills')
+        self.assertIn('only all-No',instructions('skills',120))
+        self.assertNotIn('Choose any completely judged candidate',instructions('skills',120))
+
 
 if __name__ == '__main__': unittest.main()

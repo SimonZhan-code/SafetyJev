@@ -1,0 +1,61 @@
+{
+  "created_utc": "2026-10-14T05:07:33.358980+00:00",
+  "branch": "codex/codex-robot-harness",
+  "base_commit": "2c706a46a656beb7fd8eeb0bd26987106e8f06de",
+  "condition": "bounded local skills / strict all-No / one local retry / one no-progress Codex replan",
+  "cpu_tests": {
+    "passed": 199,
+    "skipped": 3,
+    "subtests_passed": 79,
+    "skip_reason": "Historical clutter-exact-v1 fixtures; latest dev has separate passing coverage",
+    "command": "SAFETYJEV_MANIGUARD_ROOT=/tmp/safetyjev-maniguard-dev python -m pytest tests -q -rs",
+    "post_receipt_change_targeted_passed": 51
+  },
+  "stock_runtime_isolation": {
+    "status": "passed",
+    "sdk": "0.162.1",
+    "tools": [
+      "observe",
+      "run_skill"
+    ],
+    "environment": "Local macOS CPU mock provider, clean temporary home; no external model requests or ChatGPT tokens",
+    "evidence": "local-dispatch-isolation.json"
+  },
+  "maniguard_dev": {
+    "repository": "https://github.com/NU-IDEAS-Lab/ManiGuard.git",
+    "head_checked": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107"
+  },
+  "rpent": {
+    "reference_commit": "a3340f46b00755dae419e1350a6740829534064c",
+    "integration": "Optional restricted native Toolkit facade; production runner retains audited Codex SDK",
+    "validation": "Protocol-unit tests against referenced Tool/ToolResult/Toolkit interface; no complete RPent runtime installation test"
+  },
+  "live_validation": "Not run; authenticated remote admission, GPU smoke timing and task outcomes remain unverified for this condition. Rentals were not resumed.",
+  "source_sha256": {
+    "configs/codex-harness-skills-smoke.example.json": "6e2f3f4ad7d09a221eae676ed2ace557d8d5268745f7523b016cfdbffce5cea6",
+    "safetyjev/codex_audit.py": "1906939a91d139d188cfc24af1ac1463d122d396723795bf295bc07c338daff2",
+    "safetyjev/codex_bridge.py": "5692b0d24091a2cbc754a670fbc54f2083e4bc9f992f41ad1fd7ef87a9c16eda",
+    "safetyjev/codex_config.py": "b408cacc8b0e1f84103b8da269a9cf7e993592dee95f6b5dc93ccaf317a35ddf",
+    "safetyjev/codex_dispatch_audit.py": "b28d02da9eb60a2ac5eff360cfe30c81e023961ddff12feb898d980f1c686d64",
+    "safetyjev/codex_episode.py": "e795e9e17c104ff03d4b454152f9bc86bf2ed305232b2b90f93173a95ab1e028",
+    "safetyjev/codex_registry.py": "c468412d52b692616e3fcc23da0b00f42df07533c27bacfca2d6343f1799edba",
+    "safetyjev/codex_setup.py": "8867fb97bec6257661757f841efcfdd4ac1be15c8447e4377ba20dc4e72f6801",
+    "safetyjev/codex_skills.py": "71c496c62ce54f90e32285030d50f3ac073d173c1ec4f0fe3c3c6f2ae95aab57",
+    "safetyjev/codex_tools.py": "221f0e3787ebc34794f9bdaeff87408271731b7bff9c1ff55c251ab2c37aad66",
+    "safetyjev/codex_worker.py": "25bc925f2e51708d91e959a562c52f87ec2b1f5b0313acecc94a8ec088fe4cd2",
+    "safetyjev/rpent_adapter.py": "6adc92d7d97ce9fa45785d5877fd9e15028f80aa8e79004a553e249f52d14e4f",
+    "scripts/analyze-codex-skill-opportunities.py": "70591b0849c91a23bd19a848521f8905d5eb0c273cb7969c91eea2427324baa2",
+    "scripts/remote/codex-robot-smoke.py": "99028c8cddf151a881021bac3fca5f601d3caabdcde2ad4b820b08293b2e2b61",
+    "scripts/remote/setup-codex-harness.py": "cb63fc1e80b6e27348f3919e70ed41656b429dbfbf056aac9c6767161d48e188",
+    "tests/test_codex_dispatch_audit.py": "ff43515eca94a9c1dc497e1fbe2595798480ba660103e6892698ee5ab249e92b",
+    "tests/test_codex_skills.py": "a34f57fd683ecf41deed55a3963a83897a4f598e9c5531e11fbbabc427258358",
+    "tests/test_rpent_adapter.py": "66529a73604aaa061c11b41ea8c321224c2c44a049d422817a8e80b6aa5f8b38"
+  },
+  "limits": [
+    "Not a measured speedup or causal safety improvement",
+    "Prediction calibration on primitive actions unvalidated",
+    "Historical FLA 4/120 binary disagreements remain",
+    "Strict stopping changes trajectories and outcome denominators",
+    "Planner ceilings limit replanning, not an exact token charge"
+  ]
+}

@@ -27,6 +27,8 @@ class Bridge:
     def __init__(self, path, uid, gid):
         self.pending = queue.Queue(maxsize=16)
         self.closed = False
+        self.cancel_requested = threading.Event()
+        self.commit_lock = threading.Lock()
         self.path = Path(path)
         owner = self
 
@@ -44,7 +46,12 @@ class Bridge:
                     value = json.loads(raw)
                     if not isinstance(value, dict) or set(value) != {'method', 'arguments'}:
                         return
-                    if owner.closed:
+                    if value == {'method': '_cancel', 'arguments': {}}:
+                        # Lifecycle only; no state read or action. Not exposed by MCP.
+                        with owner.commit_lock:
+                            owner.cancel_requested.set()
+                        result = {'status': 'cancellation_requested'}
+                    elif owner.closed:
                         result = {'status': 'session_closed'}
                     else:
                         reply = queue.Queue(maxsize=1)
@@ -66,7 +73,8 @@ class Bridge:
         self.thread.start()
 
     def close(self):
-        self.closed = True
+        with self.commit_lock:
+            self.closed = True
         while True:
             try:
                 _, reply = self.pending.get_nowait()

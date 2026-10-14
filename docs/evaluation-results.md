@@ -1228,3 +1228,34 @@ package lists accompany those records. The full local backup is
 logs and raw JSONL traces; all 553 manifest entries passed SHA256 verification.
 The two model services were stopped after the run. The rental instance remains
 running. Earlier classifier results are unchanged.
+
+### Bounded-skill implementation diagnostic (2026-10-14; no new live result)
+
+The prior prepared-candidate Jar trial had an all-No initial candidate in 54/250
+decisions and **any** all-No scored candidate in 57/250. The longest contiguous
+run with an all-No scored candidate was 21 decisions; the first state without
+one was action 168. The remaining 193 decisions selected predicted-unsafe
+commands. [Trace diagnostic](results/2026-10-14-bounded-skills/historical-trace-diagnostic.json).
+The reproducible archive reader is `scripts/analyze-codex-skill-opportunities.py`.
+
+These observations motivate bounded local skills and a limit on repeated Codex
+replanning, but do not establish counterfactual speed or safety. New skill
+instructions, a local resample and strict all-No execution change which states
+are reached. A predictor-blocked trial may finish quickly by stopping early;
+report executed actions and task success alongside wall time. Do not call that
+a speedup or a prevented ground-truth violation.
+
+The new implementation allows one local VLA retry, one Codex replan without
+action progress, then an explicit unsuccessful `predictor_blocked` termination.
+It does not automatically execute a warned candidate. At most eight separately
+observed and scored chunks run under one skill authorization. Existing permissive
+results remain separate. CPU contracts and the stock-runtime mock-provider
+isolation audit have been exercised; no remote authenticated skill-mode trial,
+GPU timing or task-performance result is claimed. The optional RPent facade has
+protocol-unit coverage, not full RPent environment integration coverage.
+
+Preserve the existing limits: FLA's 4/120 binary disagreements, semantic versus
+native predicate/horizon alignment, experimental simulator parity, unverified
+training/evaluation independence, and unvalidated predictor reliability on
+scripted or Codex-written actions. More frequent stopping does not resolve those
+calibration questions. See [implementation and validation record](results/2026-10-14-bounded-skills/validation.json).
