@@ -39,9 +39,12 @@ times, not uninterrupted rental uptime or a controlled backend speed benchmark.
 [summary](results/2026-10-13-astra-jar/summary.json) and
 [matched comparison](results/2026-10-13-astra-jar/matched-comparison.json)
 retain per-case evidence. Model services are stopped. Complete raw-capture and
-separate simulator-output archives are transferring to local storage; rental
-retirement remains pending full off-node checksum/coverage verification and
-secured documentation. Do not interpret the completed audit as a completed backup.
+separate simulator-output archives are verified off-node across **261,867 files
+and 14,030,868,457 bytes**, including the interrupted attempt. Both archive SHA256
+checks, every file checksum and exact manifest coverage passed. The
+[backup receipt](results/2026-10-13-astra-jar/backup-verification.json) records both
+archives. The authorized stop of instance 55620382 follows securing this receipt;
+the stop has not yet been issued.
 
 This comparison changes System 1 model/API settings, recovery logic, predictor
 backend and hardware together. Astra uses GPT-6 Astra via OpenRouter with reasoning

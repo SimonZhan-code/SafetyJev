@@ -874,8 +874,11 @@ engagement-gated safe successes and three successes without raw LTL violations.
 All 129,943 executed commands/instructions and 82 runtime hashes passed audit.
 There were 234 repairs (167 safety-triggered, 67 stagnation-triggered), 96 persistent
 instruction activations, 94 clear events, 8,166 best-valid fallbacks and no API or
-infrastructure errors. Model services are stopped. Raw archives are transferring;
-the authorized rental stop remains gated on verified complete off-node backups
+infrastructure errors. Model services are stopped. Complete off-node backup is
+verified across 261,867 files and 14,030,868,457 bytes, including both raw captures
+and separate simulator outputs. Archive/file SHA256 and exact coverage passed;
+see the [backup receipt](results/2026-10-13-astra-jar/backup-verification.json).
+The authorized rental stop follows securing this verification
 and pushed final records. [Results and matched DeepSeek comparison](evaluation-results.md)
 retain raw versus gated outcomes, timings and confounding differences. This is
 not an isolated recovery-only causal comparison.

@@ -1,0 +1,20 @@
+{
+  "status": "verified",
+  "archives": [
+    {
+      "archive": "artifacts.tar.zst",
+      "sha256": "36009129a92635371cf89dd77d9c6c1a842a64100c11c754c7bb0f544ddf04ea",
+      "files_verified": 261378,
+      "bytes_verified": 13900092793
+    },
+    {
+      "archive": "simulator-outputs.tar.zst",
+      "sha256": "e81c9f0267222b2f0de43e579968b0fe5aec120c75e2ec4c5bd3f3658ba399eb",
+      "files_verified": 489,
+      "bytes_verified": 130775664
+    }
+  ],
+  "files_verified": 261867,
+  "bytes_verified": 14030868457,
+  "all_file_checksums_and_coverage_match": true
+}
