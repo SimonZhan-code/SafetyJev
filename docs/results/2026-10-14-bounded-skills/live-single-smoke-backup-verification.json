@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "98e4efb289606c3f5eee4462031cfb7399b2e3d91de6396b98a95deca7a60503",
+  "files_verified": 382,
+  "bytes_verified": 17266580,
+  "coverage": "Entire bounded-skills smoke trial and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}

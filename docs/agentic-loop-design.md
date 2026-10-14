@@ -1606,3 +1606,16 @@ per-chunk Codex decision times. Token usage remains recorded as SDK usage events
 The new offline auditor verifies delegation bounds, exact registered/scored/
 executed commands, instructions, receipts and all-No execution, plus nested
 public response allowlists. See [validation evidence](results/2026-10-14-bounded-skills/validation.json).
+
+
+### Bounded-skills live smoke, October 14
+
+Runtime `b52691f` was tested on the original Codex instance 55768662 after verifying idle services and GPU. Authenticated GPT-6 Astra setup admitted only `observe` and `run_skill` with the approved restricted dispatch wrappers. The dedicated `single-smoke` suite runs task_0000/base seed 1 with a 256-action cap; it cannot satisfy the two-case full-sweep admission. Launch:
+
+```bash
+SAFETYJEV_MANIGUARD_ROOT=/workspace/ManiGuard-dev /workspace/native-env/bin/python scripts/remote/codex-robot-smoke.py --suite single-smoke --config configs/codex-harness-skills-smoke.example.json --output artifacts/codex-harness-skills-single-20261014 --launch
+```
+
+Four Codex skill requests committed 64, 64, 48, and zero actions respectively. The last request changed the instruction to withdraw/reposition, but both freshly scored pi0.5 proposals still had warnings. The no-progress replan allowance was exhausted and the attempt ended with `predictor_blocked` at action 176. No hidden fallback ran. Exact command/instruction alignment, skill delegation, public payload allowlists and all saved source hashes passed audit. No harness/tool errors or invalid proposals occurred. Model services stopped and the GPU was released.
+
+Total case wall time was 193.790 seconds, including warmup, simulator startup and teardown. Skill execution totaled 49.005 seconds and between-skill planner waits totaled 45.336 seconds. Local eight-action selection averaged 1.278 seconds, which must not be compared directly with previous end-to-end per-chunk Codex decision times. This is a mechanically valid but unsuccessful, early-blocked smoke; it does not establish a ten-minute 2,000-action trial or matched speedup. Full trial artifacts and separate ManiGuard outputs are backed up and verified across 382 files / 17,266,580 bytes, archive SHA256 `98e4efb289606c3f5eee4462031cfb7399b2e3d91de6396b98a95deca7a60503`. Rental stop is pending until these results are pushed.
