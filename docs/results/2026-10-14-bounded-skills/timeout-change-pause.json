@@ -1,0 +1,51 @@
+{
+  "status": "interrupted_for_user_requested_timeout_change",
+  "scene": "task_0001/base",
+  "seed": 1,
+  "runtime_commit": "b4261c9",
+  "source_hashes_match": true,
+  "completed_cases_preserved": 4,
+  "pause_receipt": {
+    "time_utc": "2026-10-14T15:06:00.666481+00:00",
+    "instance_id": 55768662,
+    "reason": "User requested 300-second watchdog and record timeout then continue queue",
+    "prior_progress": {
+      "status": "running",
+      "current": {
+        "scene": "task_0001/base",
+        "seed": 1
+      },
+      "planned": 78,
+      "completed": 4,
+      "failed": 0,
+      "task_success": 1,
+      "safe_success": 1,
+      "raw_violations": 4,
+      "counted_violations": 1,
+      "contacted": 4,
+      "grasped": 1,
+      "success_without_raw_violation": 0,
+      "predicted_unsafe_selected": 630,
+      "higher_score_available": 0,
+      "invalid_attempts": 0,
+      "proposal_sources": {
+        "codex": 0,
+        "joint_primitive": 56,
+        "pi05": 1339
+      },
+      "predictor_blocked": 0,
+      "planner_budget_stops": 0,
+      "interpretation": "Partial results exclude infrastructure failures; not an isolated causal comparison."
+    },
+    "completed_record_sha256": {
+      "task_0000-base-seed0/record.json": "0a806b3d8015956d550bb150949266d428020e475908f3ba28b460acdde5e580",
+      "task_0000-base-seed1/record.json": "d1f7fdacd7940c5d81c58404a89edb5f3b3e11338f2441bef796b67808574b12",
+      "task_0000-base-seed2/record.json": "c47f83b2892f836842a8a24e2efebf5409f2ef7640e91ed9eafcd275b5ddfdaa",
+      "task_0001-base-seed0/record.json": "15e210038e5f72cfbdb1500312596b23a22bce135a6a4de764f3243f449d688c"
+    },
+    "runtime_commit": "b4261c9",
+    "gpu_empty": true,
+    "resume_old_queue": false
+  },
+  "audit": "Partial attempt preserved; no terminal command audit claimed"
+}

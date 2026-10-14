@@ -140,7 +140,7 @@ private reason or outcome. No unscored or predicted-unsafe override tool exists 
         if tool_sequence == 'paired' else '')
 
 
-def runtime_config(socket_path, tool_sequence='individual'):
+def runtime_config(socket_path, tool_sequence='individual', decision_timeout_s=120):
     return {'features': {**{k: False for k in DISABLED_FEATURES}, 'code_mode': {'enabled': False},
                              'skip_host_skill_discovery': True},
         'agents': {'enabled': False},
@@ -151,7 +151,7 @@ def runtime_config(socket_path, tool_sequence='individual'):
             'args': ['-m', 'safetyjev.codex_tools', str(socket_path), tool_sequence],
             'env': {'PYTHONPATH': str(Path(__file__).resolve().parents[1])},
             'enabled_tools': list(robot_tool_names(tool_sequence)), 'required': True,
-            'tool_timeout_sec': 150, 'default_tools_approval_mode': 'approve'}}}
+            'tool_timeout_sec': max(150, decision_timeout_s + 30), 'default_tools_approval_mode': 'approve'}}}
 
 
 def validate_attestation(value, tool_sequence='individual'):
@@ -210,7 +210,7 @@ def main():
         if (hashlib.sha256(exported).hexdigest()!=isolation['original_catalog_sha256'] or
                 hashlib.sha256(catalog_path.read_bytes()).hexdigest()!=isolation['diagnostic_catalog_sha256']):
             raise RuntimeError('audited_catalog_changed')
-        config = dispatch_config(args.socket, catalog_path, args.tool_sequence)
+        config = dispatch_config(args.socket, catalog_path, args.tool_sequence, args.decision_timeout)
         config['model_reasoning_effort'] = args.reasoning_effort
         from .codex_inventory import probe_inventory
         from .codex_inventory import toml

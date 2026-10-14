@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "52c082e46bab0bf337a1825b0ff2bba4eb010996ed51952a80148de0e1e24449",
+  "files_verified": 690,
+  "bytes_verified": 45140925,
+  "coverage": "User-interrupted task_0001 seed1 attempt, separate simulator outputs, and queue provenance",
+  "all_file_checksums_and_coverage_match": true
+}

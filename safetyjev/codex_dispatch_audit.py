@@ -45,9 +45,9 @@ def rejected_output(value):
     return value.startswith(('unsupported call:', 'patch rejected:', 'resources/read failed:'))
 
 
-def dispatch_config(socket_path, catalog_path, tool_sequence='individual'):
+def dispatch_config(socket_path, catalog_path, tool_sequence='individual', decision_timeout_s=120):
     """Candidate configuration, used only by this audit until it passes."""
-    config = runtime_config(socket_path, tool_sequence)
+    config = runtime_config(socket_path, tool_sequence, decision_timeout_s)
     config['features'].update(code_mode_host=True,
         code_mode={'enabled': True, 'excluded_tool_namespaces': ['functions', 'clock']},
         code_mode_only_strict_3p_tools=True, apply_patch_freeform=False,

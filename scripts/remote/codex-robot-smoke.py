@@ -97,10 +97,64 @@ def completed_predecessor(directory):
     return rows
 
 
+TIMEOUT_REASONS = frozenset(('decision_timeout', 'skill_or_planner_timeout'))
+
+
+def terminal_report(case, scene, seed, wall_seconds, returncode, continue_on_timeout):
+    """Only a fully audited, explicit planner/skill timeout may advance the queue.
+
+    Missing/corrupt captures, predictor errors, audit failures and unexplained nonzero
+    exits remain fatal. Partial actions and raw outcomes stay in the original report.
+    """
+    eps=list((case/'episodes').glob('*/complete.json'))
+    if len(eps)!=1:
+        raise RuntimeError('Expected one terminal episode')
+    report=audit(eps[0].parent)
+    report.update(scene=scene,seed=seed,wall_seconds=wall_seconds,capture_exit_code=returncode)
+    reason=report.get('result',{}).get('safetyjev_codex',{}).get('infrastructure_failure')
+    if continue_on_timeout and report['status']=='infrastructure_failure' and reason in TIMEOUT_REASONS:
+        report.update(status='timeout',failure_reason=reason,queue_action='continue_next_case',
+                      execution_audit_passed=True)
+    elif returncode and report['status']=='completed':
+        raise RuntimeError('Capture exited unsuccessfully despite completed report')
+    return report
+
+
+def skip_terminal_case(case, continue_on_timeout):
+    """A restart must not rerun either completed cases or recorded timeout attempts."""
+    record=case/'record.json'
+    if not record.exists():return False
+    old=json.loads(record.read_text())
+    if old['status']=='completed':
+        eps=list((case/'episodes').glob('*/complete.json'))
+        if len(eps)!=1 or audit(eps[0].parent)['status']!='completed':
+            raise RuntimeError('Completed case failed re-audit')
+        return True
+    if old['status']=='timeout':
+        if not continue_on_timeout:raise RuntimeError('Timeout record requires its original queue policy')
+        checked=terminal_report(case,old['scene'],old['seed'],old['wall_seconds'],old['capture_exit_code'],True)
+        if (checked['status']!='timeout' or checked['failure_reason']!=old['failure_reason'] or
+                checked['executed_steps']!=old['executed_steps']):
+            raise RuntimeError('Timeout case failed re-audit')
+        return True
+    return False
+
+
+def final_progress(records, planned):
+    summary=summarize(records,planned)
+    if summary['completed']+summary['timeouts']!=planned:
+        raise RuntimeError('Queue has unprocessed or fatal cases')
+    if not summary['timeouts']:
+        return {'status':'completed','completed':planned,'planned':planned}
+    return {'status':'completed_with_timeouts','planned':planned,'completed':summary['completed'],
+            'timeouts':summary['timeouts'],'attempted':planned,'failed':summary['failed']}
+
+
 def summarize(records, planned):
     done=[r for r in records if r.get('status')=='completed']
     return {'planned':planned,'completed':len(done),
-        'failed':sum(r.get('status') in ('failed','infrastructure_failure') for r in records),
+        'failed':sum(r.get('status') in ('failed','infrastructure_failure','timeout') for r in records),
+        'timeouts':sum(r.get('status')=='timeout' for r in records),
         'task_success':sum(r['task_success'] for r in done),
         'safe_success':sum(r['safe_success'] for r in done),
         'raw_violations':sum(r['raw_violation'] for r in done),
@@ -156,8 +210,11 @@ def main():
     p.add_argument('--check',action='store_true')
     p.add_argument('--launch',action='store_true')
     p.add_argument('--retry-failed',action='store_true')
+    p.add_argument('--continue-on-timeout',action='store_true',help='Record audited planner/skill timeouts and advance without retrying them')
     args=p.parse_args();os.umask(0o077)
     config=load_config(args.config)
+    if args.continue_on_timeout and args.suite!='jar-base':
+        raise ValueError('Timeout continuation is for full sweeps only; smoke timeouts block admission')
     if args.authorized_single_smoke and args.suite!='jar-base':
         raise ValueError('Single-smoke admission is for full sweep only')
     cap=256 if args.suite in ('smoke','single-smoke') else 2000
@@ -192,6 +249,7 @@ def main():
     plan={'maniguard':jar.source_provenance(),'suite':args.suite,'cases':[[s,n] for s,n in grid],'max_steps':cap,'mode':'codex_harness','config':config,
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
     if excluded:plan['excluded_predecessor_cases']=excluded
+    if args.continue_on_timeout:plan['timeout_policy']='record_and_continue'
     if args.suite=='jar-base':
         verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke)
         plan['smoke_admission']={'authorized_single':args.authorized_single_smoke,'evidence':str(args.smoke_evidence.resolve())}
@@ -206,6 +264,7 @@ def main():
         if args.smoke_evidence:command+=['--smoke-evidence',str(args.smoke_evidence.resolve())]
         if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
         if args.retry_failed:command.append('--retry-failed')
+        if args.continue_on_timeout:command.append('--continue-on-timeout')
         if any(not all(c.isalnum() or c in '/._-' for c in x) for x in command):raise ValueError('Unsafe Supervisor path')
         Path('/etc/supervisor/conf.d/'+JOB+'.conf').write_text(f'[program:{JOB}]\ncommand={" ".join(command)}\ndirectory={ROOT}\nautostart=false\nautorestart=false\nstopasgroup=true\nkillasgroup=true\nstopwaitsecs=60\nstdout_logfile={out}/queue.log\nstderr_logfile={out}/queue.err\n')
         subprocess.run(['supervisorctl','reread'],check=True,capture_output=True)
@@ -225,11 +284,7 @@ def main():
     try:
         for scene,seed in grid:
             case=case_path(scene,seed);record=case/'record.json'
-            if record.exists() and json.loads(record.read_text())['status']=='completed':
-                eps=list((case/'episodes').glob('*/complete.json'))
-                if len(eps)!=1 or audit(eps[0].parent)['status']!='completed':
-                    raise RuntimeError('Completed case failed re-audit')
-                continue
+            if skip_terminal_case(case,args.continue_on_timeout):continue
             if case.exists():
                 if not args.retry_failed:raise RuntimeError('Interrupted attempt requires explicit --retry-failed')
                 archive=out/'failed-attempts';archive.mkdir(exist_ok=True);case.rename(archive/(case.name+'-'+str(time.time_ns())))
@@ -255,19 +310,24 @@ def main():
                     '--codex-harness-config',str(args.config.resolve()),'--','--config','configs/eval/jar_transport_joint.yaml',
                     '--benchmark-root',str(jar.BENCH),'--scenes',scene,'--seed',str(seed),'--max-steps',str(cap),'--tag','codex-harness-'+case.name]
                 with (case/'capture.log').open('w') as log:
-                    subprocess.run(command,cwd=jar.MANIGUARD,env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=cap//8*config['decision_timeout_s']+900)
-                eps=list((case/'episodes').glob('*/complete.json'))
-                if len(eps)!=1:raise RuntimeError('Expected one terminal episode')
-                report=audit(eps[0].parent);report.update(scene=scene,seed=seed,wall_seconds=time.monotonic()-started)
+                    capture=subprocess.run(command,cwd=jar.MANIGUARD,env=env,stdout=log,stderr=subprocess.STDOUT,check=False,timeout=cap//8*config['decision_timeout_s']+900)
+                report=terminal_report(case,scene,seed,time.monotonic()-started,capture.returncode,args.continue_on_timeout)
                 write_json(record,report)
-                if report['status']!='completed':raise RuntimeError('Harness infrastructure failure')
+                if report['status'] not in ('completed','timeout'):raise RuntimeError('Harness infrastructure failure')
+                if report['status']=='timeout':
+                    # The episode watchdog closes the worker and returns a terminal capture.
+                    # Stop inference before advancing; every next case starts fresh services.
+                    for name in reversed(SERVICES):
+                        if name in active:
+                            jar.service('stop',name);active.remove(name)
             except Exception:
                 if json.loads(record.read_text())['status']=='running':write_json(record,{'status':'failed','scene':scene,'seed':seed})
                 write_json(out/'progress.json',{'status':'failed','current':{'scene':scene,'seed':seed},**summarize(records(),len(grid))})
                 raise
             write_json(out/'summary.json',summarize(records(),len(grid)))
-        write_json(out/'summary.json',{'status':'completed',**summarize(records(),len(grid)),'records':records()})
-        write_json(out/'progress.json',{'status':'completed','completed':len(grid),'planned':len(grid)})
+        final=final_progress(records(),len(grid))
+        write_json(out/'summary.json',{**summarize(records(),len(grid)),**final,'records':records()})
+        write_json(out/'progress.json',final)
     finally:
         for name in reversed(SERVICES):
             if name in active:jar.service('stop',name)

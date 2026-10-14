@@ -122,7 +122,7 @@ class SkillRegistryTests(unittest.TestCase):
             with self.subTest(changes=changes),self.assertRaises(HarnessError):validate_skill(s,8)
         for changes in ({'skill_max_chunks':9},{'skill_replans_without_progress':-1},
                         {'skill_call_limit':0},{'skill_joint_delta_limit':float('nan')},
-                        {'decision_timeout_s':150},{'proposal_limit':3}):
+                        {'decision_timeout_s':301},{'proposal_limit':3}):
             c={'tool_sequence':'skills','proposal_limit':2};c.update(changes)
             with self.assertRaises(ValueError):validate_config(c)
 

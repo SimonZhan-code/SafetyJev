@@ -4,6 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from contextlib import ExitStack
+from types import SimpleNamespace
 
 spec=importlib.util.spec_from_file_location('codex_sweep',Path(__file__).parents[1]/'scripts/remote/codex-robot-smoke.py')
 queue=importlib.util.module_from_spec(spec);spec.loader.exec_module(queue)
@@ -92,6 +94,111 @@ class CodexSweepTests(unittest.TestCase):
         self.assertEqual(result['task_success'],1)
         self.assertEqual(result['success_without_raw_violation'],0)
         self.assertEqual(result['proposal_sources'],{'pi05':3,'codex':1})
+
+
+class TimeoutContinuationTests(unittest.TestCase):
+    def report(self, reason='skill_or_planner_timeout'):
+        return {'status':'infrastructure_failure','executed_steps':384,
+                'result':{'safetyjev_codex':{'infrastructure_failure':reason}}}
+
+    def test_audited_timeout_is_recorded_even_with_nonzero_capture_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            case=Path(directory);ep=case/'episodes/one';ep.mkdir(parents=True)
+            (ep/'complete.json').write_text('{}')
+            with patch.object(queue,'audit',return_value=self.report()):
+                r=queue.terminal_report(case,'task_0001/base',1,420,1,True)
+                self.assertEqual(r['status'],'timeout')
+                self.assertEqual(r['queue_action'],'continue_next_case')
+                self.assertEqual(r['executed_steps'],384)
+                (case/'record.json').write_text(json.dumps(r))
+                self.assertTrue(queue.skip_terminal_case(case,True))
+                with self.assertRaisesRegex(RuntimeError,'original queue policy'):
+                    queue.skip_terminal_case(case,False)
+            for reason in ('predictor_failed','codex_ended_without_execution','skill_cancelled'):
+                with patch.object(queue,'audit',return_value=self.report(reason)):
+                    self.assertEqual(queue.terminal_report(case,'task_0001/base',1,420,1,True)['status'],'infrastructure_failure')
+            with patch.object(queue,'audit',return_value=self.report()):
+                self.assertEqual(queue.terminal_report(case,'task_0001/base',1,420,1,False)['status'],'infrastructure_failure')
+            with patch.object(queue,'audit',side_effect=ValueError('command mismatch')):
+                with self.assertRaisesRegex(ValueError,'command mismatch'):
+                    queue.terminal_report(case,'task_0001/base',1,420,1,True)
+            (ep/'complete.json').unlink()
+            with self.assertRaisesRegex(RuntimeError,'terminal episode'):
+                queue.terminal_report(case,'task_0001/base',1,420,1,True)
+
+    def test_timeout_does_not_inflate_task_success_or_completed_count(self):
+        timed={'status':'timeout','task_success':True,'safe_success':True}
+        self.assertEqual(queue.summarize([timed],1)['task_success'],0)
+        self.assertEqual(queue.final_progress([timed],1),
+            {'status':'completed_with_timeouts','planned':1,'completed':0,'timeouts':1,'attempted':1,'failed':1})
+        self.assertEqual(queue.final_progress([],0),{'status':'completed','completed':0,'planned':0})
+        with self.assertRaisesRegex(RuntimeError,'unprocessed'):
+            queue.final_progress([{'status':'failed'}],1)
+
+    def test_real_queue_advances_after_timeout_and_restart_skips_both(self):
+        with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
+            root=Path(directory);out=root/'out';mg=root/'mg';bench=root/'bench'
+            cfg=root/'config.json'
+            cfg.write_text(json.dumps({'tool_sequence':'skills','proposal_limit':2,
+                'decision_timeout_s':300,'max_steps':2000}))
+            for relative in ('scripts/remote/jar-agentic-eval.py','scripts/remote/serve-pi05.sh',
+                    'scripts/remote/warm-jar-policy.py','configs/jar-isaac51-provenance.json',
+                    'configs/predictor-semantic-definitions.json','mg/configs/eval/jar_transport_joint.yaml',
+                    'bench/task_0000/base/scene.json'):
+                p=root/relative;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{}')
+            good={'status':'completed','task_success':False,'safe_success':False,'raw_violation':False,
+                'result':{},'predicted_unsafe_selected':0,'higher_score_available':0,
+                'invalid_attempts':0,'proposal_sources':{},'executed_steps':2000}
+            def audited(ep):
+                return self.report() if 'seed0' in str(ep) else dict(good)
+            captures=[]
+            def run(command, **kwargs):
+                if 'capture' in command:
+                    ep=Path(command[command.index('--output')+1])/'one';ep.mkdir(parents=True)
+                    (ep/'complete.json').write_text('{}');captures.append(str(ep))
+                    return SimpleNamespace(returncode=1 if 'seed0' in str(ep) else 0)
+                return SimpleNamespace(returncode=0)
+            original_open=Path.open
+            def redirected_open(p,*args,**kwargs):
+                if str(p)=='/workspace/safetyjev-jar-agentic.lock':p=root/'queue.lock'
+                return original_open(p,*args,**kwargs)
+            for obj,name,value in ((queue,'ROOT',root),(queue.jar,'MANIGUARD',str(mg)),
+                    (queue.jar,'BENCH',bench)):
+                stack.enter_context(patch.object(obj,name,value))
+            for obj,name,value in ((queue,'case_grid',[('task_0000/base',0),('task_0000/base',1)]),
+                    (queue,'preflight',{}),(queue.jar,'source_provenance',{}),
+                    (queue.jar,'verify_sources',None),(queue.jar,'verify_latest_dev',None),
+                    (queue,'verify_smoke',None),(queue,'no_overlap',None),(queue,'create_services',None),
+                    (queue.jar,'wait_for',True)):
+                stack.enter_context(patch.object(obj,name,return_value=value))
+            services=stack.enter_context(patch.object(queue.jar,'service'))
+            stack.enter_context(patch.object(queue,'audit',side_effect=audited))
+            stack.enter_context(patch.object(queue.subprocess,'run',side_effect=run))
+            stack.enter_context(patch.object(Path,'open',redirected_open))
+            stack.enter_context(patch.object(queue.shutil,'disk_usage',return_value=SimpleNamespace(free=100*1024**3)))
+            stack.enter_context(patch.object(queue.sys,'argv',['queue','--suite','jar-base','--config',str(cfg),
+                '--output',str(out),'--smoke-evidence',str(root/'smoke'),'--continue-on-timeout']))
+            queue.main()
+            self.assertEqual(len(captures),2)
+            progress=json.loads((out/'progress.json').read_text())
+            self.assertEqual(progress['status'],'completed_with_timeouts')
+            self.assertEqual((progress['completed'],progress['timeouts']),(1,1))
+            # Timeout cleanup stops both services and restarts them for the next case.
+            self.assertEqual(services.call_args_list[2].args,('stop',queue.SERVICES[1]))
+            self.assertEqual(services.call_args_list[3].args,('stop',queue.SERVICES[0]))
+            self.assertEqual(services.call_args_list[4].args,('start',queue.SERVICES[0]))
+            queue.main()
+            self.assertEqual(len(captures),2)
+
+    def test_300_second_watchdog_has_longer_mcp_envelope(self):
+        from safetyjev.codex_config import validate_config
+        from safetyjev.codex_dispatch_audit import dispatch_config
+        cfg=validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':300})
+        actual=dispatch_config('/socket','/catalog','skills',cfg['decision_timeout_s'])
+        self.assertEqual(actual['mcp_servers']['robot']['tool_timeout_sec'],330)
+        self.assertEqual(actual['mcp_servers']['robot']['enabled_tools'],['observe','run_skill'])
+        with self.assertRaises(ValueError):
+            validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':301})
 
 
 if __name__=='__main__':unittest.main()

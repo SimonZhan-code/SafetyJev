@@ -59,8 +59,8 @@ def validate_config(value):
     delta = result['skill_joint_delta_limit']
     if type(delta) not in (int, float) or not math.isfinite(delta) or not 0 < delta <= 0.2:
         raise ValueError('Invalid joint primitive bound')
-    if result['tool_sequence'] == 'skills' and (result['proposal_limit'] != 2 or t > 120):
-        raise ValueError('Skills require two proposals and watchdog at most 120 seconds')
+    if result['tool_sequence'] == 'skills' and (result['proposal_limit'] != 2 or t > 300):
+        raise ValueError('Skills require two proposals and watchdog at most 300 seconds')
     for k in ('runtime_python', 'runtime_root', 'runtime_home', 'socket_root'):
         if not isinstance(result[k], str) or not Path(result[k]).is_absolute():
             raise ValueError('Runtime paths must be absolute')
