@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "4be2be1b91a8f0ba2a7574d1dabf5d225ccb5b11336b1eebb9c7c62f17505314",
+  "files_verified": 3463,
+  "bytes_verified": 192344231,
+  "coverage": "Entire paused strict sweep including interrupted attempt and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}
