@@ -878,8 +878,12 @@ infrastructure errors. Model services are stopped. Complete off-node backup is
 verified across 261,867 files and 14,030,868,457 bytes, including both raw captures
 and separate simulator outputs. Archive/file SHA256 and exact coverage passed;
 see the [backup receipt](results/2026-10-13-astra-jar/backup-verification.json).
-The authorized rental stop follows securing this verification
-and pushed final records. [Results and matched DeepSeek comparison](evaluation-results.md)
+After verification/results commit `ec86765` was pushed, the authorized stop of
+exact instance 55620382 returned HTTP 200 `success:true`. A follow-up platform
+query reported `cur_state: stopped` and `intended_status: stopped`, with
+`actual_status: running` during the transition; no later actual state is claimed.
+The [stop receipt](results/2026-10-13-astra-jar/stop-receipt.json) records the
+October 14 00:45:08 UTC acknowledgement. Storage was retained, not destroyed. [Results and matched DeepSeek comparison](evaluation-results.md)
 retain raw versus gated outcomes, timings and confounding differences. This is
 not an isolated recovery-only causal comparison.
 

@@ -43,8 +43,13 @@ separate simulator-output archives are verified off-node across **261,867 files
 and 14,030,868,457 bytes**, including the interrupted attempt. Both archive SHA256
 checks, every file checksum and exact manifest coverage passed. The
 [backup receipt](results/2026-10-13-astra-jar/backup-verification.json) records both
-archives. The authorized stop of instance 55620382 follows securing this receipt;
-the stop has not yet been issued.
+archives. After receipt/results commit `ec86765` was pushed, the authorized stop
+of exact instance **55620382** returned HTTP 200 `success:true` at 00:45:08 UTC
+on October 14. The follow-up platform query returned HTTP 200 with `cur_state`
+and `intended_status` both `stopped`; `actual_status` still showed `running`
+during the transition. No later actual stopped state is claimed. The
+[stop receipt](results/2026-10-13-astra-jar/stop-receipt.json) preserves this evidence.
+The rental was stopped, not destroyed; its storage remains subject to billing.
 
 This comparison changes System 1 model/API settings, recovery logic, predictor
 backend and hardware together. Astra uses GPT-6 Astra via OpenRouter with reasoning

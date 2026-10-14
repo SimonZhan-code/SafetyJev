@@ -1,0 +1,34 @@
+{
+  "instance_id": 55620382,
+  "operation": "stop",
+  "not_destroyed": true,
+  "backup_verified": true,
+  "results_pushed_commit": "ec86765",
+  "platform_acknowledged": true,
+  "records": [
+    {
+      "event": "pre_stop_identity",
+      "instance_id": 55620382,
+      "actual_status": "running",
+      "services_idle": true,
+      "gpu_compute_empty": true
+    },
+    {
+      "event": "stop_response",
+      "instance_id": 55620382,
+      "http_status": 200,
+      "success": true,
+      "utc": "2026-10-14T00:45:08.267113+00:00"
+    },
+    {
+      "event": "followup_status",
+      "http_status": 200,
+      "instance_id": 55620382,
+      "id": 55620382,
+      "actual_status": "running",
+      "cur_state": "stopped",
+      "intended_status": "stopped"
+    }
+  ],
+  "ssh_exit_code": 0
+}
