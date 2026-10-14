@@ -77,7 +77,7 @@ class CodexEpisode(AgenticEpisode):
         cmd = [c['runtime_python'], '-m', 'safetyjev.codex_worker', '--socket', str(path),
                '--model', c['model'], '--reasoning-effort', c['reasoning_effort'],
                '--tool-sequence', c['tool_sequence'], '--decision-timeout', str(c['decision_timeout_s']),
-               '--proposal-limit', str(c['proposal_limit'])]
+               '--proposal-limit', str(c['proposal_limit']), '--skill-selection-policy', c['skill_selection_policy']]
         if c['decision_target_s'] is not None:
             cmd.extend(['--decision-target', str(c['decision_target_s'])])
         # No root environment, model credentials, supervisor access, or inherited descriptors.

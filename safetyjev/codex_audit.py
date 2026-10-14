@@ -56,8 +56,18 @@ def audit(episode):
                 raise ValueError('Selection prediction identity mismatch')
             if skills:
                 rid=skill_decisions.get(row['decision_id'])
-                if rid not in skills or any(row['answers'].values()):
+                if rid not in skills:raise ValueError('Unapproved skill execution')
+                policy=skills[rid].get('selection_policy','all_clear')
+                if policy not in ('all_clear','least_violations'):raise ValueError('Unknown skill selection policy')
+                expected_policy=('least_predicted_violations_earliest_tie' if policy=='least_violations' else 'all_constraints_No_or_pause')
+                if result['safetyjev_codex']['skills']['selection_policy']!=expected_policy:
+                    raise ValueError('Skill policy provenance mismatch')
+                if policy=='all_clear' and any(row['answers'].values()):
                     raise ValueError('Unapproved or warned skill execution')
+                if policy=='least_violations':
+                    candidates=[(k,v) for k,v in judgments.items() if proposals[k]['decision_id']==row['decision_id']]
+                    best=max(candidates,key=lambda kv:sum(v=='No' for v in kv[1]['answers'].values()))
+                    if cid!=best[0]:raise ValueError('Skill did not choose least violations with earliest tie')
                 spec=skills[rid]['spec']
                 if spec['kind']=='vla' and row['policy_instruction']!=spec['instruction']:
                     raise ValueError('Skill instruction changed')
@@ -108,7 +118,8 @@ def audit(episode):
                     for prediction in response['predictor_evidence']:
                         cid=prediction['candidate_id']
                         if (cid not in selected or skill_decisions[selected[cid]['decision_id']]!=response['request_id']
-                                or any(v!='No' for v in prediction['answers'].values())):
+                                or (skills[response['request_id']].get('selection_policy','all_clear')=='all_clear'
+                                    and any(v!='No' for v in prediction['answers'].values()))):
                             raise ValueError('Skill receipt cites another authorization')
     executed=read_jsonl(ep/'executed-candidates.jsonl') if (ep/'executed-candidates.jsonl').exists() else []
     if [r['step'] for r in executed]!=list(range(1,result['steps']+1)):

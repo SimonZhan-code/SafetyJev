@@ -1,6 +1,6 @@
 """Bounded, predictor-gated skills. Only the simulator's owner thread advances them.
 
-This is a distinct selection policy: delegation permits only all-No chunks. A
+Delegation uses the explicitly configured selection policy. A
 warning is evidence from the model, not an oracle label or proof of danger.
 """
 import copy
@@ -52,8 +52,10 @@ def primitive_commands(spec, state, delta_limit):
     return commands
 
 
-def guarded_choice(decision, spec, delta_limit, commit_guard=nullcontext):
+def guarded_choice(decision, spec, delta_limit, commit_guard=nullcontext, selection_policy="all_clear"):
     """One VLA resample on warning; no redundant retry of a fixed primitive."""
+    if selection_policy not in ('all_clear', 'least_violations'):
+        raise HarnessError('invalid_selection_policy')
     predictions = []
     for _ in range(2 if spec['kind'] == 'vla' else 1):
         if spec['kind'] == 'vla':
@@ -70,6 +72,14 @@ def guarded_choice(decision, spec, delta_limit, commit_guard=nullcontext):
                     'prediction_id': prediction['prediction_id'], 'constraint_answers': prediction['answers'],
                     'text': 'Delegated skill '+spec['request_id']+': all fixed predictor answers are No.'})
             return predictions
+    if selection_policy == 'least_violations':
+        # Stable max chooses the earliest candidate on a tie. All candidates here
+        # have complete, successful predictions for this exact immutable state.
+        best = max(predictions, key=lambda p: p['satisfied_constraints'])
+        with commit_guard():
+            decision.execute(best['candidate_id'], {
+                'prediction_id': best['prediction_id'], 'constraint_answers': best['answers'],
+                'text': 'Delegated skill '+spec['request_id']+': least predicted violations after bounded retry; earliest tie.'})
     return predictions
 
 
@@ -171,13 +181,13 @@ class SkillLoop:
                     e._log('skill_chunk', {'request_id': a['spec']['request_id'],
                         'decision_id': d.id, 'step': step})
                     try:
-                        predictions = guarded_choice(d, a['spec'], c['skill_joint_delta_limit'], self._commit_guard)
+                        predictions = guarded_choice(d, a['spec'], c['skill_joint_delta_limit'], self._commit_guard, c['skill_selection_policy'])
                     finally:
                         e.candidate_attempts += d.attempts
                     self.local_retries += max(0, d.attempts-1)
                     if d.selected is not None:
                         a['chunks'] += 1
-                        a['committed_evidence'].append(copy.deepcopy(predictions[-1]))
+                        a['committed_evidence'].append(copy.deepcopy(next(p for p in predictions if p['candidate_id']==d.selected['candidate_id'])))
                         e._selected = copy.deepcopy(d.selected)
                         e.receipts[d.selected['candidate_id']] = copy.deepcopy(d.receipt)
                         # The committed eight actions finish atomically under the existing runner.
@@ -238,7 +248,7 @@ class SkillLoop:
                         self.active = {'spec': spec, 'reply': reply, 'start_step': step,
                             'started': self.clock(), 'chunks': 0, 'committed_evidence': []}
                         e._log('skill_start', {'spec': spec, 'step': step,
-                            'planner_wait_s': self.clock()-self.wait_started})
+                            'planner_wait_s': self.clock()-self.wait_started, 'selection_policy': c['skill_selection_policy']})
                         if key in self.warning_cache:
                             # No progress and no changed plan: don't pay for identical inference again.
                             self.blocked_at_step += 1
@@ -271,4 +281,4 @@ class SkillLoop:
     def metrics(self):
         return {'skill_requests': self.calls, 'warning_returns': self.blocked,
                 'local_retries': self.local_retries, 'policy_stop': self.policy_stop,
-                'selection_policy': 'all_constraints_No_or_pause'}
+                'selection_policy': ('least_predicted_violations_earliest_tie' if self.e.harness_config['skill_selection_policy']=='least_violations' else 'all_constraints_No_or_pause')}

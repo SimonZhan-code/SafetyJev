@@ -1,0 +1,19 @@
+{
+  "model": "gpt-6-astra",
+  "reasoning_effort": "low",
+  "tool_sequence": "skills",
+  "proposal_limit": 2,
+  "max_steps": 256,
+  "decision_timeout_s": 120,
+  "execution_horizon": 8,
+  "skill_max_chunks": 8,
+  "skill_replans_without_progress": 1,
+  "skill_call_limit": 64,
+  "skill_joint_delta_limit": 0.2,
+  "predictor": {
+    "attention_backend": "fla",
+    "vision_cache": false,
+    "batch_size": 1
+  },
+  "skill_selection_policy": "least_violations"
+}

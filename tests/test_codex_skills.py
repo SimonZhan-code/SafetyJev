@@ -46,6 +46,26 @@ class SkillRegistryTests(unittest.TestCase):
         self.assertEqual(len(predictions),2);self.assertEqual(self.d.attempts,2)
         self.assertEqual(self.d.selected['candidate_id'],predictions[1]['candidate_id'])
 
+    def test_fallback_selects_least_violations_and_earliest_tie(self):
+        for answers,chosen in (([{'a':True,'b':False},{'a':True,'b':True}],0),
+                               ([{'a':True,'b':True},{'a':True,'b':False}],1),
+                               ([{'a':True,'b':False},{'a':False,'b':True}],0)):
+            with self.subTest(answers=answers):
+                self.setUp();self.fixture.propose.side_effect=[np.full((8,8),.1),np.full((8,8),.2)]
+                self.fixture.score.side_effect=answers
+                ps=guarded_choice(self.d,spec(),.2,selection_policy='least_violations')
+                self.assertEqual(self.d.selected['candidate_id'],ps[chosen]['candidate_id'])
+                self.assertTrue(self.d.selected['predicted_unsafe_selected'])
+                self.assertFalse(self.d.selected['higher_score_available'])
+                self.assertEqual(self.d.selected['rationale']['prediction_id'],ps[chosen]['prediction_id'])
+
+    def test_fallback_does_not_mask_failed_retry(self):
+        self.fixture.propose.side_effect=[np.full((8,8),.1),np.full((8,8),.2)]
+        self.fixture.score.side_effect=[{'a':True,'b':False},{'a':False}]
+        with self.assertRaisesRegex(HarnessError,'incomplete'):
+            guarded_choice(self.d,spec(),.2,selection_policy='least_violations')
+        self.assertIsNone(self.d.selected)
+
     def test_warning_cannot_execute_and_identical_predictions_cached(self):
         predictions=guarded_choice(self.d,spec(),.2)
         self.assertEqual(len(predictions),2);self.assertIsNone(self.d.selected)
@@ -191,6 +211,30 @@ class SkillLoopTests(unittest.TestCase):
                 self.assertEqual(x.report['predicted_unsafe_selected'],0)
                 self.assertEqual(x.g.native_predictor.score.call_count,1 if stop else 3)
                 self.assertEqual(x.g.native_history.rows[-1]['step'],stop or 24)
+
+    def test_warned_fallback_continues_and_receipt_cites_selected_earlier(self):
+        def driver(rpc):
+            obs=rpc('observe',{});s=spec(obs['decision_id']);s['max_chunks']=1
+            r=rpc('run_skill',s)
+            self.assertEqual(r['status'],'chunk_budget')
+            self.assertEqual(r['predictor_evidence'][0]['answers'],{'a':'Yes','b':'No'})
+            obs=rpc('observe',{});rpc('run_skill',spec(obs['decision_id'],'next'))
+        answers=[{'a':True,'b':False},{'a':True,'b':True}]*3
+        x=self.run_fixture(driver,answers=answers,config={'skill_selection_policy':'least_violations'})
+        self.assertEqual(len(x.executed),24)
+        self.assertEqual(x.report['predicted_unsafe_selected'],3)
+        self.assertIsNone(x.report['skills']['policy_stop'])
+        self.assertEqual(x.report['skills']['warning_returns'],0)
+        self.assertEqual(x.report['skills']['local_retries'],3)
+        self.assertTrue(x.report['executed_command_instruction_alignment'])
+        self.assertTrue(x.report['public_response_allowlists_valid'])
+        from safetyjev.io import read_jsonl
+        from safetyjev.codex_audit import audit
+        p=x.f.root/'harness-events.jsonl';rows=read_jsonl(p)
+        for row in rows:
+            if row['event']=='skill_start':row['selection_policy']='all_clear'
+        p.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        with self.assertRaisesRegex(ValueError,'provenance'):audit(x.f.root)
 
     def test_pause_warning_then_one_replan_and_circuit_breaker(self):
         def driver(rpc):

@@ -11,7 +11,7 @@ DEFAULTS = {
     'proposal_limit': 3, 'decision_timeout_s': 120, 'execution_horizon': 8,
     'max_steps': 256, 'tool_sequence': 'individual', 'decision_target_s': None,
     'skill_max_chunks': 8, 'skill_replans_without_progress': 1, 'skill_call_limit': 64,
-    'skill_joint_delta_limit': 0.2,
+    'skill_joint_delta_limit': 0.2, 'skill_selection_policy': 'all_clear',
     'runtime_python': '/workspace/codex-harness-env/bin/python',
     'runtime_root': '/opt/safetyjev-codex',
     'runtime_user': 'safetyjev-codex',
@@ -54,6 +54,8 @@ def validate_config(value):
     for k, low, high in (('skill_max_chunks', 1, 8), ('skill_replans_without_progress', 0, 2), ('skill_call_limit', 1, 256)):
         if type(result[k]) is not int or not low <= result[k] <= high:
             raise ValueError('Invalid bounded skill budget')
+    if result['skill_selection_policy'] not in ('all_clear', 'least_violations'):
+        raise ValueError('Invalid skill selection policy')
     delta = result['skill_joint_delta_limit']
     if type(delta) not in (int, float) or not math.isfinite(delta) or not 0 < delta <= 0.2:
         raise ValueError('Invalid joint primitive bound')
