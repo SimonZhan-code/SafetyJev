@@ -1,0 +1,32 @@
+{
+  "instance_id": 55768662,
+  "action": "destroy",
+  "authorization": "Explicit user request to stop evaluation and destroy rented Vast.ai node",
+  "time_utc": "2026-10-14T22:09:35.297549+00:00",
+  "backup_verified": true,
+  "results_commit": "09147ebe57cd7025ab3ff6357057ef1fa1cd67e8",
+  "idle_checks": {
+    "instance_id": 55768662,
+    "evaluation_and_model_jobs_idle": true,
+    "gpu_empty": true
+  },
+  "platform_before": {
+    "id": 55768662,
+    "actual_status": "running",
+    "cur_state": "running",
+    "intended_status": "running",
+    "ssh_host": "ssh9.vast.ai",
+    "ssh_port": 13564
+  },
+  "destroy_http_status": 200,
+  "platform_success": true,
+  "followup_checks": [
+    {
+      "time_utc": "2026-10-14T22:09:41.600296+00:00",
+      "http_status": 200,
+      "instance_absent": true
+    }
+  ],
+  "destroyed_independently_verified": true,
+  "monitoring_automation_status": "PAUSED"
+}
