@@ -1,0 +1,23 @@
+{
+  "time_utc": "2026-10-14T15:00:43.619269+00:00",
+  "instance_id": 55768662,
+  "runtime_commit": "b4261c9",
+  "action": "User explicitly requested resume after reported planner timeout",
+  "user_authorization": "wait why the run stop? can we resume?",
+  "failed_attempt_offnode_verified": {
+    "files": 792,
+    "bytes": 50689787,
+    "archive_sha256": "7fc7b5a3b3805db8dc00781c9d1f0ddc9317f0da7bbfb1322db6e11b3557f9df"
+  },
+  "completed_record_sha256": {
+    "task_0000-base-seed0/record.json": "0a806b3d8015956d550bb150949266d428020e475908f3ba28b460acdde5e580",
+    "task_0000-base-seed1/record.json": "d1f7fdacd7940c5d81c58404a89edb5f3b3e11338f2441bef796b67808574b12",
+    "task_0000-base-seed2/record.json": "c47f83b2892f836842a8a24e2efebf5409f2ef7640e91ed9eafcd275b5ddfdaa",
+    "task_0001-base-seed0/record.json": "15e210038e5f72cfbdb1500312596b23a22bce135a6a4de764f3243f449d688c"
+  },
+  "settings_or_source_changed": false,
+  "retry_only": "task_0001/base seed1; then remaining planned cases",
+  "failure_policy": "Queue exits again on any failure; no automatic retry loop",
+  "status": "launched",
+  "launcher_exit_code": 0
+}
