@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "7fc7b5a3b3805db8dc00781c9d1f0ddc9317f0da7bbfb1322db6e11b3557f9df",
+  "files_verified": 792,
+  "bytes_verified": 50689787,
+  "coverage": "Failed task_0001 seed1 attempt, separate simulator outputs, and queue provenance",
+  "all_file_checksums_and_coverage_match": true
+}

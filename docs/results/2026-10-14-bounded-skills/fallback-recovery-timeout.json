@@ -1,0 +1,62 @@
+{
+  "status": "infrastructure_failure",
+  "scene": "task_0001/base",
+  "seed": 1,
+  "runtime_commit": "b4261c9",
+  "source_hashes_match": true,
+  "error": "skill_or_planner_timeout",
+  "interpretation": "Six skills completed; 120-second planner watchdog expired after step384. No tool errors. No new HTTP503 warning observed for this episode; do not attribute this second failure to the earlier provider errors without further evidence.",
+  "completed_cases_preserved": 4,
+  "retry_launched": false,
+  "prior_recovery_attempt": 1,
+  "skill_timings": [
+    {
+      "request_id": "episode-1",
+      "elapsed_s": 17.567639981396496,
+      "step": 64,
+      "status": "chunk_budget"
+    },
+    {
+      "request_id": "episode-2",
+      "elapsed_s": 17.33582477364689,
+      "step": 128,
+      "status": "chunk_budget"
+    },
+    {
+      "request_id": "episode-3",
+      "elapsed_s": 17.33250430598855,
+      "step": 192,
+      "status": "chunk_budget"
+    },
+    {
+      "request_id": "episode-4",
+      "elapsed_s": 19.098259495571256,
+      "step": 256,
+      "status": "chunk_budget"
+    },
+    {
+      "request_id": "episode-5",
+      "elapsed_s": 20.350640919059515,
+      "step": 320,
+      "status": "chunk_budget"
+    },
+    {
+      "request_id": "episode-6",
+      "elapsed_s": 23.83284354954958,
+      "step": 384,
+      "status": "chunk_budget"
+    }
+  ],
+  "executed_steps": 384,
+  "executed_command_instruction_alignment": true,
+  "public_response_allowlists_valid": true,
+  "delegated_skills_audited": 6,
+  "predicted_unsafe_selected": 6,
+  "higher_score_available": 0,
+  "invalid_attempts": 0,
+  "proposal_sources": {
+    "pi05": 55,
+    "codex": 0,
+    "joint_primitive": 0
+  }
+}
