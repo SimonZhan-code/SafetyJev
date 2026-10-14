@@ -1,0 +1,73 @@
+{
+  "status": "infrastructure_failure",
+  "scene": "task_0001/base",
+  "seed": 1,
+  "runtime_commit": "b4261c9",
+  "source_hashes_match": true,
+  "error": "codex_ended_without_execution",
+  "provider_evidence": [
+    {
+      "unix_time": 1791961726,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "1"
+    },
+    {
+      "unix_time": 1791961753,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "1"
+    },
+    {
+      "unix_time": 1791961754,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "2"
+    },
+    {
+      "unix_time": 1791961793,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "1"
+    },
+    {
+      "unix_time": 1791961845,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "1"
+    },
+    {
+      "unix_time": 1791961863,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "1"
+    },
+    {
+      "unix_time": 1791961865,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "2"
+    },
+    {
+      "unix_time": 1791961867,
+      "http_status": 503,
+      "classification": "Service Unavailable",
+      "retry": "3"
+    }
+  ],
+  "interpretation": "Repeated provider HTTP 503 errors observed in failed turn; terminal service error is not preserved by worker stream handling. No model_text event, no predictor warning, no invalid proposal. No blind retry authorized by monitor policy.",
+  "completed_cases_preserved": 4,
+  "retry_launched": false,
+  "executed_steps": 128,
+  "executed_command_instruction_alignment": true,
+  "public_response_allowlists_valid": true,
+  "delegated_skills_audited": 2,
+  "predicted_unsafe_selected": 0,
+  "higher_score_available": 0,
+  "invalid_attempts": 0,
+  "proposal_sources": {
+    "pi05": 16,
+    "codex": 0,
+    "joint_primitive": 0
+  }
+}
