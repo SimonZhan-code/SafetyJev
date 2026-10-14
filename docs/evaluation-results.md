@@ -1363,3 +1363,10 @@ Contact-repair validation passed 216 CPU tests and 82 subtests, with three histo
 
 
 Repair commit `2d1a5e7` was installed on verified instance 55768662 at 18:45 UTC after confirming idle services and an empty GPU. Historical output files were not changed, and no sweep or inference process was started. Deployment receipt: `results/2026-10-14-bounded-skills/initialization-contact-repair-deployment.json`.
+
+
+### User-authorized resumption from the first initialization failure
+
+The user explicitly requested resuming from the initialization-failure point. The repaired-contact continuation starts at task_0002/base seed 0 in a fresh output root, preserving all historical failures and the interrupted task_0005 seed 0 attempt. Six audited completed trials are excluded: task_0000 seeds 0/1/2 and task_0001 seed 0 from the 120-second predecessor, plus task_0001 seeds 1/2 from the 300-second predecessor. The queue now accepts repeated `--exclude-completed-from` arguments, audits each source separately, preserves each record/plan identity and rejects overlapping completed outcomes. Thus the repaired plan contains 72 cases, including fresh attempts for all nine initialization-failed cases; it does not claim 78 cases under repaired contact reporting.
+
+The 300-second planner/skill watchdog, timeout continuation, verified zero-action initialization-failure continuation, model/checkpoints, private boundary, eight-action predictor checks and least-violations ranking stay unchanged. Explicit `--persistent-contacts` is enabled. Two new 256-action smoke trials must complete with matching repaired-contact source/config provenance and pass command, public-payload and selection audits before full admission. No old smoke or gate is reused. Validation passed 217 CPU tests and 82 subtests with three historical fixture skips. Live launch evidence follows after admission.

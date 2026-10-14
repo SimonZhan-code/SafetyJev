@@ -106,6 +106,16 @@ class CodexSweepTests(unittest.TestCase):
             with patch.object(queue.jar,'source_provenance',return_value={'revision':'other'}):
                 with self.assertRaisesRegex(ValueError,'Incompatible'):queue.completed_predecessor(root)
 
+    def test_multiple_predecessor_conditions_are_audited_and_duplicates_rejected(self):
+        a={'scene':'task_0000/base','seed':0,'record':'a'}
+        b={'scene':'task_0001/base','seed':2,'record':'b'}
+        with patch.object(queue,'completed_predecessor',side_effect=[[a],[b]]) as audit:
+            self.assertEqual(queue.completed_predecessors([Path('old'),Path('new')]),[a,b])
+            self.assertEqual(audit.call_count,2)
+        with patch.object(queue,'completed_predecessor',side_effect=[[a],[a]]):
+            with self.assertRaisesRegex(ValueError,'Overlapping'):queue.completed_predecessors([Path('old'),Path('old')])
+        self.assertEqual(queue.completed_predecessors(None),[])
+
     def test_failures_do_not_become_task_outcomes(self):
         good={'status':'completed','task_success':True,'safe_success':True,'raw_violation':True,
               'result':{'counted_violation':False,'ever_contacted':True,'ever_grasped':True},

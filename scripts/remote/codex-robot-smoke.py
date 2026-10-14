@@ -102,6 +102,17 @@ def completed_predecessor(directory):
     return rows
 
 
+def completed_predecessors(directories):
+    """Audit each explicitly supplied prior condition; reject overlapping outcomes."""
+    rows=[];seen=set()
+    for directory in directories or []:
+        for row in completed_predecessor(directory):
+            key=(row['scene'],row['seed'])
+            if key in seen:raise ValueError('Overlapping completed predecessor cases')
+            seen.add(key);rows.append(row)
+    return sorted(rows,key=lambda row:(row['scene'],row['seed']))
+
+
 TIMEOUT_QUEUE_SHA256 = '66fee879bc8d56dda61a94be479964b30887d718a8a05795f079d53bb26e20f4'
 
 TIMEOUT_REASONS = frozenset(('decision_timeout', 'skill_or_planner_timeout'))
@@ -276,7 +287,7 @@ def main():
     p.add_argument('--suite',choices=('smoke','single-smoke','jar-base','timing'),default='smoke')
     p.add_argument('--smoke-evidence',type=Path)
     p.add_argument('--authorized-single-smoke',action='store_true',help='Explicit user approval to admit bounded skills from the audited single smoke')
-    p.add_argument('--exclude-completed-from',type=Path)
+    p.add_argument('--exclude-completed-from',type=Path,action='append',help='Repeat for separate audited predecessor conditions')
     p.add_argument('--config',type=Path,default=ROOT/'configs/codex-harness.example.json')
     p.add_argument('--output',type=Path,default=ROOT/'artifacts/codex-harness-smoke')
     p.add_argument('--check',action='store_true')
@@ -300,7 +311,7 @@ def main():
     if config['max_steps']!=cap:raise ValueError('Incorrect action cap for selected suite')
     if args.exclude_completed_from and args.suite!='jar-base':
         raise ValueError('Only full sweeps may exclude predecessor cases')
-    excluded=completed_predecessor(args.exclude_completed_from)
+    excluded=completed_predecessors(args.exclude_completed_from)
     excluded_keys={(r['scene'],r['seed']) for r in excluded}
     grid=[c for c in case_grid(args.suite) if c not in excluded_keys]
     if not grid:raise ValueError('No remaining cases')
@@ -353,7 +364,8 @@ def main():
         command=[sys.executable,'-u',str(Path(__file__).resolve()),'--suite',args.suite,'--config',str(args.config.resolve()),'--output',str(out)]
         if args.authorized_single_smoke:command.append('--authorized-single-smoke')
         if args.smoke_evidence:command+=['--smoke-evidence',str(args.smoke_evidence.resolve())]
-        if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
+        for predecessor in args.exclude_completed_from or []:
+            command+=['--exclude-completed-from',str(predecessor.resolve())]
         if args.retry_failed:command.append('--retry-failed')
         if args.persistent_contacts:command.append('--persistent-contacts')
         if args.continue_on_timeout:command.append('--continue-on-timeout')
