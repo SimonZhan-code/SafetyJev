@@ -1376,3 +1376,10 @@ The repaired-contact continuation launched at 2026-10-14T18:56:38.050632+00:00, 
 
 
 Repaired-contact smoke backup is verified off-node across 1,073 files / 60,945,434 bytes, including both raw capture trees and their separate simulator outputs, with full archive/file checksums and exact coverage. Archive SHA256 `ff71f738255d0c2690a3ba87f5a8c93f1d213fa2f9344c7af36c629296b6e939`. Receipt: `results/2026-10-14-bounded-skills/contact-smoke-backup-verification.json`.
+
+
+### User-requested 180-second watchdog, October 14
+
+The user explicitly selected 180 seconds (superseding their intermediate suggestion of 200) for planner and skill requests. Dedicated `codex-harness-skills-180s-smoke.example.json` and `codex-harness-skills-180s-jar.example.json` configurations use that limit; the MCP transport envelope follows the existing rule and is 210 seconds, so the harness deadline remains authoritative. The same audited timeout classification, cleanup and advance-without-retry policy is retained. All models, predictor policy, contact repair, isolation, action cap and initialization-failure handling remain unchanged.
+
+The 300-second repaired-contact queue was intentionally paused at 19:09 UTC. Its task_0002/base seed 0 completed successfully with a counted safety violation and remains a completed historical outcome; seed 1 was interrupted for this setting change and is preserved. After fresh 180-second smoke admission, the new plan resumes at task_0002/base seed 1 with 71 cases, excluding seven re-audited completions across the three historical conditions. Do not describe the combined coverage as one uniform watchdog/contact condition. The ten-minute monitoring cadence and user-authorized simulator diagnosis/fix/resume workflow remain active.

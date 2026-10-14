@@ -223,13 +223,15 @@ class TimeoutContinuationTests(unittest.TestCase):
             queue.main()
             self.assertEqual(len(captures),2)
 
-    def test_300_second_watchdog_has_longer_mcp_envelope(self):
+    def test_watchdogs_have_longer_mcp_envelopes(self):
         from safetyjev.codex_config import validate_config
         from safetyjev.codex_dispatch_audit import dispatch_config
-        cfg=validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':300})
-        actual=dispatch_config('/socket','/catalog','skills',cfg['decision_timeout_s'])
-        self.assertEqual(actual['mcp_servers']['robot']['tool_timeout_sec'],330)
-        self.assertEqual(actual['mcp_servers']['robot']['enabled_tools'],['observe','run_skill'])
+        for seconds in (180,300):
+            with self.subTest(seconds=seconds):
+                cfg=validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':seconds})
+                actual=dispatch_config('/socket','/catalog','skills',cfg['decision_timeout_s'])
+                self.assertEqual(actual['mcp_servers']['robot']['tool_timeout_sec'],seconds+30)
+                self.assertEqual(actual['mcp_servers']['robot']['enabled_tools'],['observe','run_skill'])
         with self.assertRaises(ValueError):
             validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':301})
 
