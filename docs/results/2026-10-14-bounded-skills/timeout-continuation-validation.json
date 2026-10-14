@@ -20,11 +20,27 @@
     "skipped_historical_fixtures": 3,
     "queue_integration": "Simulated timeout followed by normal case; services reset and both skipped after restart"
   },
-  "live_validation": "Pending fresh two-case smoke and authenticated preflight; old queue intentionally stopped",
+  "live_validation": "Both fresh 256-action smokes completed and command/public audits passed; 74-case continuation launched 2026-10-14T15:19:06Z. Runtime remains3e09de1.",
   "changed_sources": {
     "safetyjev/codex_config.py": "8eb465b092a3171958675f43e8032332c90f2928374e70455fd14456892a110e",
     "safetyjev/codex_worker.py": "f3ac6686230242b45697ae33afc542f2a1b8359b42ba420b9920f8ad1edfa603",
     "safetyjev/codex_dispatch_audit.py": "2b1ea9338251c754e112dee534dc856bc75cb9468df4e6641a2e12076bf14c6d",
     "scripts/remote/codex-robot-smoke.py": "66fee879bc8d56dda61a94be479964b30887d718a8a05795f079d53bb26e20f4"
-  }
+  },
+  "runtime_commit": "3e09de1524a3459c456322ff9055f1fbf6b015ba",
+  "historical_capture_classifier_check": [
+    {
+      "steps": 128,
+      "reason": "codex_ended_without_execution",
+      "classification": "infrastructure_failure",
+      "files_modified": false
+    },
+    {
+      "steps": 384,
+      "reason": "skill_or_planner_timeout",
+      "classification": "timeout",
+      "files_modified": false
+    }
+  ],
+  "smoke_backup": "timeout-smoke-backup-verification.json"
 }

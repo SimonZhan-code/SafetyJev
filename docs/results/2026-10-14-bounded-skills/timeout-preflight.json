@@ -1,0 +1,168 @@
+{
+  "status": "passed",
+  "chatgpt_authenticated": true,
+  "attestation": {
+    "sdk_version": "0.162.1",
+    "runtime_version": "0.162.1",
+    "model": "gpt-6-astra",
+    "mcp_tools": [
+      "observe",
+      "run_skill"
+    ],
+    "disabled_features": [
+      "shell_tool",
+      "unified_exec",
+      "shell_snapshot",
+      "apps",
+      "browser_use",
+      "browser_use_external",
+      "computer_use",
+      "in_app_browser",
+      "multi_agent",
+      "multi_agent_v2",
+      "memories",
+      "hooks",
+      "goals",
+      "image_generation",
+      "artifact",
+      "workspace_dependencies",
+      "tool_suggest",
+      "view_image",
+      "plugins",
+      "remote_plugin",
+      "sleep_tool",
+      "skill_search",
+      "skill_mcp_dependency_install",
+      "code_mode_only",
+      "default_mode_request_user_input",
+      "send_message_to_user_async"
+    ],
+    "native_inventory": [
+      "functions.exec",
+      "functions.wait"
+    ],
+    "isolation": {
+      "status": "passed",
+      "checks": {
+        "only_dispatch_wrappers": true,
+        "only_robot_nested_tools": true,
+        "host_globals_absent": true,
+        "nested_forbidden_calls_rejected": true,
+        "all_robot_methods_dispatched": true,
+        "canary_unchanged": true,
+        "direct_calls_within_policy": true
+      },
+      "sdk_version": "0.162.1",
+      "runtime_version": "0.162.1",
+      "model": "gpt-6-astra",
+      "allow_empty_resources": true,
+      "scope": "CPU-only mock-provider audit; no ChatGPT tokens, model inference or simulator",
+      "native_inventory": [
+        "functions.exec",
+        "functions.wait"
+      ],
+      "nested_audit": {
+        "audit_nested": true,
+        "names": [
+          "mcp__robot__observe",
+          "mcp__robot__run_skill"
+        ],
+        "keys": [
+          "mcp__robot__observe",
+          "mcp__robot__run_skill"
+        ],
+        "globals": {
+          "process": "undefined",
+          "require": "undefined",
+          "fetch": "undefined",
+          "Deno": "undefined",
+          "WebSocket": "undefined",
+          "XMLHttpRequest": "undefined"
+        },
+        "denied": {
+          "node_fs": true,
+          "node_shell": true,
+          "node_network": true,
+          "network_fetch": true,
+          "process_constructor": true,
+          "file_patch": true,
+          "shell": true,
+          "file_read": true,
+          "mcp_resources": true,
+          "mcp_read": true,
+          "config": true,
+          "simulator": true,
+          "subagent": true
+        }
+      },
+      "direct_attempts": [
+        {
+          "tool": "list_mcp_resources",
+          "rejected": false,
+          "result": "{\"resources\":[]}"
+        },
+        {
+          "tool": "list_mcp_resource_templates",
+          "rejected": false,
+          "result": "{\"resourceTemplates\":[]}"
+        },
+        {
+          "tool": "read_mcp_resource",
+          "rejected": true,
+          "result": "resources/read failed: resources/read failed for `robot` (audit://private): Mcp error: -32601: Method not found"
+        },
+        {
+          "tool": "exec_command",
+          "rejected": true,
+          "result": "unsupported call: exec_command"
+        },
+        {
+          "tool": "view_image",
+          "rejected": true,
+          "result": "unsupported call: view_image"
+        },
+        {
+          "tool": "read_file",
+          "rejected": true,
+          "result": "unsupported call: read_file"
+        },
+        {
+          "tool": "config",
+          "rejected": true,
+          "result": "unsupported call: config"
+        },
+        {
+          "tool": "simulator",
+          "rejected": true,
+          "result": "unsupported call: simulator"
+        },
+        {
+          "tool": "apply_patch",
+          "rejected": true,
+          "result": "patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings"
+        }
+      ],
+      "robot_stub_calls": [
+        "observe",
+        "run_skill"
+      ],
+      "mcp_servers": [
+        {
+          "name": "robot",
+          "tools": [
+            "observe",
+            "run_skill"
+          ],
+          "resource_count": 0,
+          "resource_template_count": 0
+        }
+      ],
+      "catalog_source": "stock runtime bundled catalog",
+      "catalog_changes": {
+        "gpt-6-astra.experimental_supported_tools": []
+      },
+      "original_catalog_sha256": "69af12f94a39dabd1a1ded8f5257b4884d2118902ea2b5b9cffbf4a1925dfa65",
+      "diagnostic_catalog_sha256": "1678bcd86327d0b06ab6dbe0b7180f27c5f93530c76b8c10b24b16ab53835572"
+    }
+  }
+}

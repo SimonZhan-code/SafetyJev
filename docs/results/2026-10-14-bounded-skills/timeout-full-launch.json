@@ -1,0 +1,422 @@
+{
+  "instance_id": 55768662,
+  "runtime_commit": "3e09de1524a3459c456322ff9055f1fbf6b015ba",
+  "gate": {
+    "status": "sweep_launched",
+    "time": 1791991146.147252,
+    "output": "/workspace/SafetyJev/artifacts/jar-codex-skills-timeout-id",
+    "planned": 74,
+    "previous_completed": 4
+  },
+  "config": {
+    "model": "gpt-6-astra",
+    "reasoning_effort": "low",
+    "proposal_limit": 2,
+    "decision_timeout_s": 300,
+    "execution_horizon": 8,
+    "max_steps": 2000,
+    "tool_sequence": "skills",
+    "decision_target_s": null,
+    "skill_max_chunks": 8,
+    "skill_replans_without_progress": 1,
+    "skill_call_limit": 64,
+    "skill_joint_delta_limit": 0.2,
+    "skill_selection_policy": "least_violations",
+    "runtime_python": "/workspace/codex-harness-env/bin/python",
+    "runtime_root": "/opt/safetyjev-codex",
+    "runtime_user": "safetyjev-codex",
+    "runtime_home": "/home/safetyjev-codex",
+    "socket_root": "/run/safetyjev-codex",
+    "predictor": {
+      "endpoint": "http://127.0.0.1:8794",
+      "timeout": 120,
+      "attention_backend": "fla",
+      "vision_cache": false,
+      "batch_size": 1
+    }
+  },
+  "timeout_policy": "record_and_continue",
+  "cases": [
+    [
+      "task_0001/base",
+      1
+    ],
+    [
+      "task_0001/base",
+      2
+    ],
+    [
+      "task_0002/base",
+      0
+    ],
+    [
+      "task_0002/base",
+      1
+    ],
+    [
+      "task_0002/base",
+      2
+    ],
+    [
+      "task_0003/base",
+      0
+    ],
+    [
+      "task_0003/base",
+      1
+    ],
+    [
+      "task_0003/base",
+      2
+    ],
+    [
+      "task_0004/base",
+      0
+    ],
+    [
+      "task_0004/base",
+      1
+    ],
+    [
+      "task_0004/base",
+      2
+    ],
+    [
+      "task_0005/base",
+      0
+    ],
+    [
+      "task_0005/base",
+      1
+    ],
+    [
+      "task_0005/base",
+      2
+    ],
+    [
+      "task_0006/base",
+      0
+    ],
+    [
+      "task_0006/base",
+      1
+    ],
+    [
+      "task_0006/base",
+      2
+    ],
+    [
+      "task_0007/base",
+      0
+    ],
+    [
+      "task_0007/base",
+      1
+    ],
+    [
+      "task_0007/base",
+      2
+    ],
+    [
+      "task_0008/base",
+      0
+    ],
+    [
+      "task_0008/base",
+      1
+    ],
+    [
+      "task_0008/base",
+      2
+    ],
+    [
+      "task_0009/base",
+      0
+    ],
+    [
+      "task_0009/base",
+      1
+    ],
+    [
+      "task_0009/base",
+      2
+    ],
+    [
+      "task_0010/base",
+      0
+    ],
+    [
+      "task_0010/base",
+      1
+    ],
+    [
+      "task_0010/base",
+      2
+    ],
+    [
+      "task_0011/base",
+      0
+    ],
+    [
+      "task_0011/base",
+      1
+    ],
+    [
+      "task_0011/base",
+      2
+    ],
+    [
+      "task_0012/base",
+      0
+    ],
+    [
+      "task_0012/base",
+      1
+    ],
+    [
+      "task_0012/base",
+      2
+    ],
+    [
+      "task_0013/base",
+      0
+    ],
+    [
+      "task_0013/base",
+      1
+    ],
+    [
+      "task_0013/base",
+      2
+    ],
+    [
+      "task_0014/base",
+      0
+    ],
+    [
+      "task_0014/base",
+      1
+    ],
+    [
+      "task_0014/base",
+      2
+    ],
+    [
+      "task_0015/base",
+      0
+    ],
+    [
+      "task_0015/base",
+      1
+    ],
+    [
+      "task_0015/base",
+      2
+    ],
+    [
+      "task_0016/base",
+      0
+    ],
+    [
+      "task_0016/base",
+      1
+    ],
+    [
+      "task_0016/base",
+      2
+    ],
+    [
+      "task_0017/base",
+      0
+    ],
+    [
+      "task_0017/base",
+      1
+    ],
+    [
+      "task_0017/base",
+      2
+    ],
+    [
+      "task_0018/base",
+      0
+    ],
+    [
+      "task_0018/base",
+      1
+    ],
+    [
+      "task_0018/base",
+      2
+    ],
+    [
+      "task_0019/base",
+      0
+    ],
+    [
+      "task_0019/base",
+      1
+    ],
+    [
+      "task_0019/base",
+      2
+    ],
+    [
+      "task_0020/base",
+      0
+    ],
+    [
+      "task_0020/base",
+      1
+    ],
+    [
+      "task_0020/base",
+      2
+    ],
+    [
+      "task_0021/base",
+      0
+    ],
+    [
+      "task_0021/base",
+      1
+    ],
+    [
+      "task_0021/base",
+      2
+    ],
+    [
+      "task_0022/base",
+      0
+    ],
+    [
+      "task_0022/base",
+      1
+    ],
+    [
+      "task_0022/base",
+      2
+    ],
+    [
+      "task_0023/base",
+      0
+    ],
+    [
+      "task_0023/base",
+      1
+    ],
+    [
+      "task_0023/base",
+      2
+    ],
+    [
+      "task_0024/base",
+      0
+    ],
+    [
+      "task_0024/base",
+      1
+    ],
+    [
+      "task_0024/base",
+      2
+    ],
+    [
+      "task_0025/base",
+      0
+    ],
+    [
+      "task_0025/base",
+      1
+    ],
+    [
+      "task_0025/base",
+      2
+    ]
+  ],
+  "excluded_predecessor_cases": [
+    {
+      "scene": "task_0000/base",
+      "seed": 0,
+      "record": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id/task_0000-base-seed0/record.json",
+      "record_sha256": "0a806b3d8015956d550bb150949266d428020e475908f3ba28b460acdde5e580",
+      "plan_sha256": "15813cbfcc7e1d613b8401d66658923e663171b9076755f2d6a25e84b79c2c80"
+    },
+    {
+      "scene": "task_0000/base",
+      "seed": 1,
+      "record": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id/task_0000-base-seed1/record.json",
+      "record_sha256": "d1f7fdacd7940c5d81c58404a89edb5f3b3e11338f2441bef796b67808574b12",
+      "plan_sha256": "15813cbfcc7e1d613b8401d66658923e663171b9076755f2d6a25e84b79c2c80"
+    },
+    {
+      "scene": "task_0000/base",
+      "seed": 2,
+      "record": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id/task_0000-base-seed2/record.json",
+      "record_sha256": "c47f83b2892f836842a8a24e2efebf5409f2ef7640e91ed9eafcd275b5ddfdaa",
+      "plan_sha256": "15813cbfcc7e1d613b8401d66658923e663171b9076755f2d6a25e84b79c2c80"
+    },
+    {
+      "scene": "task_0001/base",
+      "seed": 0,
+      "record": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id/task_0001-base-seed0/record.json",
+      "record_sha256": "15e210038e5f72cfbdb1500312596b23a22bce135a6a4de764f3243f449d688c",
+      "plan_sha256": "15813cbfcc7e1d613b8401d66658923e663171b9076755f2d6a25e84b79c2c80"
+    }
+  ],
+  "four_predecessor_records_unchanged": true,
+  "source_hashes_match": true,
+  "plan_sha256": "b4d7bf8c4ceefa9958133c7f4dfadaf7856d47d9363eb241741780ef26c91bab",
+  "health": {
+    "time": 1791991191.7666755,
+    "root": "/workspace/SafetyJev/artifacts/jar-codex-skills-timeout-id",
+    "alerts": [],
+    "progress": {
+      "status": "running",
+      "current": {
+        "scene": "task_0001/base",
+        "seed": 1
+      },
+      "planned": 74,
+      "completed": 0,
+      "failed": 0,
+      "timeouts": 0,
+      "task_success": 0,
+      "safe_success": 0,
+      "raw_violations": 0,
+      "counted_violations": 0,
+      "contacted": 0,
+      "grasped": 0,
+      "success_without_raw_violation": 0,
+      "predicted_unsafe_selected": 0,
+      "higher_score_available": 0,
+      "invalid_attempts": 0,
+      "proposal_sources": {
+        "codex": 0,
+        "pi05": 0
+      },
+      "predictor_blocked": 0,
+      "planner_budget_stops": 0,
+      "interpretation": "Partial results exclude infrastructure failures; not an isolated causal comparison."
+    },
+    "hash_mismatches": [],
+    "services": [
+      "safetyjev-codex-jar-eval-skills       RUNNING   pid 68770, uptime 0:00:49",
+      "safetyjev-codex-pi05                  RUNNING   pid 69487, uptime 0:00:24",
+      "safetyjev-codex-predictor             RUNNING   pid 69245, uptime 0:00:44"
+    ],
+    "gpu": "0 %, 61844 MiB",
+    "free_gib": 123.48,
+    "current": {
+      "scene": "task_0001/base",
+      "seed": 1,
+      "steps": 0,
+      "startup_activity_age_s": 13.6
+    },
+    "service_tcp": {
+      "safetyjev-codex-predictor": true,
+      "safetyjev-codex-pi05": true
+    }
+  },
+  "saved_utc": "2026-10-14T15:19:51.739543+00:00"
+}

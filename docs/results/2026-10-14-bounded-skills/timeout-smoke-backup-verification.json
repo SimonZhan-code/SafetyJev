@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "94a55b38667c6ac2c9f205a2bc666cac8bdd1fc0fb6e561d8954e4ff4df7cc3f",
+  "files_verified": 1073,
+  "bytes_verified": 61420948,
+  "coverage": "Both 300-second watchdog smoke trials and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}
