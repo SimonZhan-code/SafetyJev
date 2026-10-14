@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "0be4c1a50b9a7452528ff07a8dd276290e39abae24aee112137e28574482b232",
+  "files_verified": 84822,
+  "bytes_verified": 4744901771,
+  "coverage": "Entire node evaluation artifacts and separate ManiGuard-dev outputs; all historical, current, smoke, failed and interrupted attempts",
+  "all_file_checksums_and_coverage_match": true
+}
