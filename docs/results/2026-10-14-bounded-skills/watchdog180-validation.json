@@ -1,0 +1,27 @@
+{
+  "runtime_commit": "114f59a",
+  "watchdog_seconds": 180,
+  "mcp_transport_envelope_seconds": 210,
+  "cpu_tests_passed": 217,
+  "subtests_passed": 84,
+  "historical_fixture_skips": 3,
+  "continue_on_audited_timeout": true,
+  "persistent_contacts": true,
+  "planned_cases": 71,
+  "first_case": [
+    "task_0002/base",
+    1
+  ],
+  "completed_predecessors_excluded": 7,
+  "timeout_classification_unchanged": true,
+  "predictor_policy_models_and_action_limits_unchanged": true,
+  "live_smoke_status": "running",
+  "pause_backup": {
+    "status": "verified",
+    "archive_sha256": "424466b92d01acb9581b11c0dfe3c8dd3d9c1537e3c915c76a5dd1124130433f",
+    "files_verified": 2552,
+    "bytes_verified": 158562244,
+    "coverage": "Full repaired-contact 300-second queue including one completed trial, partial next trial, and separate simulator outputs",
+    "all_file_checksums_and_coverage_match": true
+  }
+}

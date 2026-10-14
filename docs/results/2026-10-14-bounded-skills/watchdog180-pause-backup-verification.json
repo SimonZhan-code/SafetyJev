@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "424466b92d01acb9581b11c0dfe3c8dd3d9c1537e3c915c76a5dd1124130433f",
+  "files_verified": 2552,
+  "bytes_verified": 158562244,
+  "coverage": "Full repaired-contact 300-second queue including one completed trial, partial next trial, and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}
