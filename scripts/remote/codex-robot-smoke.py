@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -43,7 +44,7 @@ def case_grid(suite):
 SINGLE_SMOKE_LAUNCHER_SHA256 = '68f9a9340a6e78c37db90f93f30b160f077d7fd2e05aaec143ccec11ebaf1ede'
 
 
-def verify_smoke(directory, config, source_hashes, config_path, authorized_single=False):
+def verify_smoke(directory, config, source_hashes, config_path, authorized_single=False, queue_update=False):
     """A longer budget cannot bypass live mechanics and source validation."""
     if directory is None:
         raise ValueError('Jar sweep requires --smoke-evidence')
@@ -64,6 +65,8 @@ def verify_smoke(directory, config, source_hashes, config_path, authorized_singl
         # Config is compared structurally above; its action cap intentionally differs.
         if authorized_single and path == str(Path(__file__).resolve()) and plan['source_sha256'].get(path)==SINGLE_SMOKE_LAUNCHER_SHA256:
             continue  # Explicitly pinned prior launcher; all runtime/model/scene hashes still match.
+        if queue_update and path == str(Path(__file__).resolve()) and plan['source_sha256'].get(path)==TIMEOUT_QUEUE_SHA256:
+            continue  # Only the pinned queue launcher changes; all inference sources/configs match.
         if path != str(config_path.resolve()) and plan['source_sha256'].get(path) != sha:
             raise ValueError('Smoke runtime differs from sweep')
     for scene,seed in case_grid(suite):
@@ -97,17 +100,67 @@ def completed_predecessor(directory):
     return rows
 
 
+TIMEOUT_QUEUE_SHA256 = '66fee879bc8d56dda61a94be479964b30887d718a8a05795f079d53bb26e20f4'
+
 TIMEOUT_REASONS = frozenset(('decision_timeout', 'skill_or_planner_timeout'))
 
 
-def terminal_report(case, scene, seed, wall_seconds, returncode, continue_on_timeout):
-    """Only a fully audited, explicit planner/skill timeout may advance the queue.
+def initialization_report(case, scene, seed, wall_seconds, returncode):
+    """Accept only a matching simulator declaration of failure before recording/actions."""
+    if any((case/'episodes').glob('*/complete.json')):return None
+    if any((case/'episodes').rglob('harness-events.jsonl')) or any((case/'episodes').rglob('executed-candidates.jsonl')):
+        raise ValueError('Initialization failure has policy/command evidence')
+    log=case/'capture.log'
+    if not log.exists():return None
+    paths=re.findall(r'^Results: (outputs/eval_logs/jar_transport_joint/[^\r\n]+/results\.jsonl)$',log.read_text(errors='replace'),re.M)
+    if not paths:return None
+    if len(set(paths))!=1:raise ValueError('Ambiguous initialization result')
+    base=(Path(jar.MANIGUARD)/'outputs/eval_logs/jar_transport_joint').resolve()
+    result_path=(Path(jar.MANIGUARD)/paths[0]).resolve()
+    if base not in result_path.parents:raise ValueError('Initialization result outside simulator output')
+    values=[json.loads(line) for line in result_path.read_text().splitlines() if line.strip()]
+    if len(values)!=1:raise ValueError('Initialization output must describe exactly one case')
+    result=values[0]
+    if result.get('status')!='initialization_failed':return None
+    cfg_path=result_path.parent/'eval_config.json';cfg=json.loads(cfg_path.read_text())
+    if (result.get('scene_name')!=scene or result.get('seed')!=seed or
+            cfg.get('scenes')!=[scene] or cfg.get('seed')!=seed or
+            cfg.get('tag')!='codex-harness-'+case.name or cfg.get('max_steps')!=2000 or
+            type(result.get('steps')) is not int or result['steps']!=0 or
+            result.get('success') is not None or result.get('ltl_violated') is not None or
+            result.get('counted_violation') is not None or result.get('safety_evaluated') is not False or
+            result.get('rollout_diagnostics',{}).get('termination_reason')!='initialization_error'):
+        raise ValueError('Initialization failure identity or zero-action contract mismatch')
+    return {'status':'initialization_failed','scene':scene,'seed':seed,'executed_steps':0,
+        'wall_seconds':wall_seconds,'capture_exit_code':returncode,'result':result,
+        'task_success':None,'safe_success':None,'raw_violation':None,
+        'failure_reason':'initialization_failed','queue_action':'continue_next_case',
+        'execution_audit_passed':False,'initialization_evidence_validated':True,
+        'initialization_evidence':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (result_path,cfg_path)},
+        'audit_note':'Simulator declares zero policy actions; recorder was not started. No executed-command audit claimed.'}
+
+
+def validate_queue_update(old, new):
+    """Authorize only this queue-only amendment; reject all model/scene/config changes."""
+    expected=json.loads(json.dumps(old));path=str(Path(__file__).resolve())
+    if expected['source_sha256'].get(path)!=TIMEOUT_QUEUE_SHA256:
+        raise ValueError('Queue amendment requires pinned predecessor launcher')
+    expected['source_sha256'][path]=new['source_sha256'][path]
+    expected['initialization_failure_policy']='record_and_continue'
+    if expected!=new:raise ValueError('Queue amendment changed more than initialization continuation')
+
+
+def terminal_report(case, scene, seed, wall_seconds, returncode, continue_on_timeout, continue_on_initialization_failure=False):
+    """Advance only audited timeouts or explicitly validated zero-action initialization failures.
 
     Missing/corrupt captures, predictor errors, audit failures and unexplained nonzero
     exits remain fatal. Partial actions and raw outcomes stay in the original report.
     """
     eps=list((case/'episodes').glob('*/complete.json'))
     if len(eps)!=1:
+        if not eps and continue_on_initialization_failure:
+            initial=initialization_report(case,scene,seed,wall_seconds,returncode)
+            if initial is not None:return initial
         raise RuntimeError('Expected one terminal episode')
     report=audit(eps[0].parent)
     report.update(scene=scene,seed=seed,wall_seconds=wall_seconds,capture_exit_code=returncode)
@@ -120,11 +173,23 @@ def terminal_report(case, scene, seed, wall_seconds, returncode, continue_on_tim
     return report
 
 
-def skip_terminal_case(case, continue_on_timeout):
+def skip_terminal_case(case, continue_on_timeout, continue_on_initialization_failure=False):
     """A restart must not rerun either completed cases or recorded timeout attempts."""
     record=case/'record.json'
     if not record.exists():return False
     old=json.loads(record.read_text())
+    if old['status'] in ('failed','initialization_failed') and continue_on_initialization_failure:
+        checked=initialization_report(case,old['scene'],old['seed'],old.get('wall_seconds'),old.get('capture_exit_code'))
+        if checked is not None:
+            if old['status']=='initialization_failed':
+                if old['initialization_evidence']!=checked['initialization_evidence']:
+                    raise ValueError('Initialization evidence changed')
+            else:
+                saved=case/'record-before-initialization-classification.json'
+                if saved.exists():raise ValueError('Original failure record already archived')
+                saved.write_bytes(record.read_bytes());write_json(record,checked)
+            return True
+        if old['status']=='initialization_failed':raise ValueError('Initialization record failed verification')
     if old['status']=='completed':
         eps=list((case/'episodes').glob('*/complete.json'))
         if len(eps)!=1 or audit(eps[0].parent)['status']!='completed':
@@ -142,10 +207,14 @@ def skip_terminal_case(case, continue_on_timeout):
 
 def final_progress(records, planned):
     summary=summarize(records,planned)
-    if summary['completed']+summary['timeouts']!=planned:
+    if summary['completed']+summary['timeouts']+summary['initialization_failures']!=planned:
         raise RuntimeError('Queue has unprocessed or fatal cases')
-    if not summary['timeouts']:
+    if not summary['timeouts'] and not summary['initialization_failures']:
         return {'status':'completed','completed':planned,'planned':planned}
+    if summary['initialization_failures']:
+        return {'status':'completed_with_failures','planned':planned,'completed':summary['completed'],
+                'timeouts':summary['timeouts'],'initialization_failures':summary['initialization_failures'],
+                'attempted':planned,'failed':summary['failed']}
     return {'status':'completed_with_timeouts','planned':planned,'completed':summary['completed'],
             'timeouts':summary['timeouts'],'attempted':planned,'failed':summary['failed']}
 
@@ -153,8 +222,9 @@ def final_progress(records, planned):
 def summarize(records, planned):
     done=[r for r in records if r.get('status')=='completed']
     return {'planned':planned,'completed':len(done),
-        'failed':sum(r.get('status') in ('failed','infrastructure_failure','timeout') for r in records),
+        'failed':sum(r.get('status') in ('failed','infrastructure_failure','timeout','initialization_failed') for r in records),
         'timeouts':sum(r.get('status')=='timeout' for r in records),
+        'initialization_failures':sum(r.get('status')=='initialization_failed' for r in records),
         'task_success':sum(r['task_success'] for r in done),
         'safe_success':sum(r['safe_success'] for r in done),
         'raw_violations':sum(r['raw_violation'] for r in done),
@@ -211,8 +281,14 @@ def main():
     p.add_argument('--launch',action='store_true')
     p.add_argument('--retry-failed',action='store_true')
     p.add_argument('--continue-on-timeout',action='store_true',help='Record audited planner/skill timeouts and advance without retrying them')
+    p.add_argument('--continue-on-initialization-failure',action='store_true')
+    p.add_argument('--queue-update-from',help='SHA256 of the original plan for the authorized queue-only amendment')
     args=p.parse_args();os.umask(0o077)
     config=load_config(args.config)
+    if (args.continue_on_initialization_failure or args.queue_update_from) and args.suite!='jar-base':
+        raise ValueError('Initialization continuation is for full sweeps only')
+    if args.queue_update_from and (not re.fullmatch('[0-9a-f]{64}',args.queue_update_from) or not args.continue_on_initialization_failure):
+        raise ValueError('Invalid queue amendment request')
     if args.continue_on_timeout and args.suite!='jar-base':
         raise ValueError('Timeout continuation is for full sweeps only; smoke timeouts block admission')
     if args.authorized_single_smoke and args.suite!='jar-base':
@@ -250,11 +326,22 @@ def main():
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
     if excluded:plan['excluded_predecessor_cases']=excluded
     if args.continue_on_timeout:plan['timeout_policy']='record_and_continue'
+    if args.continue_on_initialization_failure:plan['initialization_failure_policy']='record_and_continue'
     if args.suite=='jar-base':
-        verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke)
+        verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke,bool(args.queue_update_from))
         plan['smoke_admission']={'authorized_single':args.authorized_single_smoke,'evidence':str(args.smoke_evidence.resolve())}
+    archive=out/'plan-before-initialization-continuation.json'
+    if args.queue_update_from:
+        source=archive if archive.exists() else out/'plan.json'
+        if hashlib.sha256(source.read_bytes()).hexdigest()!=args.queue_update_from:
+            raise ValueError('Queue amendment predecessor plan hash mismatch')
+        old=json.loads(source.read_text());validate_queue_update(old,plan)
+        if not archive.exists():archive.write_bytes(source.read_bytes())
+        plan['queue_update']={'previous_plan_sha256':args.queue_update_from,
+            'archive':str(archive),'scope':'Queue-only initialization-failure continuation; model/controller/settings unchanged'}
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text())!=plan:
-        raise RuntimeError('Plan changed; use a new output directory')
+        if not args.queue_update_from or hashlib.sha256((out/'plan.json').read_bytes()).hexdigest()!=args.queue_update_from:
+            raise RuntimeError('Plan changed; use a new output directory')
     write_json(out/'plan.json',plan)
     if args.check:return
     no_overlap()
@@ -265,6 +352,8 @@ def main():
         if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
         if args.retry_failed:command.append('--retry-failed')
         if args.continue_on_timeout:command.append('--continue-on-timeout')
+        if args.continue_on_initialization_failure:command.append('--continue-on-initialization-failure')
+        if args.queue_update_from:command+=['--queue-update-from',args.queue_update_from]
         if any(not all(c.isalnum() or c in '/._-' for c in x) for x in command):raise ValueError('Unsafe Supervisor path')
         Path('/etc/supervisor/conf.d/'+JOB+'.conf').write_text(f'[program:{JOB}]\ncommand={" ".join(command)}\ndirectory={ROOT}\nautostart=false\nautorestart=false\nstopasgroup=true\nkillasgroup=true\nstopwaitsecs=60\nstdout_logfile={out}/queue.log\nstderr_logfile={out}/queue.err\n')
         subprocess.run(['supervisorctl','reread'],check=True,capture_output=True)
@@ -284,7 +373,7 @@ def main():
     try:
         for scene,seed in grid:
             case=case_path(scene,seed);record=case/'record.json'
-            if skip_terminal_case(case,args.continue_on_timeout):continue
+            if skip_terminal_case(case,args.continue_on_timeout,args.continue_on_initialization_failure):continue
             if case.exists():
                 if not args.retry_failed:raise RuntimeError('Interrupted attempt requires explicit --retry-failed')
                 archive=out/'failed-attempts';archive.mkdir(exist_ok=True);case.rename(archive/(case.name+'-'+str(time.time_ns())))
@@ -311,10 +400,10 @@ def main():
                     '--benchmark-root',str(jar.BENCH),'--scenes',scene,'--seed',str(seed),'--max-steps',str(cap),'--tag','codex-harness-'+case.name]
                 with (case/'capture.log').open('w') as log:
                     capture=subprocess.run(command,cwd=jar.MANIGUARD,env=env,stdout=log,stderr=subprocess.STDOUT,check=False,timeout=cap//8*config['decision_timeout_s']+900)
-                report=terminal_report(case,scene,seed,time.monotonic()-started,capture.returncode,args.continue_on_timeout)
+                report=terminal_report(case,scene,seed,time.monotonic()-started,capture.returncode,args.continue_on_timeout,args.continue_on_initialization_failure)
                 write_json(record,report)
-                if report['status'] not in ('completed','timeout'):raise RuntimeError('Harness infrastructure failure')
-                if report['status']=='timeout':
+                if report['status'] not in ('completed','timeout','initialization_failed'):raise RuntimeError('Harness infrastructure failure')
+                if report['status'] in ('timeout','initialization_failed'):
                     # The episode watchdog closes the worker and returns a terminal capture.
                     # Stop inference before advancing; every next case starts fresh services.
                     for name in reversed(SERVICES):

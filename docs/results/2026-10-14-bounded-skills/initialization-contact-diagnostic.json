@@ -1,0 +1,139 @@
+{
+  "scene": "task_0002/base",
+  "seed": 0,
+  "purpose": "Zero-policy initialization diagnosis; not scored evaluation",
+  "diagnostic_reloads": 2,
+  "policy_actions": 0,
+  "passive_physics_ticks_second_reload": 30,
+  "bindings": {
+    "subjects": {
+      "hinged_jar_0": "target_hinged_jar_ep1_1"
+    },
+    "supports": {
+      "breakfast_table.n.01_0": "breakfast_table_ep1_1"
+    }
+  },
+  "initial_ap": {
+    "jar_on_support": false,
+    "jar_closed": false,
+    "jar_dropped": false,
+    "jar_upright": true
+  },
+  "samples": [
+    {
+      "physics_ticks": 0,
+      "ap": {
+        "jar_on_support": false,
+        "jar_closed": false,
+        "jar_dropped": false,
+        "jar_upright": true
+      },
+      "target_position": [
+        0.001741883810609579,
+        -0.0037896335124969482,
+        0.3693995773792267
+      ],
+      "contact_bodies": [],
+      "pairs": [
+        {
+          "on_top": false,
+          "touching": false,
+          "table_below": true
+        }
+      ]
+    },
+    {
+      "physics_ticks": 1,
+      "ap": {
+        "jar_on_support": false,
+        "jar_closed": false,
+        "jar_dropped": false,
+        "jar_upright": true
+      },
+      "target_position": [
+        0.001741883810609579,
+        -0.0037896335124969482,
+        0.3693995773792267
+      ],
+      "contact_bodies": [],
+      "pairs": [
+        {
+          "on_top": false,
+          "touching": false,
+          "table_below": true
+        }
+      ]
+    },
+    {
+      "physics_ticks": 5,
+      "ap": {
+        "jar_on_support": false,
+        "jar_closed": false,
+        "jar_dropped": false,
+        "jar_upright": true
+      },
+      "target_position": [
+        0.001741883810609579,
+        -0.0037896335124969482,
+        0.3693995773792267
+      ],
+      "contact_bodies": [],
+      "pairs": [
+        {
+          "on_top": false,
+          "touching": false,
+          "table_below": true
+        }
+      ]
+    },
+    {
+      "physics_ticks": 30,
+      "ap": {
+        "jar_on_support": false,
+        "jar_closed": false,
+        "jar_dropped": false,
+        "jar_upright": true
+      },
+      "target_position": [
+        0.001741883810609579,
+        -0.0037896335124969482,
+        0.3693995773792267
+      ],
+      "contact_bodies": [],
+      "pairs": [
+        {
+          "on_top": false,
+          "touching": false,
+          "table_below": true
+        }
+      ]
+    }
+  ],
+  "mechanism": "OnTop requires Touching. ContactBodies is empty; vertical adjacency correctly finds table below. Initial open jar plus false support dooms close-before-lift constraint before recorder startup.",
+  "ruled_out": [
+    "wrong jar/table object binding",
+    "resolution by up to 30 passive physics ticks"
+  ],
+  "unresolved": "Why contact reports are missing. AABB overlap does not prove collision-mesh contact. Convex mesh warning and sleeping-body behavior are hypotheses, not established causes.",
+  "historical_generation_gate": "Saved scene diagnostics report gate_pass true and initial LTL not doomed; reload behavior differs.",
+  "sources": {
+    "initial-support-settle-diagnostic/diagnostic.json": "d771ed209abaea3e8996eb379952b3ad7389ad65f603aba20f05b25d453d12a3",
+    "initial-support-settle-diagnostic/simulator/20261014_180104_INITIAL-SUPPORT-DIAGNOSTIC/eval_config.json": "76fa4af2b17d35252e10a934482851e6fc1fe4da990485ec105b1da6779776c6",
+    "initial-support-diagnostic/diagnostic.json": "4f23e5e3a07af16bb1f643ca7590c44d024d8e391a4885168c90740d0cfeb751",
+    "initial-support-diagnostic/simulator/20261014_175834_INITIAL-SUPPORT-DIAGNOSTIC/eval_config.json": "767f5c808b9728b60e326e6e8d3bcb5b22121c95a29fdbd4aa50e0bc5f6d9136"
+  },
+  "continuation": {
+    "user_authorized": true,
+    "zero_action_only": true,
+    "preserve_original": true,
+    "retry_initialization_failures": false,
+    "exclude_from_policy_metrics": true,
+    "guard_bypass": false
+  },
+  "validation": {
+    "tests_passed": 211,
+    "subtests_passed": 82,
+    "historical_fixture_skips": 3
+  },
+  "previous_plan_sha256": "b4d7bf8c4ceefa9958133c7f4dfadaf7856d47d9363eb241741780ef26c91bab"
+}

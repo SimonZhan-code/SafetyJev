@@ -65,6 +65,27 @@ class CodexSweepTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'runtime differs'):queue.verify_smoke(root,cfg,hashes,config_path,True)
                 with self.assertRaisesRegex(ValueError,'only to bounded skills'):queue.verify_smoke(root,dict(cfg,tool_sequence='paired'),hashes,config_path,True)
 
+    def test_queue_only_smoke_admission_rejects_other_source_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);cfg={'max_steps':2000,'tool_sequence':'skills'}
+            config_path=root/'full.json';launcher=str(Path(queue.__file__).resolve())
+            hashes={'runtime.py':'same',launcher:'updated'}
+            plan={'suite':'smoke','cases':[[s,n] for s,n in queue.case_grid('smoke')],
+                  'config':dict(cfg,max_steps=256),'maniguard':{'revision':'dev'},
+                  'source_sha256':{'runtime.py':'same',launcher:queue.TIMEOUT_QUEUE_SHA256}}
+            (root/'plan.json').write_text(json.dumps(plan))
+            (root/'progress.json').write_text(json.dumps({'status':'completed','completed':2,'planned':2}))
+            for scene in queue.CASES:
+                ep=root/scene.replace('/','-')/'episodes'/'one';ep.mkdir(parents=True);(ep/'complete.json').write_text('{}')
+            with patch.object(queue.jar,'source_provenance',return_value={'revision':'dev'}),patch.object(queue,'audit',return_value={'status':'completed'}):
+                with self.assertRaisesRegex(ValueError,'runtime differs'):queue.verify_smoke(root,cfg,hashes,config_path)
+                queue.verify_smoke(root,cfg,hashes,config_path,queue_update=True)
+                with self.assertRaisesRegex(ValueError,'runtime differs'):
+                    queue.verify_smoke(root,cfg,dict(hashes,**{'runtime.py':'changed'}),config_path,queue_update=True)
+                plan['source_sha256'][launcher]='unknown';(root/'plan.json').write_text(json.dumps(plan))
+                with self.assertRaisesRegex(ValueError,'runtime differs'):
+                    queue.verify_smoke(root,cfg,hashes,config_path,queue_update=True)
+
     def test_predecessor_excludes_only_audited_completed_cases(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
@@ -199,6 +220,65 @@ class TimeoutContinuationTests(unittest.TestCase):
         self.assertEqual(actual['mcp_servers']['robot']['enabled_tools'],['observe','run_skill'])
         with self.assertRaises(ValueError):
             validate_config({'tool_sequence':'skills','proposal_limit':2,'decision_timeout_s':301})
+
+
+class InitializationContinuationTests(unittest.TestCase):
+    def fixture(self, root):
+        case=root/'task_0002-base-seed0';case.mkdir()
+        out=root/'mg/outputs/eval_logs/jar_transport_joint/run';out.mkdir(parents=True)
+        result={'status':'initialization_failed','scene_name':'task_0002/base','seed':0,'steps':0,
+                'success':None,'ltl_violated':None,'counted_violation':None,'safety_evaluated':False,
+                'rollout_diagnostics':{'termination_reason':'initialization_error','phase':'initial_safety'}}
+        (out/'results.jsonl').write_text(json.dumps(result)+'\n')
+        cfg={'scenes':['task_0002/base'],'seed':0,'tag':'codex-harness-'+case.name,'max_steps':2000}
+        (out/'eval_config.json').write_text(json.dumps(cfg))
+        (case/'capture.log').write_text('Results: outputs/eval_logs/jar_transport_joint/run/results.jsonl\n')
+        return case,out,result
+
+    def test_verified_zero_action_failure_continues_and_is_not_retried(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);case,out,result=self.fixture(root)
+            with patch.object(queue.jar,'MANIGUARD',str(root/'mg')):
+                with self.assertRaisesRegex(RuntimeError,'terminal episode'):
+                    queue.terminal_report(case,'task_0002/base',0,40,0,True)
+                r=queue.terminal_report(case,'task_0002/base',0,40,0,True,True)
+                self.assertEqual(r['status'],'initialization_failed')
+                self.assertIsNone(r['task_success']);self.assertFalse(r['execution_audit_passed'])
+                original={'status':'failed','scene':'task_0002/base','seed':0}
+                (case/'record.json').write_text(json.dumps(original))
+                self.assertTrue(queue.skip_terminal_case(case,True,True))
+                self.assertEqual(json.loads((case/'record-before-initialization-classification.json').read_text()),original)
+                self.assertTrue(queue.skip_terminal_case(case,True,True))
+                final=queue.final_progress([r],1)
+                self.assertEqual(final['status'],'completed_with_failures')
+                self.assertEqual((final['completed'],final['initialization_failures'],final['timeouts']),(0,1,0))
+                result['error']='modified evidence';(out/'results.jsonl').write_text(json.dumps(result))
+                with self.assertRaisesRegex(ValueError,'evidence changed'):
+                    queue.skip_terminal_case(case,True,True)
+
+    def test_mismatches_or_policy_evidence_never_become_initialization_skips(self):
+        for field,value in (('steps',1),('steps',False),('scene_name','task_0003/base'),('seed',1),('success',False),('safety_evaluated',True)):
+            with tempfile.TemporaryDirectory() as d:
+                root=Path(d);case,out,result=self.fixture(root);result[field]=value
+                (out/'results.jsonl').write_text(json.dumps(result))
+                with patch.object(queue.jar,'MANIGUARD',str(root/'mg')),self.assertRaises(ValueError):
+                    queue.initialization_report(case,'task_0002/base',0,40,0)
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);case,out,result=self.fixture(root)
+            ep=case/'episodes/one';ep.mkdir(parents=True);(ep/'harness-events.jsonl').write_text('')
+            with patch.object(queue.jar,'MANIGUARD',str(root/'mg')),self.assertRaisesRegex(ValueError,'policy/command'):
+                queue.initialization_report(case,'task_0002/base',0,40,0)
+
+    def test_queue_amendment_cannot_change_models_scenes_or_controller(self):
+        import copy
+        launcher=str(Path(queue.__file__).resolve())
+        old={'config':{'decision_timeout_s':300},'source_sha256':{launcher:queue.TIMEOUT_QUEUE_SHA256,'controller.py':'same'},'cases':[['task_0002/base',0]]}
+        new=copy.deepcopy(old);new['source_sha256'][launcher]='updated';new['initialization_failure_policy']='record_and_continue'
+        queue.validate_queue_update(old,new)
+        for key,value in (('config',{'decision_timeout_s':600}),('cases',[]),('source_sha256',{launcher:'updated','controller.py':'changed'})):
+            bad=copy.deepcopy(new);bad[key]=value
+            with self.assertRaisesRegex(ValueError,'more than'):
+                queue.validate_queue_update(old,bad)
 
 
 if __name__=='__main__':unittest.main()
