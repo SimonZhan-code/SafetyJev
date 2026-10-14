@@ -1,0 +1,27 @@
+{
+  "checked_at_utc": "2026-10-14T10:56:41.740Z",
+  "episode_scene": "task_0001/base",
+  "seed": 1,
+  "attempt": "provider_recovery_retry",
+  "runtime": "b4261c9",
+  "last_skill_end_unix": 1791968603,
+  "last_skill_duration_s": 23.83284354954958,
+  "followup_request": {
+    "transport": "responses_websocket",
+    "connection_reused": true,
+    "request_logged_unix": 1791968603,
+    "subsequent_model_output_observed_before_watchdog": false
+  },
+  "context": {
+    "active_tokens": 28336,
+    "auto_compact_threshold": 244800,
+    "effective_context_window": 258400,
+    "token_limit_reached": false,
+    "full_context_window_limit_reached": false,
+    "cumulative_usage_is_not_active_context": true
+  },
+  "conclusion": "Stall follows successful skill return and start of provider follow-up request; no evidence of context exhaustion. Logs do not distinguish network, service, or client transport stall. No concrete runtime fix established.",
+  "actions": "Read-only diagnosis only; no retry, deadline, transport, model or runtime change.",
+  "queue_completed": 4,
+  "model_services_stopped": true
+}
