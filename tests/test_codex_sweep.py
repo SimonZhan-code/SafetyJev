@@ -43,6 +43,26 @@ class CodexSweepTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'smoke-evidence'):
             queue.verify_smoke(None,{}, {},Path('/tmp/cfg'))
 
+    def test_explicit_skills_single_admission_keeps_runtime_checks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);cfg={'max_steps':2000,'tool_sequence':'skills'}
+            config_path=root/'full.json';launcher=str(Path(queue.__file__).resolve())
+            hashes={'runtime.py':'a',launcher:'new',str(config_path.resolve()):'c'}
+            plan={'suite':'single-smoke','cases':[['task_0000/base',1]],
+                  'config':dict(cfg,max_steps=256),'maniguard':{'revision':'dev'},
+                  'source_sha256':{'runtime.py':'a',launcher:queue.SINGLE_SMOKE_LAUNCHER_SHA256}}
+            (root/'plan.json').write_text(json.dumps(plan))
+            (root/'progress.json').write_text(json.dumps({'status':'completed','completed':1,'planned':1}))
+            ep=root/'task_0000-base-seed1/episodes/one';ep.mkdir(parents=True);(ep/'complete.json').write_text('{}')
+            with patch.object(queue.jar,'source_provenance',return_value={'revision':'dev'}), patch.object(queue,'audit',return_value={'status':'completed'}):
+                with self.assertRaises(ValueError):queue.verify_smoke(root,cfg,hashes,config_path)
+                queue.verify_smoke(root,cfg,hashes,config_path,True)
+                with self.assertRaisesRegex(ValueError,'runtime differs'):
+                    queue.verify_smoke(root,cfg,dict(hashes,**{'runtime.py':'changed'}),config_path,True)
+                plan['source_sha256'][launcher]='unknown';(root/'plan.json').write_text(json.dumps(plan))
+                with self.assertRaisesRegex(ValueError,'runtime differs'):queue.verify_smoke(root,cfg,hashes,config_path,True)
+                with self.assertRaisesRegex(ValueError,'only to bounded skills'):queue.verify_smoke(root,dict(cfg,tool_sequence='paired'),hashes,config_path,True)
+
     def test_predecessor_excludes_only_audited_completed_cases(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)

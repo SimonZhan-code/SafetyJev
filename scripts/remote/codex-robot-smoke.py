@@ -40,25 +40,34 @@ def case_grid(suite):
     raise ValueError('Unknown Codex suite')
 
 
-def verify_smoke(directory, config, source_hashes, config_path):
+SINGLE_SMOKE_LAUNCHER_SHA256 = '68f9a9340a6e78c37db90f93f30b160f077d7fd2e05aaec143ccec11ebaf1ede'
+
+
+def verify_smoke(directory, config, source_hashes, config_path, authorized_single=False):
     """A longer budget cannot bypass live mechanics and source validation."""
     if directory is None:
         raise ValueError('Jar sweep requires --smoke-evidence')
     plan=json.loads((directory/'plan.json').read_text())
     progress=json.loads((directory/'progress.json').read_text())
-    if progress != {'status':'completed','completed':2,'planned':2}:
-        raise ValueError('Both smoke trials must complete')
+    count=1 if authorized_single else 2
+    if authorized_single and config.get('tool_sequence')!='skills':
+        raise ValueError('Single-smoke authorization applies only to bounded skills')
+    if progress != {'status':'completed','completed':count,'planned':count}:
+        raise ValueError('Both smoke trials must complete' if not authorized_single else 'Single smoke must complete')
     expected=dict(config,max_steps=256)
-    if plan.get('suite')!='smoke' or plan.get('cases') != [[s,n] for s,n in case_grid('smoke')]:
+    suite='single-smoke' if authorized_single else 'smoke'
+    if plan.get('suite')!=suite or plan.get('cases') != [[s,n] for s,n in case_grid(suite)]:
         raise ValueError('Unexpected smoke case grid')
     if plan['config'] != expected or plan['maniguard'] != jar.source_provenance():
         raise ValueError('Smoke model/controller or ManiGuard identity changed')
     for path, sha in source_hashes.items():
         # Config is compared structurally above; its action cap intentionally differs.
+        if authorized_single and path == str(Path(__file__).resolve()) and plan['source_sha256'].get(path)==SINGLE_SMOKE_LAUNCHER_SHA256:
+            continue  # Explicitly pinned prior launcher; all runtime/model/scene hashes still match.
         if path != str(config_path.resolve()) and plan['source_sha256'].get(path) != sha:
             raise ValueError('Smoke runtime differs from sweep')
-    for scene in CASES:
-        case=directory/scene.replace('/','-')
+    for scene,seed in case_grid(suite):
+        case=directory/(scene.replace('/','-')+('-seed'+str(seed) if authorized_single else ''))
         episodes=list((case/'episodes').glob('*/complete.json'))
         if len(episodes)!=1 or audit(episodes[0].parent)['status']!='completed':
             raise ValueError('Smoke execution audit failed')
@@ -140,6 +149,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--suite',choices=('smoke','single-smoke','jar-base','timing'),default='smoke')
     p.add_argument('--smoke-evidence',type=Path)
+    p.add_argument('--authorized-single-smoke',action='store_true',help='Explicit user approval to admit bounded skills from the audited single smoke')
     p.add_argument('--exclude-completed-from',type=Path)
     p.add_argument('--config',type=Path,default=ROOT/'configs/codex-harness.example.json')
     p.add_argument('--output',type=Path,default=ROOT/'artifacts/codex-harness-smoke')
@@ -148,6 +158,8 @@ def main():
     p.add_argument('--retry-failed',action='store_true')
     args=p.parse_args();os.umask(0o077)
     config=load_config(args.config)
+    if args.authorized_single_smoke and args.suite!='jar-base':
+        raise ValueError('Single-smoke admission is for full sweep only')
     cap=256 if args.suite in ('smoke','single-smoke') else 2000
     if config['max_steps']!=cap:raise ValueError('Incorrect action cap for selected suite')
     if args.exclude_completed_from and args.suite!='jar-base':
@@ -180,7 +192,9 @@ def main():
     plan={'maniguard':jar.source_provenance(),'suite':args.suite,'cases':[[s,n] for s,n in grid],'max_steps':cap,'mode':'codex_harness','config':config,
           'source_sha256':{str(x.resolve()):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}}
     if excluded:plan['excluded_predecessor_cases']=excluded
-    if args.suite=='jar-base':verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config)
+    if args.suite=='jar-base':
+        verify_smoke(args.smoke_evidence,config,plan['source_sha256'],args.config,args.authorized_single_smoke)
+        plan['smoke_admission']={'authorized_single':args.authorized_single_smoke,'evidence':str(args.smoke_evidence.resolve())}
     if (out/'plan.json').exists() and json.loads((out/'plan.json').read_text())!=plan:
         raise RuntimeError('Plan changed; use a new output directory')
     write_json(out/'plan.json',plan)
@@ -188,6 +202,7 @@ def main():
     no_overlap()
     if args.launch:
         command=[sys.executable,'-u',str(Path(__file__).resolve()),'--suite',args.suite,'--config',str(args.config.resolve()),'--output',str(out)]
+        if args.authorized_single_smoke:command.append('--authorized-single-smoke')
         if args.smoke_evidence:command+=['--smoke-evidence',str(args.smoke_evidence.resolve())]
         if args.exclude_completed_from:command+=['--exclude-completed-from',str(args.exclude_completed_from.resolve())]
         if args.retry_failed:command.append('--retry-failed')

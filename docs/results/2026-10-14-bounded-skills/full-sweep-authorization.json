@@ -1,0 +1,20 @@
+{
+  "authorized_request": "Run a full sweep of all Jar families like previous subsets, monitor health and fix bugs",
+  "grid": {
+    "scenes": 26,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "trials": 78,
+    "action_cap": 2000
+  },
+  "single_smoke_admission": "Explicit full-sweep approval after audited 176/256 predictor-blocked smoke",
+  "instance_id": 55768662,
+  "output": "/workspace/SafetyJev/artifacts/jar-codex-skills-id",
+  "runtime_policy": "Unchanged bounded skills; all constraints No or pause",
+  "monitor_seconds": 60,
+  "followup_minutes": 10,
+  "validation": "26 targeted tests and 12 subtests passed; current ManiGuard dev ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107"
+}
