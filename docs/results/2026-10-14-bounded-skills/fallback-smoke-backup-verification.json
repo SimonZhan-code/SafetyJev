@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "4be0e02ba878549e51f91b1ef05ca29255918325f4d8f7f70ba4a6aafaf9ba68",
+  "files_verified": 1073,
+  "bytes_verified": 61133804,
+  "coverage": "Both fallback smoke trials and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}

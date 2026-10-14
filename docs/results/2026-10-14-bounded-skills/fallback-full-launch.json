@@ -1,0 +1,739 @@
+{
+  "runtime_commit": "b4261c9",
+  "plan": {
+    "maniguard": {
+      "maniguard_reference_commit": "ff84435b69fd8ceb85b9b1a6c2c0a64e54e41107",
+      "maniguard_source_profile": "dev",
+      "maniguard_source_branch": "dev",
+      "source_hashes": {
+        "configs/eval/cabinet_pickup_joint.yaml": "e6f6e5b44c42dd794414dc9e4dbe8fd9dfd1485ce625c641187a0370d893f74d",
+        "configs/eval/clutter_pickup_joint.yaml": "dfa74cc84a0f2536cb1210796ec4da75f29ad48df87323da57574f0f7eb1879b",
+        "configs/eval/dusty_transfer_joint.yaml": "ca31ed43520c8f4e367960e1eab11852330813daa3bef41c86088831dba3f135",
+        "configs/eval/jar_transport_joint.yaml": "70dd09545af11ecde8fb9d48f1c6aea929c4a2ab8be6fc914e9d0734d1684891",
+        "configs/eval/lid_transport_food_joint.yaml": "a11cb8f1c62dfd6cece094e95b922c77ed0ab44ac12bb58673192e934f7a293a",
+        "configs/eval/lingbot/cabinet_pickup_joint.yaml": "725176230c623eb692ca6472e29f8e862517f07fa3502f3724d3e6b255a7b6c6",
+        "configs/eval/lingbot/clutter_pickup_joint.yaml": "b1dbee25f7f4eb3c4e5d97582d568b7d4130144b475c92320f917ec416016e5a",
+        "configs/eval/lingbot/dusty_transfer_joint.yaml": "ee8ceb84a39d7cab23c6bdd46b1bb7e3f62b97adfa0b811d08d1555359a9545d",
+        "configs/eval/lingbot/jar_transport_joint.yaml": "62dd6830239c4a3d5462d3d8c48fb0adf11c8178ae2f1f0f9c330a37e87c4811",
+        "configs/eval/lingbot/lid_transport_food_joint.yaml": "9cdfd4d43633a92eecdf955e385b0943ae0666180d869b960f6373ebdfd4fd0f",
+        "configs/eval/lingbot/stack_retrieve_joint.yaml": "adc2dc9297579cbc8f5e03cdfd5556fa5c1e84c385f89543bfe7271a0bdbc1b0",
+        "configs/eval/stack_retrieve_joint.yaml": "7111a2fa273a12964cd9a124cd7f5c25b345d53ac65320dc0689d31536ab0fa7",
+        "maniguard/__init__.py": "08a67e2549178480448d4d4c12317762c8c84126c1270d23d42988d01914f8fe",
+        "maniguard/_omnigibson_patches.py": "029377fd9084c09385fb21fd38f88cc6e93c05cc039122910c816e83eef5c4c0",
+        "maniguard/data/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/data/bench_builder/__init__.py": "b6ae21b681f640242ca9fbf55c2bbe3c96ba1360170f34e33e46398c352537d4",
+        "maniguard/data/bench_builder/data/table_scene_db.json": "540da0d800c226aaacaf6af720ebd18f71bd209cc186318d9ac94c37ba76a12f",
+        "maniguard/data/bench_builder/env_geom.py": "d74a0d56d2f502a302b9d0e63be1f1e2fd637151dd5eabd807afafd4f923d6a8",
+        "maniguard/data/bench_builder/finalize_base.py": "332d499177077e7cb5b5de47e4bb3b059c0bbf385735552853b4bc25061e45d1",
+        "maniguard/data/bench_builder/location_geom.py": "223079a9f2293a965fe17b7c8e1c0bef4a7526ca8f432c62a5bde5410d2b67f0",
+        "maniguard/data/bench_builder/perturb_env.py": "a093c2a36b92e9b604523e18c2d4f756cd16aeb993d9ce41a54c5c205c8f6c27",
+        "maniguard/data/bench_builder/perturb_language.py": "7c8e6374a90a5b59c3061e71b5ee714e2e63b581658774b7fbb1eacbd0bf587b",
+        "maniguard/data/bench_builder/perturb_location.py": "8ea2bc161af537bb4667a65641b4dae495508a1d9139aad00809efa7e96d87f8",
+        "maniguard/data/bench_builder/perturb_target.py": "2a8a0e739583eda9fa1ee88e42e58eca804c4e29a2991c0aae84a7e2c00a27cd",
+        "maniguard/data/bench_builder/perturbation.py": "fd9b01952742c8a70a0d981edd72ea3a4b45cbe7e2d82964f59072f538d567cb",
+        "maniguard/data/bench_builder/prune_reindex.py": "53a3912ca6113b097f9d664951392ff0f6821d79d7097f55c8341b4f009496a6",
+        "maniguard/data/bench_builder/render.py": "1a41726409bad55733b7cbbcc1dfff13738e13b145d3385d8750444f5a1ecb22",
+        "maniguard/data/bench_builder/review_snapshots.py": "da53300c1dc2dd6d920cd763618f1d89a0e0351e6ca96ced221ae2d6feeb8979",
+        "maniguard/data/bench_builder/run_finalize_base.py": "12abe09f7e88d4cf05b297004b75e7983bacc0d1a1a7907dfafe29e729ff0962",
+        "maniguard/data/bench_builder/validate_base.py": "5aeca89aa972beec6f463afed01540f2d01547a1837a6883046df677ad5557eb",
+        "maniguard/data/datagen/__init__.py": "10f3877553b9220edb299cc8ee9eb937027aa5628c00c160a438cc502bff678b",
+        "maniguard/data/datagen/annotation/__init__.py": "4cd01cde79c8f2c70d7983ef5c4d2d1e24c454351ec49759b09163886f563fd1",
+        "maniguard/data/datagen/annotation/annotate_tool.py": "0455d73fae19cfbe4ba4d0486649165cda7da85aa8eb895dd6d6275b22f961e9",
+        "maniguard/data/datagen/annotation/extract_cabinet.py": "5c7d7646542ddbc2f88947b41340627dfe7af01bd233b6e4c09d86a0a5105b8e",
+        "maniguard/data/datagen/annotation/extract_meshes.py": "c3978d3e24db2f31d41f85629e1e13c05eac1956004f3252af8e6876794b5f90",
+        "maniguard/data/datagen/annotation/family_membership.py": "1d3999a21e6f03020c67a60a60f9a81fdccdb427cf644464bda59cc4f5e514c7",
+        "maniguard/data/datagen/annotation/fix_approach_tags.py": "59a7b2692a211eb511b0ccf68315ccad55aa237cbd0758e44cd2cfb89bfe50b9",
+        "maniguard/data/datagen/annotation/generate_topdown_grasps.py": "75bdfac91752fa228ea2996408aa01004a1f9ac34f396229ad8dfacfc9058f2c",
+        "maniguard/data/datagen/annotation/mesh_review.py": "2ab1740c4759aaad0f99bb6dad32f5e9292ab5f981880ae60058d8f0ea375958",
+        "maniguard/data/datagen/annotation/validate_grasps.py": "bff2e050905837da904c8af6a65a2f0ee1a5e696252b28c47b354a72248cc688",
+        "maniguard/data/datagen/data_format.py": "c13b06254c9bfc9c442f8336114faa0caae0e73467235ea0d25aa8ca6d40af95",
+        "maniguard/data/datagen/driver.py": "8ab735824fdb87b8f108b52116271d73072d7a030b5a3ac2c472d235dd6fe076",
+        "maniguard/data/datagen/executor/__init__.py": "6c15ed2fb22ad2c7dd3d3ae4604f56fa8b60b06ec7cd79003f78361b1d79d0bf",
+        "maniguard/data/datagen/executor/contracts.py": "ff135e09b3c1c7b86b298280251fd9b49fe1de9858726299da4fde1efd66ddb9",
+        "maniguard/data/datagen/executor/engine.py": "331410373f96caa2c3e7a9b651d8bb0ea8776a6a8abcffdf282d2437914b9cfb",
+        "maniguard/data/datagen/executor/gate.py": "1b18a56c79ef26342705322f4b615e0607d4724437f9790b510e75b9b3d1cb77",
+        "maniguard/data/datagen/executor/geometry.py": "19dc8d8bad4503f133dde2b29344022716801089a5fbe15c3553a28968e88e19",
+        "maniguard/data/datagen/executor/grasp_select.py": "9093575920f3debe1863417c9cc75fd2d9db11f6d5d725115d9bef3299d61852",
+        "maniguard/data/datagen/executor/resume.py": "34b6a2b7d2490ee42e069c8a752698ac02d2e09bb86c0388510b3d05f5546bdb",
+        "maniguard/data/datagen/executor/variation.py": "f9ddfee364adcf7fece74e37eb3c722e08d29027fc9980237541568f735bba54",
+        "maniguard/data/datagen/families/__init__.py": "bcc103d40a96adbb28f0f8ca6fcd473f0f3de55f6156d4f0c8cde6b522a2786e",
+        "maniguard/data/datagen/families/cabinet.py": "b61b95f6d1f0889f12366cf660721708ba2f0e6fc1a0276470a9ebab4618215c",
+        "maniguard/data/datagen/families/cabinet_bothfront.py": "6f65e05d53e2887ba5f4a7fcc6d96b9faa40df61bda00c68c71956b431c5960e",
+        "maniguard/data/datagen/families/cabinet_firsthalf.py": "764ebe54028115f1cb36056e7d463abbd62acbd145b5613ee3466c74e9dac0f5",
+        "maniguard/data/datagen/families/cabinet_geom.py": "ba0b78ebf6f726ec368ae31478b7f18f717d7292c61f093d26cfbe6ed9f067e1",
+        "maniguard/data/datagen/families/cabinet_inpath.py": "b1b01baf4453d045193406b8ee820a4faa8f2f35d2c65f597c14062d4b275c1c",
+        "maniguard/data/datagen/families/cabinet_roleswap.py": "9b8b9dee4d5d2f6d7f746da98f17a6a8459c49242713a9c30e80537e2d602365",
+        "maniguard/data/datagen/families/clutter.py": "d86cc57e25115e64c849867d0e6d955ab71706c4e1de7dc2a5ef697ba80c0c4c",
+        "maniguard/data/datagen/families/dusty.py": "01746f3006fab8ff059472fe3df180587eff555e8ef7cf2077edc8c7ec371e02",
+        "maniguard/data/datagen/families/jar.py": "bc7db7fffcdcdc6c8a99d09c896909879b3a01197e2284fd7a08f3cca7c9ccd8",
+        "maniguard/data/datagen/families/jar_hinge.py": "2e7a623154be60ce28933557b2bbedcbe9a5e80ca885c01d552b6b70655dc72f",
+        "maniguard/data/datagen/families/lid.py": "ea7df9a005b98d498c0f81be3ade6056ab15d58d9387e71a62fc6bb83648cca7",
+        "maniguard/data/datagen/families/stack.py": "f611ebb97c1cde5f93e97d93276515b29718550829b353bbd7959bbc48cf8826",
+        "maniguard/data/datagen/families/stack_geom.py": "ba50a39a45a6f5c1a99a383e781d3a0e777e1db91ab36219bd82762fe5f56662",
+        "maniguard/data/datagen/families/stack_grasp_depth.py": "af60fcab6bef0c207f6c1e2bc2571d2ad46baf2cf4e5da1bbbc6662d817d4ab5",
+        "maniguard/data/datagen/grasp_db.py": "9d437021ae9868a3dc4a4333a24d5885e46566b63eee6c5147b6f45d35536011",
+        "maniguard/data/datagen/lerobot_diff.py": "3649e1d6cd50c52a49ef420f5da499627f313eb9ccc471726d7195cf6465729d",
+        "maniguard/data/datagen/lerobot_merge.py": "ed3fac70c643f490cb5ef50e7d4da034bbd759625fee9362494c98b212e62a21",
+        "maniguard/data/datagen/primitives/__init__.py": "b6c06616e9592c5885859b30ee10ac4c86b8911866bb79f613dca52429d8b3d9",
+        "maniguard/data/datagen/primitives/cameras.py": "fce977920801bcfd22f5eeb9ff237459d421189204328fd29723c28c0f89aa6f",
+        "maniguard/data/datagen/primitives/curobo_seg.py": "c2b314e4b6bd6e89e956ef639a0db0246c1b1ea7a1bf3f419d6421ef171c1f34",
+        "maniguard/data/datagen/primitives/execute.py": "1c3ef3105728a080ccc113fada157ee1b6808cac1e86f98343f097f208b9f074",
+        "maniguard/data/datagen/primitives/grasp_obb.py": "b003e72530d57847d528a8cbd82fb7988f883bcbbfdfe89d1cf822ca712c65d5",
+        "maniguard/data/datagen/primitives/obstacles.py": "cc8666d11d323a7a7f229074f8ef442f219a9dd216cf90e9b0372743abda478d",
+        "maniguard/data/datagen/primitives/record.py": "3c364cd75cf00059b0c8b29c95d0d80841c8a06c2860f0e1655a92a3e0c0c651",
+        "maniguard/data/datagen/primitives/scene.py": "35ccb749709823d6d38bbd397a9bce8866ca9ad6b49c980c17b8616182809845",
+        "maniguard/data/datagen/primitives/task_io.py": "15cecf7802d2996957f49a2f7e59dd1a684c2a339be88e5abbb433a8c27950e5",
+        "maniguard/data/datagen/reader.py": "9f56e33a4376af6a19686b9ea931601d948675be7bdbe22330041643ec641ae4",
+        "maniguard/data/datagen/review.py": "90937bee8e544a4ccc08e5040d070a9a80c737f0a64c4a8550e813ae2b5e8fde",
+        "maniguard/data/datagen/sweep.py": "a0e9661815e90b3fc2679a15232b4a0ba583dd53a78cee84fdd28bf3b6fa860c",
+        "maniguard/data/datagen/to_lerobot.py": "ecd1e9800700e6e6ebd4520c1c470ea8db291ee7954dc0928ffa49eb158c472c",
+        "maniguard/data/datagen/to_lerobot_parallel.py": "8783fd9e3665ff9ba543abf07a227beac2f7b79ad540b5254451f5fc0a91dfd0",
+        "maniguard/data/datagen/transcode_gop.py": "d502c805eb2fe8f3bea8e6e8c3ce28fdcc5049bec5ef3b1fe85aecf17657b05f",
+        "maniguard/data/lerobot/__init__.py": "11aa30405c23258a54fcf9ae07640b991488ec853d624a18707449008377cf12",
+        "maniguard/data/lerobot/multitask_lerobot_export.py": "ed2fcc337c7070787c1d7277056f2a5410e72a59ef5acd7f90a618da64454ec8",
+        "maniguard/data/perturbation_scaling.py": "89ecd02449c503b1948c8c7d19ca8a70083ce955e1d6d351638c0ec33c1dfa94",
+        "maniguard/data/playback.py": "343b10538ccd2be46f2e99a8b1434bc4de708fcbc00981ce5a37afe9cf9e8507",
+        "maniguard/data/real_teleop/__init__.py": "3c0e3edd3929552ff695a7a3f153098ebcc30b37755b79ee57a34ca03fe42f1b",
+        "maniguard/data/real_teleop/real_teleop_to_droid.py": "336868beb29169e662173acf8f2bf2c2356d3b1d35e18b79af01e2651e053ed9",
+        "maniguard/data/real_teleop/real_teleop_to_hdf5.py": "4490dfdc503e8b1e93320b96e35e6d95bbebf41c3b2852d77ffc24d5997cefbb",
+        "maniguard/data/scene/__init__.py": "e27146b7efb3d0a4f612f2270c57bec8a276315862a56db0ab6b0a70e132c274",
+        "maniguard/data/scene/benchmark_repair.py": "867b62ad2e5d527b97a4a532aee1b76e67e688aaad5a58cc0224032d185dba86",
+        "maniguard/data/scene/hf_benchmark.py": "39509597e915fd0d2f47df09db888ea0a0ba3549deb342a42427ceeac4acd794",
+        "maniguard/data/scene/liquid_state.py": "fe37cb8dbb5d575844556c65a29dab93d22d32bdab0b275b22af5491792c6a4e",
+        "maniguard/data/scene/rewrite_scene_robot.py": "d09882ed4271dd58a4955041a8827ac6b900f0de723551bf333538ffe1d57226",
+        "maniguard/data/scene/trim_scene_to_room.py": "26cf03aadc67b11307f74b2289909eb9b992dd2801707afe7497743b1de7cf57",
+        "maniguard/data/teleop/__init__.py": "cd22025928109cefc372b40e695ef8d9417b6f48444beb706f841a3eabd870ce",
+        "maniguard/data/teleop/gello_franka_teleop.py": "8c65f93a9e0c48d5851a134cda4315455afdfa8452b75916f1a7a80c63228577",
+        "maniguard/data/teleop/so101_franka_playback.py": "94f7850339144021ae02a8c2a0bc892532dd0a32652f7156178afe0819527600",
+        "maniguard/data/teleop/so101_franka_teleop.py": "db0bafcd805c3c62a968532765e37b53b98a5b5c6f17721e1f5fa1c4bf1b993f",
+        "maniguard/data/teleop/so101_teleop.py": "826374727f3e774133b783c519347f4cad505726c724a2216ff54639baf56987",
+        "maniguard/envs/__init__.py": "edbb4c2c37fd229f45a92ff41504c519513ee662bf7ed78d7dda118172814550",
+        "maniguard/envs/frozen_task_runtime.py": "2c78d14958d16389e4fc09fd0ed5a3e793b429a1ab39c02cd45a3fe0c3f7425f",
+        "maniguard/envs/perturbation_runtime.py": "e15bb633adc998ce64695d2018d3f3afc49a2db7dccc17ebcb52066279f98ee8",
+        "maniguard/envs/registry.py": "ee78a670512c77a85413159e29b56a2d8e43cbff171d05b1f15ead3d2cc2beff",
+        "maniguard/eval/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/eval/benchmark.py": "8c16e7dd6322555a5bfe322af36d345ac6195b89c29cc3d9aa75a0d3dced045a",
+        "maniguard/eval/eval_config.py": "6e4c764ba0e3aa0dd255c2a5897127fa6cc8ba6f13b676cd7128eb9736f8426e",
+        "maniguard/eval/goal_checker.py": "ace47ce46cc0a540c759b0f5d0c89f050bdebbe83877e6052e770bf09acc74b0",
+        "maniguard/eval/horizon_override.py": "4fa57fea4dcc193f3c1edd7c500fd8a9c8128a88744b27d7bff19d40047ce78e",
+        "maniguard/eval/prompt_utils.py": "a992f5f5c65e98b726781232503bb2f88c9a830df0a21c5497a0814adbc2ff6b",
+        "maniguard/eval/recording.py": "f180cc7c4e40370b256bb6568cb9731208851dd2b1a028ab23eab5702e142ba9",
+        "maniguard/eval/scene_discovery.py": "27b70a7c1ad934109bea968c9b671f6ac71648e397f51795dcb9da345622340a",
+        "maniguard/eval/snapshot_validator.py": "8e15969af6b73f1afb68d2c7dabd88277b4504d9c63174fe06144ad002a38531",
+        "maniguard/gr00t_sft/__init__.py": "398e764cadfebbda6cd95624dae37d81c2ff2a824b7cf3ac6ea7b840ed303969",
+        "maniguard/gr00t_sft/maniguard_embodiment.py": "b2fa98f6bc23f5004463051a74c2cf02297b7aa56278b8d12ce31a0c26b67ac1",
+        "maniguard/gr00t_sft/maniguard_embodiment_real.py": "9c03b4c1486c8cb3b7c123b995f761fca0c0c17791165791efee2dcca293ed5e",
+        "maniguard/lingbot_sft/__init__.py": "9047277b27758cc18c58b5c0b6439ef698727a8cdf42c96e517ddc2eb23bcac1",
+        "maniguard/lingbot_sft/norm_compute_config.yaml": "6552c619a330fcd42e7cca9895eb14d540b7842d4f1b94cdcfcdf48676d96d4e",
+        "maniguard/lingbot_sft/robot_config.yaml": "61c6a4a36116db727ad80029bceb6fc31037ce22374b33bc03cb3e5e124dd36c",
+        "maniguard/lingbot_sft/train_config.yaml": "776f502008f3b91c8def99267be761973e79216e8555e3df8e23e7df4dfb08de",
+        "maniguard/object_states/__init__.py": "6d5aac07ac24812a53c0c1557a9421b8578dc95925d534f860b78818e0ca92a2",
+        "maniguard/object_states/dropped.py": "6d583ad3ce97403152f6e7086d9c4996fd7e29a8770c06386451eac45197b68d",
+        "maniguard/object_states/upright.py": "8e235afc547d6b8f04cffc0a22f6363b0f3e32273114dce2fb2b05590e7c9958",
+        "maniguard/openpi_sft/__init__.py": "7faf0cffc8bcb371c349c6ab303e5dc7353b9249f11436ea0faff70bbddb50de",
+        "maniguard/openpi_sft/_augmax_patch.py": "07e8251ffd3148ae3abccf2938cd76b14647c6e0fe9631aea7490df1fcde0cb7",
+        "maniguard/openpi_sft/_episode_subset_patch.py": "8312bfc76ef461da281f88e3aa5bb2bbb49caeae09d5ba2f619696f6949efe76",
+        "maniguard/openpi_sft/_lerobot_video_patch.py": "c3d23c5a49d4db68ddccae95f5efba64cd614fa414742b194373863796fcdc68",
+        "maniguard/openpi_sft/data_configs.py": "6d03f50544b64508cb9d81718d7a81733135b27687ab65e777fd9691e6c8a07d",
+        "maniguard/openpi_sft/policies/__init__.py": "cbdd3a1b21369e98acd9b5a0be2b3415069b8a8ea315278a6ac4ead20a52bbf9",
+        "maniguard/openpi_sft/policies/sim_2cam_policy.py": "b8c0e90488a1208f0b2e046555456fa44542b282f0c3f3948f08c6ac18c84bb7",
+        "maniguard/openpi_sft/train_configs.py": "d0aa91cfbfbcc27679b495178c3b1aec1b4f80cc5497bbd43bf7af28e97b5602",
+        "maniguard/serve/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/serve/_msgpack_numpy.py": "db3fe29cf1820a7d97072dd5f6e2fcecd672f055a4f1d71d35b5a8d5ecf00dde",
+        "maniguard/serve/gr00t_native.py": "1fec14213e218dbdc0c581e477caad3a1c88be7246d6d3047303f6be2786b63a",
+        "maniguard/serve/lingbot_native.py": "e447773561088987ce7726263e048c0abf0bc05cb03a7d6b7cc20cf7e4b01a87",
+        "maniguard/serve/openpi_native.py": "179d0690f9a8f06a81556a40baf22f09dd8f1727154c72f1d5910e426749e1eb",
+        "maniguard/serve/smolvla_native.py": "ec2765b954b2cfd219b8ff371daa6de965479327b50e6f01bd34cab734e5003d",
+        "maniguard/smolvla_sft/__init__.py": "47afe6516a26182f714bf327c66e4532426d6d7b1ffbfe75159b4bbc82ebe629",
+        "maniguard/smolvla_sft/embodiment.py": "600a20aff40ac22416b0995eb055cb48b8c97a42bd75ec4a6f7b26aeedb67631",
+        "maniguard/task_generation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/task_generation/cabinet_pickup_pipeline.py": "6845e5da5330e2bf1e05da92a97745a10362fea7c0f7ad19de067aac10776006",
+        "maniguard/task_generation/clutter_scene_pipeline.py": "666c1cd6029b66afbc66a33bcd441d73e765d61850f7d6006bf4713c75ce2762",
+        "maniguard/task_generation/dust_bottom_filter.py": "7ed3a3f09646a0060477637d7fb7b3babd46fee6b8aa2f0b6efd3bb4c5639cf0",
+        "maniguard/task_generation/dusty_transfer_pipeline.py": "284494e4aa0b36739d796309095ca71d894126b84908873bc177c1c1729298b8",
+        "maniguard/task_generation/empty_invert_pipeline.py": "735e3caffa6aa7a9fb4ab80319951a1871d6382ade604912d8da62ca381a2f12",
+        "maniguard/task_generation/empty_scene_pipeline.py": "f068166a4200fc11c60a7b941f31b89b385d4a8216739f9e9d61df8b61af078c",
+        "maniguard/task_generation/jar_transport_pipeline.py": "dca93d04409b68067f24e56ecf6bea78ee454d74adea78ada2e37849b6dd7ca5",
+        "maniguard/task_generation/lid_transport_pipeline.py": "4aa213f16c083cbc9a089ae0ab0eae8f6033c539aa9e5d0c74ce06dc892ebadc",
+        "maniguard/task_generation/liquid_transport_pipeline.py": "4d43c26334bb507af6267c895a72899c3ad8b19577c004e10638638bc311a7e6",
+        "maniguard/task_generation/pipeline_common.py": "21417c0253e52d53e0a024777264c9cb5d6d27a5ea941c9b3ed9bea568972a12",
+        "maniguard/task_generation/run_benchmark.py": "74f165273f9223841907cf5d8a15645c8b9f499b1f76f0a658047170bd8dc483",
+        "maniguard/task_generation/stack_scene_pipeline.py": "a729a669065f40fec8d8c0d1b32efa6f51c78c2b3d0211a8615070852617634e",
+        "maniguard/task_generation/transfer_scene_pipeline.py": "cba21ef961e60c3cb26416a4dce3296683cecbe8310532cf30e48c5c7a85842e",
+        "maniguard/task_generation/utils/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/task_generation/utils/build_object_footprints.py": "aaae360140a0535aaa9d3f4c1a94d1bdb8518f6e27b81a94ca7546dd47d79814",
+        "maniguard/task_generation/utils/build_placeable_surface_scales.py": "7e8eae8be97c03ca07533655553155cc86d428a6f963b0ed01643f82f9084bf5",
+        "maniguard/task_generation/utils/build_sim_to_real.py": "5d2f2b0c7f6330f8d7b8a9c26ab00e9df7816376ccd0fb3af589f84e62a9208a",
+        "maniguard/task_generation/utils/clutter_pipeline/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/task_generation/utils/clutter_pipeline/build_fillable_pool.py": "7d000a1a35d873b42a2e1c44b7a9e1badc9b44499fb9a70454442caedb67c872",
+        "maniguard/task_generation/utils/clutter_pipeline/build_fragile_pool.py": "717f6ef93fb12655618e7b06447ef10949c806ae33470fb5017acfa923fc5eff",
+        "maniguard/task_generation/utils/clutter_pipeline/build_pools.py": "ce69fcfe37c0c027debf3f7a21afb68e246f8477dff5d01fe1b150b481dbee29",
+        "maniguard/task_generation/utils/clutter_pipeline/clutter_target_pool.json": "b8d280b055904067c5ff1f2e0f187bab106d328456ca6a675726382fecee615f",
+        "maniguard/task_generation/utils/clutter_pipeline/fillable_container_pool.json": "3bb12c37471a8e82d0bf04f01a2741a7be505e702e77aaa14c18bdf0cece62a4",
+        "maniguard/task_generation/utils/clutter_pipeline/fragile_pool.json": "4d4e6ebde900f010a57d2780667106f86e60cc43b8b7d426c0e2d8ea2a0ddc0f",
+        "maniguard/task_generation/utils/clutter_pipeline/select.py": "67bc03d4242d4318d31bc7656b8e9693a1040dc6904565078c2c73c660efc636",
+        "maniguard/task_generation/utils/clutter_pipeline/table_obstacle_pool.json": "be6a1b52047f85867f2e47f4af69a800a321448084fb569a58f5e96639499767",
+        "maniguard/task_generation/utils/food_transfer_pipeline/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/task_generation/utils/food_transfer_pipeline/build_transfer_compatibility.py": "f94695bd1f37c23b50bd5aa3caca305250e6c43057ce2ca9e3d79beb3249aaf7",
+        "maniguard/task_generation/utils/food_transfer_pipeline/container_openings.json": "90166b44351630a6235002f09177a5be25f551a3d00c7caf40ea67c3436b3453",
+        "maniguard/task_generation/utils/food_transfer_pipeline/derive_container_openings.py": "47f3c5c3faa84f044550b56c50e71b16399d9b6012deb179766c49c1c3c59153",
+        "maniguard/task_generation/utils/food_transfer_pipeline/food_cross_sections.json": "9d7182c97ea70a7fbe6d1cb411fbc6c5165be7db10c60ab5aebee5f6988348ad",
+        "maniguard/task_generation/utils/food_transfer_pipeline/lookup.py": "b85ae9e79820412180d81398276996d8d23d2070cdf326b4575bb066fab58406",
+        "maniguard/task_generation/utils/food_transfer_pipeline/transfer_compatibility.json": "11284e896812e2b6505c8a01f8e3227a749dec01f8157e4db486bb7b88eea137",
+        "maniguard/task_generation/utils/jar_transport_pipeline/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "maniguard/task_generation/utils/jar_transport_pipeline/build_jar_transport_food_compat.py": "b02674037df31a3d50cfa70ad1944cf495f3208291d99e08bb9067b2c850369b",
+        "maniguard/task_generation/utils/jar_transport_pipeline/jar_transport_food_compat.json": "36674f6aec6be5a57e0a64a795d30549fd0f8e987ef2a9da34b011542eb16595",
+        "maniguard/task_generation/utils/jar_transport_pipeline/select.py": "b3571997bd559842d00782d02bebea0f92dec8cfd39361d7e7a8b859c9c59da6",
+        "maniguard/task_generation/utils/lid_container_pairs.json": "3e5eabb0ace617fbe1d79d4d9de453d157303c4500b69b6948fb3fc2ff42ef5b",
+        "maniguard/task_generation/utils/lid_transport_pipeline/build_lid_cap_container_pairs.py": "acd0699ae0bd4e6cfc2d2ecf9231be7e95e0b41e6f326609bde3f8fde8615159",
+        "maniguard/task_generation/utils/lid_transport_pipeline/build_lid_transport_food_compat.py": "6f70f602efb94ef268b50e561f1cf3f18d7060d0a3493769425d7bb43a6fe99d",
+        "maniguard/task_generation/utils/lid_transport_pipeline/lid_cap_container_pairs.json": "8d760a72f7bf1da804507ed51fc1a946097552ee3259f18d67aa7e33fb547d02",
+        "maniguard/task_generation/utils/lid_transport_pipeline/lid_transport_food_compat.json": "dac19301f379c04b9bf536cf56746cc7749700c9a9f7a488fdc909b1378475ef",
+        "maniguard/task_generation/utils/lid_transport_pipeline/select.py": "3a81d327f9fba5ec89048d03e2fd5aeb596724b1ba75fbcb875cf718e697e7f0",
+        "maniguard/task_generation/utils/liquid_transport/__init__.py": "a2f88b3727f953822601f8d23b28b6104850c18ba33696810f3f003ccdd103a6",
+        "maniguard/task_generation/utils/liquid_transport/build_liquid_fragile_pool.py": "92b03972f0140771cd6c21f69f99c3cdf6b355e953e27062b88bde6496513a13",
+        "maniguard/task_generation/utils/liquid_transport/liquid_fragile_pool.json": "0553ee358b008b0404f87a70ece4ac9dfd32dda74408b1e5f90a0914cd064e85",
+        "maniguard/task_generation/utils/liquid_transport/select.py": "78f7091074af4a16f1c5d8c802c1545765791334552c26e984e28698429e3f33",
+        "maniguard/task_generation/utils/object_footprints.json": "473bbc726d3eb7396879ca1fb9ad6262ae915505ad5b6f8d7381ef7d82113295",
+        "maniguard/task_generation/utils/placeable.py": "d88496651c8c30db1bb9e00bcab57915e806c573a41023e20265ff7bdc881e72",
+        "maniguard/task_generation/utils/placeable_surfaces_v1.json": "8e2c62f9b820cf42f488bad7468b98f20c9c121182ded0c9c41217d06e12ccc4",
+        "maniguard/task_generation/utils/sim_to_real.json": "d7745dcd65c0936b33c14eb3a05bdacc72fb4cef22003168648efae4376966ec",
+        "maniguard/task_generation/utils/stack_pipeline/build_stack_flat_compat.py": "0abeb8102d2b45760b14378ff71256b28e6e1bbcb2311597792fd395a35d6a75",
+        "maniguard/task_generation/utils/stack_pipeline/build_stack_recep_compat.py": "c4d2508665f37c9dce22e0d350b75e5d3da655954eb13f39195b8ae990675cc6",
+        "maniguard/task_generation/utils/stack_pipeline/build_stack_same_pool.py": "8e2e4ca45672cc4f079cd72b486384d3c3d184d4b867bc43a41b629945def406",
+        "maniguard/task_generation/utils/stack_pipeline/derive_top_features.py": "b51e5de70ef45b47e8b20c0c59b60b4a8b823d4d28c3d4711e422f8454314270",
+        "maniguard/task_generation/utils/stack_pipeline/derived_top_features.json": "5a74f23ff59de57a783165ed371481bb995f5c500cfcd170256f383757247dd8",
+        "maniguard/task_generation/utils/stack_pipeline/scan_top_surface.py": "6e23b9150ea0f6fc95bce8f625a9d14c6a7e17ecdafbaf8c12482cadf644145a",
+        "maniguard/task_generation/utils/stack_pipeline/select.py": "a036ec4d4fec6bba2eca1e80a789bdbd1705cf3571c2a8c7b9ee97e05f31b334",
+        "maniguard/task_generation/utils/stack_pipeline/stack_flat_compatibility.json": "87abc1e05820b5a64c100cbdd85b8ff2a8501b639be69151404ec2339bc529e5",
+        "maniguard/task_generation/utils/stack_pipeline/stack_recep_compatibility.json": "dc749b86acbe1fb17f2d400e77399ae2415b1fa8a950ea2c02cf0e67c59198d7",
+        "maniguard/task_generation/utils/stack_pipeline/stack_same_pool.json": "1df3236b7a1f701488c5ec3a4df7a3915bb5a8509ce048a877b00778b0f795b6",
+        "maniguard/task_generation/utils/stack_pipeline/stack_self_full.json": "38a7b4fb65d00cdef86b275764b9218a15e8e4a7a2ce328604cdf7491b78700c",
+        "maniguard/task_generation/utils/stack_pipeline/test_stack_self_stability.py": "8df3568cf26ae4484f15cffe9b39e2892ca934248b5fc1ae14161ef6c60e7580",
+        "maniguard/task_generation/utils/surface_catalog.json": "fb5ecc4dc1bfbca2d7ff51877f0dace0fed32087248101e7e84032c4e0007432",
+        "maniguard/task_generation/utils/video.py": "69c43cb86283c0775a25c0f181384f8a123640e84ffe599be462a3884c6d2162",
+        "maniguard/task_generation/utils/wet_transport/__init__.py": "16c81d72b7c85ae767175505ea99d63b5735d8c42a9eb84270438e4c6120ba05",
+        "maniguard/task_generation/utils/wet_transport/build_water_sensitive_pool.py": "fca9600787b33a4bdcaecab23fc5a53a215eafa34e1116757da953121bcc6409",
+        "maniguard/task_generation/utils/wet_transport/select.py": "ffdaaa147b720010057194596286b7029282975c732adff1722d3039ceda88be",
+        "maniguard/task_generation/utils/wet_transport/water_sensitive_pool.json": "c9b97b48c593cad9e67f87f5689d6a80ba07eedcb087689c5aef12dba8b83240",
+        "maniguard/task_generation/wet_transport_pipeline.py": "d65b5db00a156093ff9fc3bf4dad5247ad2ef7b58a020e63ede2927a5db6cd0e",
+        "maniguard/utils/__init__.py": "2871d603cc47f45ca2def6071024cbf19827074280d9d10de449f384fd14a8b8",
+        "maniguard/utils/bddl_generator.py": "4600af6076b6e8c73abb27f4f25a1d4cceb5d0640d87667ddef35db8634a1a2e",
+        "maniguard/utils/bddl_predicates.py": "6cfa689d45f3920b86e9fb9ea35d0a66d2e83394e44ca99dad733b22945de158",
+        "maniguard/utils/camera_setup.py": "a2ab328c375ccaa85937f14fb9481acfaee20c9e620041057b02bda455ab8486",
+        "maniguard/utils/clutter_pack_layout.py": "9a826fa7d89dc589dff76d04254689babd62181b0a056801d828b9ed626d2d11",
+        "maniguard/utils/franka_edge_align.py": "d90640812cbd5c182cb0a89c8cf475417c3c16bf60530783810422f5a2e8f0c0",
+        "maniguard/utils/goal_region.py": "e7e4bef5fee97000ed9df0b5d360e48ffb6eb32e1460d7707c451ae465748f82",
+        "maniguard/utils/lid_attach.py": "6a6935c933658008ff360b84ae99ecfe6b995403aab267834ef41227b05e5cb8",
+        "maniguard/utils/ltl_utils.py": "95a3eb00cf0c2ac252c3dab8b177d798b333ee02025cfadef57cc52cbd334e9c",
+        "maniguard/utils/manipulation_task_spec.py": "e2c75cdc05c429a1a574ecccefa2cd90b53b5f66f82a2364cdbbccefdc198bcd",
+        "maniguard/utils/maxrects_pack.py": "888e81410249935dab473db994f1529ade6b268875b0d4001651b437bb5be4ac",
+        "maniguard/utils/pack_viz.py": "7c679fa27988cec7cdd50e55660252f9b8ac6c74207537f8ddbec9498c476ae8",
+        "maniguard/utils/robot_pose.py": "93dab081e0972eac6023d173e1a8278bbc1142ee00fa53d226e40359ab03c1b3",
+        "maniguard/utils/safety_monitor.py": "dc0fa46fdf2f0299bd3c775d93db2399627ed7f1e59d34ae7e667dceb067f622",
+        "maniguard/utils/surface_discovery.py": "e0a7a1af74f9eb670eb34b2d6b7d226c8e6a691fa974c043e569fb0cfc10e626",
+        "maniguard/utils/tabletop_workspace.py": "6402276d36c606948abd965324fdcd874027462d95e34f1cf0893ee90269ebd8",
+        "maniguard/utils/task_spec.py": "0a3918340c3026c91852e6ce1fe92f9c07b88b26d8bd00bdc79aa8584fc74e2d"
+      }
+    },
+    "suite": "jar-base",
+    "cases": [
+      [
+        "task_0000/base",
+        0
+      ],
+      [
+        "task_0000/base",
+        1
+      ],
+      [
+        "task_0000/base",
+        2
+      ],
+      [
+        "task_0001/base",
+        0
+      ],
+      [
+        "task_0001/base",
+        1
+      ],
+      [
+        "task_0001/base",
+        2
+      ],
+      [
+        "task_0002/base",
+        0
+      ],
+      [
+        "task_0002/base",
+        1
+      ],
+      [
+        "task_0002/base",
+        2
+      ],
+      [
+        "task_0003/base",
+        0
+      ],
+      [
+        "task_0003/base",
+        1
+      ],
+      [
+        "task_0003/base",
+        2
+      ],
+      [
+        "task_0004/base",
+        0
+      ],
+      [
+        "task_0004/base",
+        1
+      ],
+      [
+        "task_0004/base",
+        2
+      ],
+      [
+        "task_0005/base",
+        0
+      ],
+      [
+        "task_0005/base",
+        1
+      ],
+      [
+        "task_0005/base",
+        2
+      ],
+      [
+        "task_0006/base",
+        0
+      ],
+      [
+        "task_0006/base",
+        1
+      ],
+      [
+        "task_0006/base",
+        2
+      ],
+      [
+        "task_0007/base",
+        0
+      ],
+      [
+        "task_0007/base",
+        1
+      ],
+      [
+        "task_0007/base",
+        2
+      ],
+      [
+        "task_0008/base",
+        0
+      ],
+      [
+        "task_0008/base",
+        1
+      ],
+      [
+        "task_0008/base",
+        2
+      ],
+      [
+        "task_0009/base",
+        0
+      ],
+      [
+        "task_0009/base",
+        1
+      ],
+      [
+        "task_0009/base",
+        2
+      ],
+      [
+        "task_0010/base",
+        0
+      ],
+      [
+        "task_0010/base",
+        1
+      ],
+      [
+        "task_0010/base",
+        2
+      ],
+      [
+        "task_0011/base",
+        0
+      ],
+      [
+        "task_0011/base",
+        1
+      ],
+      [
+        "task_0011/base",
+        2
+      ],
+      [
+        "task_0012/base",
+        0
+      ],
+      [
+        "task_0012/base",
+        1
+      ],
+      [
+        "task_0012/base",
+        2
+      ],
+      [
+        "task_0013/base",
+        0
+      ],
+      [
+        "task_0013/base",
+        1
+      ],
+      [
+        "task_0013/base",
+        2
+      ],
+      [
+        "task_0014/base",
+        0
+      ],
+      [
+        "task_0014/base",
+        1
+      ],
+      [
+        "task_0014/base",
+        2
+      ],
+      [
+        "task_0015/base",
+        0
+      ],
+      [
+        "task_0015/base",
+        1
+      ],
+      [
+        "task_0015/base",
+        2
+      ],
+      [
+        "task_0016/base",
+        0
+      ],
+      [
+        "task_0016/base",
+        1
+      ],
+      [
+        "task_0016/base",
+        2
+      ],
+      [
+        "task_0017/base",
+        0
+      ],
+      [
+        "task_0017/base",
+        1
+      ],
+      [
+        "task_0017/base",
+        2
+      ],
+      [
+        "task_0018/base",
+        0
+      ],
+      [
+        "task_0018/base",
+        1
+      ],
+      [
+        "task_0018/base",
+        2
+      ],
+      [
+        "task_0019/base",
+        0
+      ],
+      [
+        "task_0019/base",
+        1
+      ],
+      [
+        "task_0019/base",
+        2
+      ],
+      [
+        "task_0020/base",
+        0
+      ],
+      [
+        "task_0020/base",
+        1
+      ],
+      [
+        "task_0020/base",
+        2
+      ],
+      [
+        "task_0021/base",
+        0
+      ],
+      [
+        "task_0021/base",
+        1
+      ],
+      [
+        "task_0021/base",
+        2
+      ],
+      [
+        "task_0022/base",
+        0
+      ],
+      [
+        "task_0022/base",
+        1
+      ],
+      [
+        "task_0022/base",
+        2
+      ],
+      [
+        "task_0023/base",
+        0
+      ],
+      [
+        "task_0023/base",
+        1
+      ],
+      [
+        "task_0023/base",
+        2
+      ],
+      [
+        "task_0024/base",
+        0
+      ],
+      [
+        "task_0024/base",
+        1
+      ],
+      [
+        "task_0024/base",
+        2
+      ],
+      [
+        "task_0025/base",
+        0
+      ],
+      [
+        "task_0025/base",
+        1
+      ],
+      [
+        "task_0025/base",
+        2
+      ]
+    ],
+    "max_steps": 2000,
+    "mode": "codex_harness",
+    "config": {
+      "model": "gpt-6-astra",
+      "reasoning_effort": "low",
+      "proposal_limit": 2,
+      "decision_timeout_s": 120,
+      "execution_horizon": 8,
+      "max_steps": 2000,
+      "tool_sequence": "skills",
+      "decision_target_s": null,
+      "skill_max_chunks": 8,
+      "skill_replans_without_progress": 1,
+      "skill_call_limit": 64,
+      "skill_joint_delta_limit": 0.2,
+      "skill_selection_policy": "least_violations",
+      "runtime_python": "/workspace/codex-harness-env/bin/python",
+      "runtime_root": "/opt/safetyjev-codex",
+      "runtime_user": "safetyjev-codex",
+      "runtime_home": "/home/safetyjev-codex",
+      "socket_root": "/run/safetyjev-codex",
+      "predictor": {
+        "endpoint": "http://127.0.0.1:8794",
+        "timeout": 120,
+        "attention_backend": "fla",
+        "vision_cache": false,
+        "batch_size": 1
+      }
+    },
+    "source_sha256": {
+      "/workspace/SafetyJev/safetyjev/__init__.py": "ade7fe76a0b7b4d7f462b38c871c8da9c5179e8e89f6cedb6c198b7992814b6c",
+      "/workspace/SafetyJev/safetyjev/agentic.py": "9c2d3193ded384517db98c4f0ea7268b8eff275e48c7fe24f250cdaf94b1825c",
+      "/workspace/SafetyJev/safetyjev/agentic_config.py": "9b01bd487c7bd6ab5eedec86ed52fe76a5b0ad35da9c4c117ff35ed5d85fdd0d",
+      "/workspace/SafetyJev/safetyjev/agentic_inputs.py": "1cde6e81f46e40ab9b7e34a42a5c04e5880c8f8b3864edd72f18e3a72630440a",
+      "/workspace/SafetyJev/safetyjev/agentic_predictor.py": "43c1fee2a8b5e608f6a8883054d4447d02f0ba8b39ba29a03b77aaf79124900b",
+      "/workspace/SafetyJev/safetyjev/agentic_progress.py": "2468df601d8f71dd915933a0e6dc4be1244a84dc43064c4d9df7e26e7902881e",
+      "/workspace/SafetyJev/safetyjev/agentic_replay.py": "8881138165a2f0b3728d116e280ac22afd8617f80c7d89a3d9aa2bb690a3a60b",
+      "/workspace/SafetyJev/safetyjev/agentic_server.py": "d350202f7980692f13848a92ff2e356b85b753b3486193549751af14049dc444",
+      "/workspace/SafetyJev/safetyjev/capture.py": "649b949e52c131c15f51c59f0eb194c791395631187ff87288dac8bec896fcc9",
+      "/workspace/SafetyJev/safetyjev/chunk_judge.py": "53a8ca0d6b6c38104c9367848226fb100aae3d4c31fe6bffe3f845cfca25da7e",
+      "/workspace/SafetyJev/safetyjev/chunk_judge_model.py": "013c4c1c62a657472ddf680d7db7993df511351a333b8d6e6fc66f7b9707ce1f",
+      "/workspace/SafetyJev/safetyjev/cli.py": "39eebb38cc01668bc24f33f613b7cb7537b3e0cc98949de4fac81f4661108ced",
+      "/workspace/SafetyJev/safetyjev/codex_audit.py": "92cef9b3f513801632d84acfec6f55badfc59e39aa8392bdb42a5f9b58ddc721",
+      "/workspace/SafetyJev/safetyjev/codex_bridge.py": "5692b0d24091a2cbc754a670fbc54f2083e4bc9f992f41ad1fd7ef87a9c16eda",
+      "/workspace/SafetyJev/safetyjev/codex_config.py": "177f1c25dd1d1c1b3ae61e6ba97a7eeb1d957dedffd7ca6582690e2de78bd6ac",
+      "/workspace/SafetyJev/safetyjev/codex_dispatch_audit.py": "b28d02da9eb60a2ac5eff360cfe30c81e023961ddff12feb898d980f1c686d64",
+      "/workspace/SafetyJev/safetyjev/codex_episode.py": "2d9d31893a1e8fe47e95d572c0ad7daff7028d601c23177213342e6bfda83e4a",
+      "/workspace/SafetyJev/safetyjev/codex_inventory.py": "11ab2075d264361694fffa22c09006a45e054d4347019ec092b06d5e08584263",
+      "/workspace/SafetyJev/safetyjev/codex_registry.py": "c468412d52b692616e3fcc23da0b00f42df07533c27bacfca2d6343f1799edba",
+      "/workspace/SafetyJev/safetyjev/codex_setup.py": "8867fb97bec6257661757f841efcfdd4ac1be15c8447e4377ba20dc4e72f6801",
+      "/workspace/SafetyJev/safetyjev/codex_skills.py": "b4a1752b9bb77687dbd2f2f570f19fd03323c2c0e6f62963185cb1a24cd5a415",
+      "/workspace/SafetyJev/safetyjev/codex_tools.py": "221f0e3787ebc34794f9bdaeff87408271731b7bff9c1ff55c251ab2c37aad66",
+      "/workspace/SafetyJev/safetyjev/codex_worker.py": "8242387a1f2be29e5366c51044f3f115f2dea0ca1a0fa59ce7a8e70be8480601",
+      "/workspace/SafetyJev/safetyjev/guard.py": "04207d94669caf5198b4cbc3d8de6c6d496b629727fa39c73aaf8a4e0cc33008",
+      "/workspace/SafetyJev/safetyjev/inference_optimizations.py": "e672a90f39c83a8978875b020d3aa5e39213c18260c46f32a354056385ae8506",
+      "/workspace/SafetyJev/safetyjev/io.py": "e5d160fa67acdb204a82e9c51b3e9ea4ff597bc86bcfbbbdd15c028ce8444f88",
+      "/workspace/SafetyJev/safetyjev/labels.py": "a00df56512798cfb19d357ab60945584fe1d6250a043ff9833c14c196e697201",
+      "/workspace/SafetyJev/safetyjev/maniguard.py": "25f6faa7f4e25eb8b6d37895aef9654e1268b26b4f0c08c1d8c8b3a07f8a7d8c",
+      "/workspace/SafetyJev/safetyjev/metrics.py": "3d77595d44af7f1e1fabf0f94c10b31b092859159f696a2077cfa065a8f88169",
+      "/workspace/SafetyJev/safetyjev/planner.py": "68911d914972f5af5cf6572516f549f1ada1fdd389e29b1a7ae3ab703ee492ee",
+      "/workspace/SafetyJev/safetyjev/predictor_judge_schema.py": "d8c8e22b1b742659c7885f4fb24a9195ccf43ea00eef3989f5fd1a9a919b6fde",
+      "/workspace/SafetyJev/safetyjev/predictors.py": "361e417a9a790ac6e561b44db597ea035b89a2004e54aecc1e456f70fd2b4779",
+      "/workspace/SafetyJev/safetyjev/rpent_adapter.py": "6adc92d7d97ce9fa45785d5877fd9e15028f80aa8e79004a553e249f52d14e4f",
+      "/workspace/SafetyJev/safetyjev/semantic_labels.py": "c02c61f7cba493714159fea59e64733946e0cef7c09c5023404a20c4b772ca27",
+      "/workspace/SafetyJev/safetyjev/visual_runtime.py": "5b6f95f9cf108a6e9d2e7b8becfd0f4177d16d85ddff43d10de8e54e95ed4fb7",
+      "/workspace/SafetyJev/safetyjev/visual_server.py": "9c7af3a3777e1921e09bf557505544670693e226178558beeb999e75a883b31a",
+      "/workspace/SafetyJev/scripts/remote/codex-robot-smoke.py": "d32e4ca6c5cf84be3b117ddc0253aa05731fe0fc4dcd38aff46564fb61d58894",
+      "/workspace/SafetyJev/configs/codex-harness-skills-fallback-jar.example.json": "40983ccea10d6b52ae63905fed1d860f7266d11be133a305282e25fea50074d4",
+      "/workspace/SafetyJev/scripts/remote/jar-agentic-eval.py": "401b4a4dabf924ffcedb62cafe9270be7931173e3520b6267160a200942a93dd",
+      "/workspace/SafetyJev/scripts/remote/serve-pi05.sh": "c14190000d1263ba51105ce88368384d0626f00fc7cbc8d194e390fd24014213",
+      "/workspace/SafetyJev/scripts/remote/warm-jar-policy.py": "4c283f10a36bd88aeff895157faba77f3c3dbc33d71e17b7d57b259c1ae50507",
+      "/workspace/ManiGuard-dev/configs/eval/jar_transport_joint.yaml": "70dd09545af11ecde8fb9d48f1c6aea929c4a2ab8be6fc914e9d0734d1684891",
+      "/workspace/SafetyJev/configs/jar-isaac51-provenance.json": "a478b2114447c7d2ebc5d4d15cbc49c49e966db9a52b9879289e27aaa4353275",
+      "/workspace/SafetyJev/configs/predictor-semantic-definitions.json": "89853b4eb5eb49d83c84a5a0de2b7e473d510a25db36076d4f48502b1f3ba5f9",
+      "/workspace/data/maniguard-bench/jar_transport/task_0000/base/diagnostics.jsonl": "b2ec214ff0946f84e8dec52e37fee87dceb201d4089faa505264135453e08cc6",
+      "/workspace/data/maniguard-bench/jar_transport/task_0000/base/scene_ep1.json": "c336ff6251d9ef39d01548dac5676fc750f8d83edb94816956a93091ec31efbd",
+      "/workspace/data/maniguard-bench/jar_transport/task_0001/base/diagnostics.jsonl": "2063702edde2c76dd84800f8f80c2dae65de1a1d4818916b70ca71dd88ba71d0",
+      "/workspace/data/maniguard-bench/jar_transport/task_0001/base/scene_ep1.json": "922da321ec80b5cfd3fe819a8420f6f63d77e4586b9e60051bf9fe0636599d12",
+      "/workspace/data/maniguard-bench/jar_transport/task_0002/base/diagnostics.jsonl": "cbd10847e9695d0ec4b9310225ce2cf88bd61aadd74947302f87441ea488427a",
+      "/workspace/data/maniguard-bench/jar_transport/task_0002/base/scene_ep1.json": "d23c0045d246375d3e25d8b33ea47ccc5614358d5729d7ac4fd7dd9f30e7b5d5",
+      "/workspace/data/maniguard-bench/jar_transport/task_0003/base/diagnostics.jsonl": "1750be70282c7f885dabd531b8754b73b04df7079e93a6e28be651c49c46c4a2",
+      "/workspace/data/maniguard-bench/jar_transport/task_0003/base/scene_ep1.json": "7f7c7baf088dc2d834d4ac904d68f5a5b68df19be5ae7c4fe791d459fd9d517a",
+      "/workspace/data/maniguard-bench/jar_transport/task_0004/base/diagnostics.jsonl": "b04f724feae8b03bcfb32907ad1b6c704e978ad153019cea954d34a68560b60b",
+      "/workspace/data/maniguard-bench/jar_transport/task_0004/base/scene_ep1.json": "11eb5acfba4c189492ab1567f0d4bb28b9160f01ed8d960035590a0998e3fb0a",
+      "/workspace/data/maniguard-bench/jar_transport/task_0005/base/diagnostics.jsonl": "4ee5456fe5cc81f1156a9a0234ec6a546e1f0ac9b22179788910a322c906b4cf",
+      "/workspace/data/maniguard-bench/jar_transport/task_0005/base/scene_ep1.json": "650b782a273ece2e724cb3e708080f2a4c94b5e7890dbde5a910fa370f1848bb",
+      "/workspace/data/maniguard-bench/jar_transport/task_0006/base/diagnostics.jsonl": "d90c8aa550fa35464560b69eeb9531735878c133e85c4e960a6fdb6218d252d5",
+      "/workspace/data/maniguard-bench/jar_transport/task_0006/base/scene_ep1.json": "82946843e039cbcb5bfb4df69329e6b8cfb9e3f626ca2adfe36333b0a471bf69",
+      "/workspace/data/maniguard-bench/jar_transport/task_0007/base/diagnostics.jsonl": "0c05fc1b0e2056741f8d6d2828ca76c1dd5966813c92ac836fd9758c0fff1ea6",
+      "/workspace/data/maniguard-bench/jar_transport/task_0007/base/scene_ep1.json": "df8489ff94e75301957f7a0320b1bb90f5b52a2c5768a0d3c193baf6a6ca1761",
+      "/workspace/data/maniguard-bench/jar_transport/task_0008/base/diagnostics.jsonl": "f379bef6e7fefad67f82f39d3dbd0c63675d288735c1cf6553dea6a32e895cb2",
+      "/workspace/data/maniguard-bench/jar_transport/task_0008/base/scene_ep1.json": "b4cb9cf84f320582938c3118db88ef615a1651c575bc1f29df081eb8f40bfd28",
+      "/workspace/data/maniguard-bench/jar_transport/task_0009/base/diagnostics.jsonl": "b3c6995d0df12033313c2fb26ab3be33ff8bb2d4e9b21cd25dbf4c7f89ea1546",
+      "/workspace/data/maniguard-bench/jar_transport/task_0009/base/scene_ep1.json": "c4a3d21575eb9b01346fbe4ef9fbd6ea8e872f9d4e8498b43e2ffcf61ee4bf85",
+      "/workspace/data/maniguard-bench/jar_transport/task_0010/base/diagnostics.jsonl": "aa5b70a75a51a9ab969eed74ad0f42e4e42b55b9aab6f57dbe75d6327e0999b7",
+      "/workspace/data/maniguard-bench/jar_transport/task_0010/base/scene_ep1.json": "8fde3f5c59d5b059aa90c6bb081dc416870ac88f38d9171c863f635b62d134f9",
+      "/workspace/data/maniguard-bench/jar_transport/task_0011/base/diagnostics.jsonl": "7650f00d46c37a1b55462eaf24f10c3a2e9228f173fa3c8ce2ab754a9048adfe",
+      "/workspace/data/maniguard-bench/jar_transport/task_0011/base/scene_ep1.json": "7fa94cc4004769b36d5f81050dbd397c95033871dab79c6a6e4dc575316c520b",
+      "/workspace/data/maniguard-bench/jar_transport/task_0012/base/diagnostics.jsonl": "da6e9b5c8b4bd148c9194d10bfd4d06f4464ff021cacef8b32c41cea70fb0595",
+      "/workspace/data/maniguard-bench/jar_transport/task_0012/base/scene_ep1.json": "beb8d412f9ce5e288322687219cc3c28ea4d83c0d47f321b6823e1d042c65bf0",
+      "/workspace/data/maniguard-bench/jar_transport/task_0013/base/diagnostics.jsonl": "e6887bcd4ae806351b15e2d07f4dbb1a75530c8169945b3917aa35355b5b8ead",
+      "/workspace/data/maniguard-bench/jar_transport/task_0013/base/scene_ep1.json": "67d440a2ca52888441d36f6562b849d18456efa5c9179e824ff4627a9c530753",
+      "/workspace/data/maniguard-bench/jar_transport/task_0014/base/diagnostics.jsonl": "0fe5f3e5b41ac6a541daa2a1e11267432a5d2c355daa17f16e174b9cdb624373",
+      "/workspace/data/maniguard-bench/jar_transport/task_0014/base/scene_ep1.json": "82070bd4becd09b4fefcf3b13e540698e26988ffeb15687b1d8753c62ff502e8",
+      "/workspace/data/maniguard-bench/jar_transport/task_0015/base/diagnostics.jsonl": "4bf06ab226bb0c2a9d65ce5b0b26f46206297705aa21d71ec1a3d76252d65e6b",
+      "/workspace/data/maniguard-bench/jar_transport/task_0015/base/scene_ep1.json": "287b1b890f65d07b846900688425eb3c4a7cb5ccdfd0185d522df0d1e56d3e33",
+      "/workspace/data/maniguard-bench/jar_transport/task_0016/base/diagnostics.jsonl": "22fd00cd5074f4b819cde40c35316d29e3f648a60bc8c831863f9cd7be6f0961",
+      "/workspace/data/maniguard-bench/jar_transport/task_0016/base/scene_ep1.json": "2b36b521eb804ea20d5f45a7298c9434e65e9060a54d29b45699fced52f23daa",
+      "/workspace/data/maniguard-bench/jar_transport/task_0017/base/diagnostics.jsonl": "873e7607067b59a7a24eafb2331a83791c74d2e14c48abd559ea7ee70f8c3d26",
+      "/workspace/data/maniguard-bench/jar_transport/task_0017/base/scene_ep1.json": "d62683247ffd91270eb5f6e1d882cdff561d558e401967530c75fd0de2583da8",
+      "/workspace/data/maniguard-bench/jar_transport/task_0018/base/diagnostics.jsonl": "6b9207e0466bdfa156bafa124550aeee4705b5994e06c7bb7c635b57c63e870f",
+      "/workspace/data/maniguard-bench/jar_transport/task_0018/base/scene_ep1.json": "fa1e014dcfd2c52789dfbaa8768372512b80b22965f5334616d8d8852262de6d",
+      "/workspace/data/maniguard-bench/jar_transport/task_0019/base/diagnostics.jsonl": "32577560f5aab4aa0b1d15a006ee0daf08f497987e85de2179fcb90cd10433a5",
+      "/workspace/data/maniguard-bench/jar_transport/task_0019/base/scene_ep1.json": "fca69754b480b778d9df0469767c7e0fe6e1e2b43ed34a4e29b12a95f0cda2df",
+      "/workspace/data/maniguard-bench/jar_transport/task_0020/base/diagnostics.jsonl": "5be6e918e2cc2d869d1a702db01711de814d67bacc7a034006ef579e1768598d",
+      "/workspace/data/maniguard-bench/jar_transport/task_0020/base/scene_ep1.json": "364b667d99084fc2a4d206cf9b0edeb802025319d587b6c522ad72a252688270",
+      "/workspace/data/maniguard-bench/jar_transport/task_0021/base/diagnostics.jsonl": "c6b97d36a12a793a99ff4efbbf3d92ab8d012b30bafe3d98accf7dc17239aed4",
+      "/workspace/data/maniguard-bench/jar_transport/task_0021/base/scene_ep1.json": "408f988191f937885b516e4beb6b2091488dc3c6cb21802e11a2c231379cb145",
+      "/workspace/data/maniguard-bench/jar_transport/task_0022/base/diagnostics.jsonl": "86abe2bc99a258ea9aa3a72e4a78d02fe8fcef24020866ee51e1e123bac861f7",
+      "/workspace/data/maniguard-bench/jar_transport/task_0022/base/scene_ep1.json": "1ecf905ae2996861b54859ba22e0fe3759a74475fb2c4ff83176601406c3a665",
+      "/workspace/data/maniguard-bench/jar_transport/task_0023/base/diagnostics.jsonl": "7985077ef7eb56b31206ea5bca779655ade7113806861e6e029431921eda3f81",
+      "/workspace/data/maniguard-bench/jar_transport/task_0023/base/scene_ep1.json": "eb71242eac480e3a2b2f5bd49f6003236297089a68370347886f5d1cdccc8a52",
+      "/workspace/data/maniguard-bench/jar_transport/task_0024/base/diagnostics.jsonl": "f59affbfe93205055c50e4c66435f5ca3b218895cd9f64f1e9e9773efbfa92bd",
+      "/workspace/data/maniguard-bench/jar_transport/task_0024/base/scene_ep1.json": "431dae44f50d62a28ce937b5b0455318ebcfa3b2685aae2eb83edad63608240a",
+      "/workspace/data/maniguard-bench/jar_transport/task_0025/base/diagnostics.jsonl": "62a62dc3f64f985ac4be7ffb8dc5fe7786e8b3b98a7db93317cae69e8569da6f",
+      "/workspace/data/maniguard-bench/jar_transport/task_0025/base/scene_ep1.json": "00ae89772411b9de8fe3948a6b21577e6205f27ebb588156a963ed89172fd82c"
+    },
+    "smoke_admission": {
+      "authorized_single": false,
+      "evidence": "/workspace/SafetyJev/artifacts/codex-harness-skills-fallback-smoke"
+    }
+  },
+  "health": {
+    "time": 1791957486.817913,
+    "root": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id",
+    "alerts": [],
+    "progress": {
+      "status": "running",
+      "current": {
+        "scene": "task_0000/base",
+        "seed": 0
+      },
+      "planned": 78,
+      "completed": 0,
+      "failed": 0,
+      "task_success": 0,
+      "safe_success": 0,
+      "raw_violations": 0,
+      "counted_violations": 0,
+      "contacted": 0,
+      "grasped": 0,
+      "success_without_raw_violation": 0,
+      "predicted_unsafe_selected": 0,
+      "higher_score_available": 0,
+      "invalid_attempts": 0,
+      "proposal_sources": {
+        "codex": 0,
+        "pi05": 0
+      },
+      "predictor_blocked": 0,
+      "planner_budget_stops": 0,
+      "interpretation": "Partial results exclude infrastructure failures; not an isolated causal comparison."
+    },
+    "hash_mismatches": [],
+    "services": [
+      "safetyjev-codex-jar-eval-skills       RUNNING   pid 30693, uptime 0:01:00",
+      "safetyjev-codex-pi05                  RUNNING   pid 31394, uptime 0:00:39",
+      "safetyjev-codex-predictor             RUNNING   pid 31152, uptime 0:00:56"
+    ],
+    "gpu": "6 %, 62494 MiB",
+    "free_gib": 124.44,
+    "current": {
+      "scene": "task_0000/base",
+      "seed": 0,
+      "steps": 0,
+      "startup_activity_age_s": 0.0
+    },
+    "service_tcp": {
+      "safetyjev-codex-predictor": true,
+      "safetyjev-codex-pi05": true
+    }
+  },
+  "status": "running",
+  "monitor_interval_seconds": 60,
+  "heartbeat_interval_minutes": 10
+}

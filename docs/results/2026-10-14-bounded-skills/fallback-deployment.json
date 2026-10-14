@@ -1,0 +1,21 @@
+{
+  "runtime_commit": "b4261c9",
+  "cpu_tests": {
+    "passed": 203,
+    "subtests": 82,
+    "skipped_historical_fixtures": 3
+  },
+  "selection_policy": "least_violations",
+  "tie_rule": "earliest fully scored candidate at same immutable decision",
+  "retry_limit": 1,
+  "tool_surface": [
+    "observe",
+    "run_skill"
+  ],
+  "smoke_output": "/workspace/SafetyJev/artifacts/codex-harness-skills-fallback-smoke",
+  "full_output": "/workspace/SafetyJev/artifacts/jar-codex-skills-fallback-id",
+  "gate": "/workspace/bootstrap-codex-skills-sweep/fallback-launch-gate.py",
+  "planned_full_cases": 78,
+  "strict_predecessor_backup_verified": true,
+  "prompt_policy_consistent": true
+}
