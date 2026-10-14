@@ -1,0 +1,49 @@
+{
+  "authorized_at": "2026-10-14T18:51:08.740159+00:00",
+  "request": "Resume the sweep from exactly the place where the initializations failed.",
+  "instance_id": 55768662,
+  "runtime_commit": "e5b7a02",
+  "first_case": [
+    "task_0002/base",
+    0
+  ],
+  "planned_repaired_cases": 72,
+  "excluded_completed_cases": [
+    [
+      "task_0000/base",
+      0
+    ],
+    [
+      "task_0000/base",
+      1
+    ],
+    [
+      "task_0000/base",
+      2
+    ],
+    [
+      "task_0001/base",
+      0
+    ],
+    [
+      "task_0001/base",
+      1
+    ],
+    [
+      "task_0001/base",
+      2
+    ]
+  ],
+  "predecessor_roots": [
+    "artifacts/jar-codex-skills-fallback-id",
+    "artifacts/jar-codex-skills-timeout-id"
+  ],
+  "new_root": "artifacts/jar-codex-skills-contact-id",
+  "smoke_root": "artifacts/codex-harness-skills-contact-smoke",
+  "persistent_contacts": true,
+  "watchdog_seconds": 300,
+  "continue_on_timeout": true,
+  "continue_on_verified_initialization_failure": true,
+  "historical_outputs_preserved": true,
+  "admission": "Two fresh repaired-contact smokes required; gate does not waive audits"
+}
