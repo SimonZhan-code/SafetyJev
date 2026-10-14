@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-10-14T18:45:20.091283+00:00",
+  "instance_id": 55768662,
+  "prior_runtime": "a041ebee048eae9427f66d7a42317b34a6235e37",
+  "repair_commit": "2d1a5e787a6bc3cf3aba8489cfa1e57110c78096",
+  "sweep_resumed": false,
+  "model_services": "stopped",
+  "gpu_compute_processes": 0,
+  "mode": "explicit --persistent-contacts opt-in; matching new plan and smoke required",
+  "contact_module_sha256": "cbb43c9c34fae6be21fa2c4eed5a63870963ee633b1a7a8fc02ff6c93c4a3307",
+  "historical_outputs_modified": false
+}
