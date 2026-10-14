@@ -1,0 +1,8 @@
+{
+  "status": "verified",
+  "archive_sha256": "a137c147e83bc922e0088268de22432356206f4ec7805700dedc35eb27cd8b1d",
+  "files_verified": 1073,
+  "bytes_verified": 60946708,
+  "coverage": "Both repaired-contact 180-second smoke trials and separate simulator outputs",
+  "all_file_checksums_and_coverage_match": true
+}
